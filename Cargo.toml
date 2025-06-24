@@ -1,4 +1,7 @@
 [workspace]
 members = [
-    "common_core",
+    "common_lib",
+    "actix_web_demo",
+    "axum_demo",
+    "rocket_demo",
 ]
