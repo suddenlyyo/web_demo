@@ -21,7 +21,7 @@ impl ResponseWrapper {
     }
     // 默认成功响应
     pub fn success_default() -> Self {
-        Self::from(WrapperErr::Success())
+        Self::from(WrapperErr::Success)
     }
 
     // 自定义成功响应
@@ -31,7 +31,7 @@ impl ResponseWrapper {
 
     // 默认失败响应
     pub fn fail_default() -> Self {
-        Self::from(WrapperErr::Fail())
+        Self::from(WrapperErr::Fail)
     }
 
     // 自定义失败响应
@@ -40,7 +40,7 @@ impl ResponseWrapper {
     }
     // 默认未知错误响应
     pub fn unknown_error_default() -> Self {
-        Self::from(WrapperErr::UnknownError())
+        Self::from(WrapperErr::UnknownError)
     }
 
     // 自定义未知错误响应
@@ -51,7 +51,7 @@ impl ResponseWrapper {
     // 从 WrapperErr 创建响应包装
     pub fn from(err: WrapperErr) -> Self {
         ResponseWrapper {
-            code: err.get_code(),
+            code: err.code(),
             message: err.message().to_string(),
         }
     }
