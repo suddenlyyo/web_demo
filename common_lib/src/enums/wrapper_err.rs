@@ -47,6 +47,7 @@ impl WrapperErr {
     pub fn unknown_error_default() -> Self {
         WrapperErr::UnknownError(ErrorInfo::new(Some(-2), Some("unknown error")))
     }
+    
     pub fn get_code(&self) -> i32 {
         match self {
             Self::Success(info) => info.code.unwrap_or(1),
