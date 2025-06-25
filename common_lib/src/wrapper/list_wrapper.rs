@@ -2,7 +2,7 @@ use crate::enums::WrapperErr;
 use crate::wrapper::ResponseWrapper;
 
 // 带列表数据的包装
-#[derive(Debug,serde::Serialize, PartialEq, Eq, Hash, Default)]
+#[derive(Debug,serde::Serialize, PartialEq, Eq, Hash)]
 pub struct ListWrapper<T> {
     pub base: ResponseWrapper,
     pub data: T,
@@ -106,9 +106,3 @@ impl<T> From<Vec<T>> for ListWrapper<T> {
     }
 }
 
-// 实现 Default trait
-impl<T> Default for ListWrapper<T> {
-    fn default() -> Self {
-        ListWrapper::success_empty()
-    }
-}
