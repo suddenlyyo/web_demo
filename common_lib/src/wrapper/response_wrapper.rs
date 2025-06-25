@@ -6,11 +6,6 @@ pub struct ResponseWrapper {
     message: String,
 }
 impl ResponseWrapper {
-    // 检查是否失败
-    pub fn is_failure(&self) -> bool {
-        self.code == WrapperErrEnum::Fail.code()
-    }
-
     // 通用构造函数
     pub fn new<S: Into<String>>(code: i32, message: S) -> Self {
         ResponseWrapper {
@@ -22,6 +17,7 @@ impl ResponseWrapper {
     pub fn get_code(&self) -> i32 {
         self.code
     }
+
     pub fn get_message(&self) -> &str {
         &self.message
     }
@@ -30,30 +26,25 @@ impl ResponseWrapper {
         Self::from(WrapperErr::Success)
     }
 
-    // 自定义成功响应
-    pub fn success<S: Into<String>>(code: i32, message: S) -> Self {
-        ResponseWrapper::new(code, message)
-    }
-
     // 默认失败响应
     pub fn fail_default() -> Self {
         Self::from(WrapperErr::Fail)
-    }
-
-    // 自定义失败响应
-    pub fn fail<S: Into<String>>(code: i32, message: S) -> Self {
-        ResponseWrapper::new(code, message)
     }
     // 默认未知错误响应
     pub fn unknown_error_default() -> Self {
         Self::from(WrapperErr::UnknownError)
     }
-
-    // 自定义未知错误响应
-    pub fn unknown_error<S: Into<String>>(code: i32, message: S) -> Self {
-        ResponseWrapper::new(code, message)
+    // 设置错误状态
+    pub fn fail(&mut self, msg: impl Into<String>) {
+        self.code = WrapperErrEnum::Fail.code();
+        self.msg = msg.into();
     }
 
+    // 设置未知错误状态
+    pub fn unknown_error(&mut self, msg: impl Into<String>) {
+        self.code = WrapperErrEnum::UnknownError.code();
+        self.msg = msg.into();
+    }
     // 从 WrapperErr 创建响应包装
     pub fn from(err: WrapperErr) -> Self {
         ResponseWrapper {
