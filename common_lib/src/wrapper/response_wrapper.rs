@@ -6,6 +6,11 @@ pub struct ResponseWrapper {
     message: String,
 }
 impl ResponseWrapper {
+    // 检查是否失败
+    pub fn is_failure(&self) -> bool {
+        self.code == WrapperErrEnum::Fail.code()
+    }
+
     // 通用构造函数
     pub fn new<S: Into<String>>(code: i32, message: S) -> Self {
         ResponseWrapper {
@@ -13,6 +18,7 @@ impl ResponseWrapper {
             message: message.into(),
         }
     }
+
     pub fn get_code(&self) -> i32 {
         self.code
     }
