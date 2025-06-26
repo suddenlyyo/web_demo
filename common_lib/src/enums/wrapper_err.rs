@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub enum WrapperErr {
+pub enum WrapperErrEnum {
     Success,
     Fail,
     UnknownError,
