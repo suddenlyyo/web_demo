@@ -1,8 +1,8 @@
 use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
-
+use serde::Serialize;
 // 带列表数据的包装
-#[derive(Debug, serde::Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct ListWrapper<T> {
     #[serde(flatten)]
     base: ResponseWrapper,
@@ -17,8 +17,8 @@ impl<T> ListWrapper<T> {
         }
     }
 
-    pub fn success(data: T) -> Self {
-        ObjectWrapper {
+    pub fn success(data: Vec<T>) -> Self {
+        Self {
             base: ResponseWrapper::success_default(),
             data: Some(data),
         }

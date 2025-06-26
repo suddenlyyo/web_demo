@@ -1,11 +1,12 @@
+/// 错误枚举
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum WrapperErrEnum {
-    Success,
-    Fail,
-    UnknownError,
+    Success = 1,
+    Fail = -1,
+    UnknownError = -2,
 }
 
-impl WrapperErr {
+impl WrapperErrEnum {
     // 获取固定错误码
     pub const fn code(&self) -> i32 {
         match self {
@@ -18,9 +19,9 @@ impl WrapperErr {
     // 获取固定错误信息（直接返回静态字符串）
     pub const fn message(&self) -> &'static str {
         match self {
-            Self::Success => "成功",
-            Self::Fail => "失败",
-            Self::UnknownError => "未知错误",
+            Self::Success => "Success",
+            Self::Fail => "Fail",
+            Self::UnknownError => "Unknown Error",
         }
     }
 
