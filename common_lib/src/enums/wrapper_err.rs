@@ -16,6 +16,10 @@ impl WrapperErrEnum {
         }
     }
 
+    // pub const  定义公共常量函数
+    // 需要编译时计算值时
+    // 提供常量上下文中使用的构造函数或工具函数
+    // 提供不可变的返回值
     // 获取固定错误信息（直接返回静态字符串）
     pub const fn message(&self) -> &'static str {
         match self {
