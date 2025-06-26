@@ -1,2 +1,0 @@
-window.ALL_CRATES = ["actix_web_demo","axum_demo","common_lib","proc_macro2","quote","rocket_demo","serde","serde_derive","syn","unicode_ident"];
-//{"start":21,"fragment_lengths":[16,12,13,14,8,14,8,15,6,16]}
