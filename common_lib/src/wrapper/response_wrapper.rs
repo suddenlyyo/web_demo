@@ -1,4 +1,4 @@
-use crate::enums::WrapperErr;
+use crate::enums::WrapperErrEnum;
 ///# 响应包装
 #[derive(Debug, serde::Serialize, PartialEq, Eq, Hash)]
 pub struct ResponseWrapper {
@@ -23,16 +23,16 @@ impl ResponseWrapper {
     }
     // 默认成功响应
     pub fn success_default() -> Self {
-        Self::from(WrapperErr::Success)
+        Self::from(WrapperErrEnum::Success)
     }
 
     // 默认失败响应
     pub fn fail_default() -> Self {
-        Self::from(WrapperErr::Fail)
+        Self::from(WrapperErrEnum::Fail)
     }
     // 默认未知错误响应
     pub fn unknown_error_default() -> Self {
-        Self::from(WrapperErr::UnknownError)
+        Self::from(WrapperErrEnum::UnknownError)
     }
     // 设置错误状态
     pub fn fail(&mut self, msg: impl Into<String>) {
