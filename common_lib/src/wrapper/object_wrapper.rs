@@ -1,4 +1,4 @@
-use crate::enums::WrapperErr;
+use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
 
 // 带数据的包装
@@ -24,12 +24,12 @@ impl<T> ObjectWrapper<T> {
         }
     }
     pub fn set_fail(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErr::Fail.code(), msg.into());
+        self.base = ResponseWrapper::new(WrapperErrEnum::Fail.code(), msg.into());
         self.data = None;
     }
 
     pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErr::UnknownError.code(), msg.into());
+        self.base = ResponseWrapper::new(WrapperErrEnum::UnknownError.code(), msg.into());
         self.data = None;
     }
 
