@@ -2,7 +2,7 @@ use crate::enums::WrapperErr;
 use crate::wrapper::ResponseWrapper;
 
 // 带数据的包装
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq, Eq, Hash)]
 pub struct ObjectWrapper<T> {
     #[serde(flatten)] //扁平化，去掉json中的base把内部结构提出来
     pub base: ResponseWrapper,
