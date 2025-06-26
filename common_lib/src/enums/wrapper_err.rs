@@ -10,9 +10,9 @@ impl WrapperErrEnum {
     // 获取固定错误码
     pub const fn code(&self) -> i32 {
         match self {
-            Self::Success => 1,
-            Self::Fail => -1,
-            Self::UnknownError => -2,
+            Self::Success => Self::Success as i32,
+            Self::Fail => Self::Fail as i32,
+            Self::UnknownError => Self::UnknownError as i32,
         }
     }
 
@@ -28,9 +28,9 @@ impl WrapperErrEnum {
     // 按错误码查找枚举值
     pub fn from_code(code: i32) -> Option<Self> {
         match code {
-            1 => Some(Self::Success),
-            -1 => Some(Self::Fail),
-            -2 => Some(Self::UnknownError),
+            _ if code == Self::Success as i32 => Some(Self::Success),
+            _ if code == Self::Fail as i32 => Some(Self::Fail),
+            _ if code == Self::UnknownError as i32 => Some(Self::UnknownError),
             _ => None,
         }
     }
