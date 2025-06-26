@@ -1,4 +1,4 @@
-use crate::enums::WrapperErr;
+use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
 /// 分页包装
 #[derive(Debug, serde::Serialize, PartialEq, Eq, Hash)]
@@ -42,11 +42,11 @@ impl<T> PageWrapper<T> {
     }
 
     pub fn set_fail(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErr::Fail.code(), msg.into());
+        self.base = ResponseWrapper::new(WrapperErrEnum::Fail.code(), msg.into());
     }
 
     pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErr::UnknownError.code(), msg.into());
+        self.base = ResponseWrapper::new(WrapperErrEnum::UnknownError.code(), msg.into());
     }
 }
 
