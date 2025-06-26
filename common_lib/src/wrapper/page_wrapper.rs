@@ -82,7 +82,7 @@ impl<T> PageWrapper<T> {
 }
 
 /// 分页信息结构体
-#[derive(Debug, serde::Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug,Serialize, PartialEq, Eq, Hash)]
 pub struct PageInfo {
     /// 当前页数
     page_num: Option<u64>,
