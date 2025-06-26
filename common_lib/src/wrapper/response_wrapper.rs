@@ -1,6 +1,6 @@
 use crate::enums::WrapperErr;
 ///# 响应包装
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq, Eq, Hash)]
 pub struct ResponseWrapper {
     code: i32,
     message: String,
