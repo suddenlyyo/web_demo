@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 # 公共响应处理
 common_lib = { path = "../common_lib" }
+actix-web = "4"
