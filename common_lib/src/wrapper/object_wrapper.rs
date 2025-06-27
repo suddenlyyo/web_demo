@@ -11,18 +11,19 @@ pub struct ObjectWrapper<T> {
 
 impl<T> ObjectWrapper<T> {
     pub fn new() -> Self {
-        ObjectWrapper {
+        Self {
             base: ResponseWrapper::success_default(),
             data: None,
         }
     }
 
     pub fn success(data: T) -> Self {
-        ObjectWrapper {
+        Self {
             base: ResponseWrapper::success_default(),
             data: Some(data),
         }
     }
+    
     pub fn set_fail(&mut self, msg: impl Into<String>) {
         self.base = ResponseWrapper::new(WrapperErrEnum::Fail.code(), msg.into());
         self.data = None;
