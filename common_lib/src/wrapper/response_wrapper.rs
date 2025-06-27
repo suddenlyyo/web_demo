@@ -10,7 +10,7 @@ pub struct ResponseWrapper {
 impl ResponseWrapper {
     // 通用构造函数
     pub fn new<S: Into<String>>(code: i32, message: S) -> Self {
-        ResponseWrapper {
+        Self {
             code,
             message: message.into(),
         }
@@ -49,7 +49,7 @@ impl ResponseWrapper {
     }
     // 从 WrapperErr 创建响应包装
     pub fn from(err: WrapperErrEnum) -> Self {
-        ResponseWrapper {
+        Self {
             code: err.code(),
             message: err.message().to_string(),
         }
