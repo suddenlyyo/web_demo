@@ -26,7 +26,7 @@ mod tests {
     #[test]
     fn response_wrapper_test() {
         //let response = ResponseWrapper::success_default();
-        let response = ResponseWrapper::from(WrapperErrEnum::from(WrapperErrEnum::Success.code()) 
+        let response = ResponseWrapper::from(WrapperErrEnum::from(WrapperErrEnum::Success.code()));
         let response_serialized = serde_json::to_string(&response).unwrap();
         println!("response_serialized = {}", response_serialized);
         assert_eq!(response.get_code(), WrapperErrEnum::Success.code());
