@@ -1,5 +1,5 @@
 use crate::enums::WrapperErrEnum;
-use serde::{Deserialize, Serialize}
+use serde::{Deserialize, Serialize};
 ///# 响应包装
 #[derive(Debug, Serialize,Deserialize, PartialEq, Eq, Hash)]
 pub struct ResponseWrapper {
