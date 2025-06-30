@@ -3,7 +3,7 @@ use crate::wrapper::ResponseWrapper;
 
 use serde::Serialize;
 /// 分页包装
-#[derive(Debug, Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize,Deserialize, PartialEq, Eq, Hash)]
 pub struct PageWrapper<T> {
     #[serde(flatten)]
     pub base: ResponseWrapper,
