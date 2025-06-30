@@ -1,7 +1,6 @@
 use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
-
-use serde::Serialize;
+use serde::{Deserialize, Serialize}
 /// 分页包装
 #[derive(Debug, Serialize,Deserialize, PartialEq, Eq, Hash)]
 pub struct PageWrapper<T> {
