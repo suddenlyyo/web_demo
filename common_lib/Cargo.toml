@@ -4,5 +4,7 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
-# 通用的序列化和反序列化框架
+# 用于有效和通用地序列化和反序列化Rust数据结构的框架
 serde = { version = "1.0.219", features = ["derive"] }
+# 基于serde框架实现，专门用于JSON格式的库
+serde_json = "1.0.140"
