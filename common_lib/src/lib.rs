@@ -26,15 +26,21 @@ mod tests {
     #[test]
     fn response_wrapper_test() {
         let response = ResponseWrapper::success_default();
+        let response_serialized = serde_json::to_string(&response).unwrap();
+        println!("response_serialized = {}", response_serialized);
         assert_eq!(response.get_code(), WrapperErrEnum::Success.code());
         assert_eq!(response.get_message(), "Success");
         let mut fail = ResponseWrapper::fail_default();
+        let fail_serialized = serde_json::to_string(&fail).unwrap();
+        println!("fail_serialized = {}", fail_serialized);
         assert_eq!(fail.get_code(), WrapperErrEnum::Fail.code());
         assert_eq!(fail.get_message(), "Fail");
         fail.fail("New Fail Message");
         assert_eq!(fail.get_code(), WrapperErrEnum::Fail.code());
         assert_eq!(fail.get_message(), "New Fail Message");
         let mut unknown_error = ResponseWrapper::unknown_error_default();
+        let unknown_error_serialized = serde_json::to_string(&unknown_error).unwrap();
+        println!("unknown_error_serialized = {}", unknown_error_serialized);
         assert_eq!(
             unknown_error.get_code(),
             WrapperErrEnum::UnknownError.code()
