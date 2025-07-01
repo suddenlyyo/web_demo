@@ -2,7 +2,6 @@
 resolver = "3"   
 members = [
     "common_lib",
-    "actix_web_demo",
     "axum_demo",
     "rocket_demo",
 ]
