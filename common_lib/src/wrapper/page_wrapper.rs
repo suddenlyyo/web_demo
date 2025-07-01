@@ -2,7 +2,7 @@ use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
 use serde::{Deserialize, Serialize};
 /// 分页包装
-#[derive(Debug, Serialize,Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PageWrapper<T> {
     #[serde(flatten)]
     pub base: ResponseWrapper,
@@ -81,7 +81,7 @@ impl<T> PageWrapper<T> {
 }
 
 /// 分页信息结构体
-#[derive(Debug,Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct PageInfo {
     /// 当前页数
     page_num: Option<u64>,

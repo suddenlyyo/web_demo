@@ -26,7 +26,9 @@ mod tests {
     #[test]
     fn response_wrapper_test() {
         //let response = ResponseWrapper::success_default();
-        let response = ResponseWrapper::from(WrapperErrEnum::from_code(WrapperErrEnum::Success.code()).expect("fail code!"));
+        let response = ResponseWrapper::from(
+            WrapperErrEnum::from_code(WrapperErrEnum::Success.code()).expect("fail code!"),
+        );
         let response_serialized = serde_json::to_string(&response).unwrap();
         println!("response_serialized = {}", response_serialized);
         assert_eq!(response.get_code(), WrapperErrEnum::Success.code());
@@ -72,7 +74,10 @@ mod tests {
         let mut unknown_error_data = ObjectWrapper::<String>::new();
         unknown_error_data.set_unknown_error("Unknown Error");
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
-        println!("unknown_error_data_serialized = {}", unknown_error_data_serialized);
+        println!(
+            "unknown_error_data_serialized = {}",
+            unknown_error_data_serialized
+        );
         assert_eq!(
             unknown_error_data.get_base().get_code(),
             WrapperErrEnum::UnknownError.code()
@@ -96,7 +101,10 @@ mod tests {
         let mut unknown_error_data = ListWrapper::<String>::new();
         unknown_error_data.set_unknown_error("Unknown Error");
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
-        println!("unknown_error_data_serialized = {}", unknown_error_data_serialized);
+        println!(
+            "unknown_error_data_serialized = {}",
+            unknown_error_data_serialized
+        );
         assert_eq!(
             unknown_error_data.get_base().get_code(),
             WrapperErrEnum::UnknownError.code()
@@ -120,7 +128,10 @@ mod tests {
         );
         page_wrapper.set_fail("Fail");
         let page_wrapper_fail_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!("page_wrapper_fail_serialized = {}", page_wrapper_fail_serialized);
+        println!(
+            "page_wrapper_fail_serialized = {}",
+            page_wrapper_fail_serialized
+        );
         assert_eq!(
             page_wrapper.get_base().get_code(),
             WrapperErrEnum::Fail.code()
@@ -128,7 +139,10 @@ mod tests {
         assert_eq!(page_wrapper.get_data(), None);
         page_wrapper.set_unknown_error("Unknown Error");
         let page_wrapper_unknown_error_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!("page_wrapper_unknown_error_serialized = {}", page_wrapper_unknown_error_serialized);
+        println!(
+            "page_wrapper_unknown_error_serialized = {}",
+            page_wrapper_unknown_error_serialized
+        );
         assert_eq!(
             page_wrapper.get_base().get_code(),
             WrapperErrEnum::UnknownError.code()

@@ -2,7 +2,7 @@ use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
 use serde::{Deserialize, Serialize};
 // 带数据的包装
-#[derive(Debug, Serialize,Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ObjectWrapper<T> {
     #[serde(flatten)] //扁平化，去掉json中的base把内部结构提出来
     pub base: ResponseWrapper,
@@ -23,7 +23,7 @@ impl<T> ObjectWrapper<T> {
             data: Some(data),
         }
     }
-    
+
     pub fn set_fail(&mut self, msg: impl Into<String>) {
         self.base = ResponseWrapper::new(WrapperErrEnum::Fail.code(), msg.into());
         self.data = None;

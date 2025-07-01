@@ -2,7 +2,7 @@ use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
 use serde::{Deserialize, Serialize};
 // 带列表数据的包装
-#[derive(Debug, Serialize,Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ListWrapper<T> {
     #[serde(flatten)]
     base: ResponseWrapper,

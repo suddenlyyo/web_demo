@@ -4,4 +4,5 @@ members = [
     "common_lib",
     "axum_demo",
     "rocket_demo",
+    "actix_web_demo",
 ]
