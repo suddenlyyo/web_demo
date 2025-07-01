@@ -1,9 +1,0 @@
-[package]
-name = "actix_web_demo"
-version = "0.0.0"
-edition = "2024"
-
-[dependencies]
-# 公共响应处理
-common_lib = { path = "../common_lib" }
-actix-web = "4"
