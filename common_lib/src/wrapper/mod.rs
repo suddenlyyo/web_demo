@@ -1,3 +1,4 @@
+mod response_trait; 
 mod list_wrapper;
 mod object_wrapper;
 mod page_wrapper;
