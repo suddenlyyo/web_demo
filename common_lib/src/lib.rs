@@ -30,7 +30,7 @@ mod tests {
         let response_serialized = serde_json::to_string(&response).unwrap();
         println!("response_serialized = {}", response_serialized);
         
-        assert_eq!(response.get_code(), WrapperErrEnum::Success.code());
+        assert_eq!(response.get_code(), WrapperErrEnum::Success.into());
         assert_eq!(response.get_message(), "Success");
         
         let mut fail = ResponseWrapper::fail_default();
@@ -38,12 +38,12 @@ mod tests {
         let fail_serialized = serde_json::to_string(&fail).unwrap();
         println!("fail_serialized = {}", fail_serialized);
         
-        assert_eq!(fail.get_code(), WrapperErrEnum::Fail.code());
+        assert_eq!(fail.get_code(), WrapperErrEnum::Fail.into());
         assert_eq!(fail.get_message(), "Fail");
         
         fail.set_fail("New Fail Message");
         
-        assert_eq!(fail.get_code(), WrapperErrEnum::Fail.code());
+        assert_eq!(fail.get_code(), WrapperErrEnum::Fail.into());
         assert_eq!(fail.get_message(), "New Fail Message");
         
         let mut unknown_error = ResponseWrapper::unknown_error_default();
@@ -53,14 +53,14 @@ mod tests {
         
         assert_eq!(
             unknown_error.get_code(),
-            WrapperErrEnum::UnknownError.code()
+            WrapperErrEnum::UnknownError.into()
         );
         assert_eq!(unknown_error.get_message(), "Unknown Error");
         
         unknown_error.set_unknown_error("New Unknown Error Message");
         assert_eq!(
             unknown_error.get_code(),
-            WrapperErrEnum::UnknownError.code()
+            WrapperErrEnum::UnknownError.into()
         );
         assert_eq!(unknown_error.get_message(), "New Unknown Error Message");
     }
@@ -74,7 +74,7 @@ mod tests {
         let data_serialized = serde_json::to_string(&data).unwrap();
         println!("data_serialized = {}", data_serialized);
         
-        assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.code());
+        assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.into());
         assert_eq!(data.get_data(), Some(&"Test Data"));
 
         let mut fail_data = ObjectWrapper::<String>::new();
@@ -83,7 +83,7 @@ mod tests {
         let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
         println!("fail_data_serialized = {}", fail_data_serialized);
         
-        assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.code());
+        assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.into());
         assert_eq!(fail_data.get_data(), None);
         
         let mut unknown_error_data = ObjectWrapper::<String>::new();
@@ -97,7 +97,7 @@ mod tests {
         
         assert_eq!(
             unknown_error_data.get_base().get_code(),
-            WrapperErrEnum::UnknownError.code()
+            WrapperErrEnum::UnknownError.into()
         );
         assert_eq!(unknown_error_data.get_data(), None);
     }
@@ -110,7 +110,7 @@ mod tests {
         let data_serialized = serde_json::to_string(&data).unwrap();
         println!("data_serialized = {}", data_serialized);
         
-        assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.code());
+        assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.into());
         assert_eq!(data.data(), Some(&vec!["Test Data 1", "Test Data 2"]));
         
         let mut fail_data = ListWrapper::<String>::new();
@@ -119,7 +119,7 @@ mod tests {
         let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
         println!("fail_data_serialized = {}", fail_data_serialized);
         
-        assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.code());
+        assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.into());
         assert_eq!(fail_data.data(), None);
         
         let mut unknown_error_data = ListWrapper::<String>::new();
@@ -132,7 +132,7 @@ mod tests {
         );
         assert_eq!(
             unknown_error_data.get_base().get_code(),
-            WrapperErrEnum::UnknownError.code()
+            WrapperErrEnum::UnknownError.into()
         );
         assert_eq!(unknown_error_data.data(), None);
     }
@@ -164,7 +164,7 @@ mod tests {
         
         assert_eq!(
             page_wrapper.get_base().get_code(),
-            WrapperErrEnum::Fail.code()
+            WrapperErrEnum::Fail.into()
         );
         assert_eq!(page_wrapper.get_data(), None);
         
@@ -178,7 +178,7 @@ mod tests {
         
         assert_eq!(
             page_wrapper.get_base().get_code(),
-            WrapperErrEnum::UnknownError.code()
+            WrapperErrEnum::UnknownError.into()
         );
         assert_eq!(page_wrapper.get_data(), None);
     }
