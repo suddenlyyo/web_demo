@@ -168,11 +168,11 @@ impl PageInfo {
         let current_page_num = self.current_page_num.unwrap_or(1);
         let page_size = self.get_page_size();
 
-        // 确保不会因减1导致下溢（当 page_num=0 时）
-        if page_num == 0 {
+        // 确保不会因减1导致下溢（当 current_page_num=0 时）
+        if current_page_num == 0 {
             0
         } else {
-            (page_num - 1) * page_size
+            (current_page_num - 1) * page_size
         }
     }
 }
