@@ -36,7 +36,7 @@ impl ResponseWrapper {
 impl From<WrapperErrEnum> for ResponseWrapper {
     fn from(item: WrapperErrEnum) -> Self {
         Self {
-            code: item.into(),
+            code: item as i32,
             message: item.message().to_owned(),
         }
     }
