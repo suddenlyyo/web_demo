@@ -7,15 +7,6 @@ pub enum WrapperErrEnum {
 }
 
 impl WrapperErrEnum {
-    // 获取固定错误码
-    pub const fn code(&self) -> i32 {
-        match self {
-            Self::Success => Self::Success as i32,
-            Self::Fail => Self::Fail as i32,
-            Self::UnknownError => Self::UnknownError as i32,
-        }
-    }
-
     // pub const  定义公共常量函数
     // 需要编译时计算值时
     // 提供常量上下文中使用的构造函数或工具函数
@@ -28,14 +19,23 @@ impl WrapperErrEnum {
             Self::UnknownError => "Unknown Error",
         }
     }
+}
 
-    // 按错误码查找枚举值
-    pub fn from_code(code: i32) -> Option<Self> {
+impl From<WrapperErrEnum> for i32 {
+    fn from(value: WrapperErrEnum) -> Self {
+        value as i32
+    }
+}
+
+impl TryFrom<i32> for WrapperErrEnum {
+    type Error = &'static str; // 使用有意义的错误类型
+
+    fn try_from(code: i32) -> Result<Self, Self::Error> {
         match code {
-            _ if code == Self::Success as i32 => Some(Self::Success),
-            _ if code == Self::Fail as i32 => Some(Self::Fail),
-            _ if code == Self::UnknownError as i32 => Some(Self::UnknownError),
-            _ => None,
+            code if code == Self::Success as i32 => Ok(Self::Success),
+            code if code == Self::Fail as i32 => Ok(Self::Fail),
+            code if code == Self::UnknownError as i32 => Ok(Self::UnknownError),
+            _ => Err("Fail code!"), // 提供有意义的错误信息
         }
     }
 }
