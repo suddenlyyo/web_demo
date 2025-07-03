@@ -43,7 +43,7 @@ impl<T> PageWrapper<T> {
     }
 
     // 默认失败响应
-    pub fn fail_default(&self) -> Self {
+    pub fn fail_default(&mut self) -> Self {
         self.base.fail_default();
         self.data = None;
         self.total = 0u64;
@@ -53,7 +53,7 @@ impl<T> PageWrapper<T> {
     }
 
     // 默认未知错误响应
-    pub fn unknown_error_default(&self) -> Self {
+    pub fn unknown_error_default(&mut self) -> Self {
         self.base.unknown_error_default();
         self.data = None;
         self.total = 0u64;
