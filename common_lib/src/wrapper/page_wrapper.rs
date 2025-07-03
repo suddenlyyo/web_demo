@@ -1,5 +1,6 @@
 use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
+use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 /// 分页包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -42,8 +43,9 @@ impl<T> PageWrapper<T> {
         }
     }
 
-    pub fn set_fail(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErrEnum::Fail.code(), msg.into());
+    // 默认失败响应
+    pub fn fail_default() -> Self {
+        self.base.fail_default();
         self.data = None;
         self.total = 0u64;
         self.total_page = 0u64;
@@ -51,14 +53,16 @@ impl<T> PageWrapper<T> {
         self.page_size = 0u64;
     }
 
-    pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErrEnum::UnknownError.code(), msg.into());
+    // 默认未知错误响应
+    pub fn unknown_error_default() -> Self {
+        self.base.unknown_error_default();
         self.data = None;
         self.total = 0u64;
         self.total_page = 0u64;
         self.current_page_num = 1u64;
         self.page_size = 0u64;
     }
+
     pub fn get_base(&self) -> &ResponseWrapper {
         &self.base
     }
@@ -77,6 +81,38 @@ impl<T> PageWrapper<T> {
     }
     pub fn get_page_size(&self) -> u64 {
         self.page_size
+    }
+}
+
+impl<T> ResponseTrait for PageWrapper<T> {
+    fn get_code(&self) -> i32 {
+        self.base.get_code()
+    }
+
+    fn get_message(&self) -> &str {
+        self.base.get_message()
+    }
+
+    fn is_success(&self) -> bool {
+        self.base.is_success()
+    }
+
+    fn set_fail(&mut self, msg: impl Into<String>) {
+        self.base.set_fail(msg);
+        self.data = None;
+        self.total = 0u64;
+        self.total_page = 0u64;
+        self.current_page_num = 1u64;
+        self.page_size = 0u64;
+    }
+
+    fn set_unknown_error(&mut self, msg: impl Into<String>) {
+        self.base.set_unknown_error(msg);
+        self.data = None;
+        self.total = 0u64;
+        self.total_page = 0u64;
+        self.current_page_num = 1u64;
+        self.page_size = 0u64;
     }
 }
 
