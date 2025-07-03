@@ -32,16 +32,3 @@ impl From<i32> for WrapperErrEnum {
         }
     }
 }
-
-impl TryFrom<i32> for WrapperErrEnum {
-    type Error = &'static str; 
-
-    fn try_from(code: i32) -> Result<Self, Self::Error> {
-        match code {
-            code if code == Self::Success as i32 => Ok(Self::Success),
-            code if code == Self::Fail as i32 => Ok(Self::Fail),
-            code if code == Self::UnknownError as i32 => Ok(Self::UnknownError),
-            _ => Err("Fail code!"), 
-        }
-    }
-}
