@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn object_wrapper_test() {
-        let data=ObjectWrapper::new();
+        let mut data=ObjectWrapper::new();
         //设置成功
         data.set_success("Test Data");
         //序列化
@@ -107,7 +107,7 @@ mod tests {
 
     #[test]
     fn list_wrapper_test() {
-        let data=ListWrapper::new();
+        let mut data=ListWrapper::new();
         data.set_success(vec!["Test Data 1", "Test Data 2"]);
         
         let data_serialized = serde_json::to_string(&data).unwrap();
