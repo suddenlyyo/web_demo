@@ -23,6 +23,12 @@ impl<T> ObjectWrapper<T> {
             data: Some(data),
         }
     }
+
+    // 设置成功状态和数据
+    pub fn set_success(&mut self, data: T) {
+        self.base = ResponseWrapper::success_default();
+        self.data = Some(data);
+    }
     
     // 默认失败响应
     pub fn fail_default(&mut self) -> Self {
