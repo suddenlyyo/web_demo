@@ -1,5 +1,6 @@
 use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
+use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 // 带列表数据的包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
@@ -23,13 +24,16 @@ impl<T> ListWrapper<T> {
             data: Some(data),
         }
     }
-    pub fn set_fail(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErrEnum::Fail.code(), msg.into());
+
+    // 默认失败响应
+    pub fn fail_default() -> Self {
+        self.base.fail_default();
         self.data = None;
     }
 
-    pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.base = ResponseWrapper::new(WrapperErrEnum::UnknownError.code(), msg.into());
+    // 默认未知错误响应
+    pub fn unknown_error_default() -> Self {
+        self.base.unknown_error_default();
         self.data = None;
     }
 
@@ -39,5 +43,29 @@ impl<T> ListWrapper<T> {
 
     pub fn data(&self) -> Option<&Vec<T>> {
         self.data.as_ref()
+    }
+}
+
+impl<T> ResponseTrait for ListWrapper<T> {
+    fn get_code(&self) -> i32 {
+        self.base.get_code()
+    }
+
+    fn get_message(&self) -> &str {
+        self.base.get_message()
+    }
+
+    fn is_success(&self) -> bool {
+        self.base.is_success()
+    }
+
+    fn set_fail(&mut self, msg: impl Into<String>) {
+        self.base.set_fail(msg);
+        self.data = None;
+    }
+
+    fn set_unknown_error(&mut self, msg: impl Into<String>) {
+        self.base.set_unknown_error(msg);
+        self.data = None;
     }
 }
