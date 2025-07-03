@@ -25,7 +25,7 @@ impl<T> ListWrapper<T> {
     }
 
     // 设置成功状态和数据
-    pub fn set_success(&mut self, data: T) {
+    pub fn set_success(&mut self, data: Vec<T>) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
     }
