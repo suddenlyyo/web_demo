@@ -1,5 +1,5 @@
 /// 错误枚举
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug,Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WrapperErrEnum {
     Success = 1,
     Fail = -1,
