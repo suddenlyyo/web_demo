@@ -5,7 +5,7 @@ mod wrapper;
 mod tests {
     use crate::{
         enums::WrapperErrEnum,
-        wrapper::{ListWrapper, ObjectWrapper, PageWrapper, ResponseWrapper},
+        wrapper::{ListWrapper, ObjectWrapper, PageWrapper, ResponseWrapper,ResponseTrait},
     };
 
     #[test]
