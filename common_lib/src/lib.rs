@@ -11,25 +11,22 @@ mod tests {
     #[test]
     fn wrapper_err_enum_test() {
         let success = WrapperErrEnum::Success;
-        assert_eq!(success.code(), 1);
+        assert_eq!(success.into(), 1);
         assert_eq!(success.message(), "Success");
 
         let fail = WrapperErrEnum::Fail;
-        assert_eq!(fail.code(), -1);
+        assert_eq!(fail.into(), -1);
         assert_eq!(fail.message(), "Fail");
 
         let unknown_error = WrapperErrEnum::UnknownError;
-        assert_eq!(unknown_error.code(), -2);
+        assert_eq!(unknown_error.into(), -2);
         assert_eq!(unknown_error.message(), "Unknown Error");
     }
 
     #[test]
     fn response_wrapper_test() {
-        //let response = ResponseWrapper::success_default();
-        let response = ResponseWrapper::from(
-            WrapperErrEnum::from_code(WrapperErrEnum::Success.code()).expect("fail code!"),
-        );
-        
+        let response = ResponseWrapper::success_default();
+     
         let response_serialized = serde_json::to_string(&response).unwrap();
         println!("response_serialized = {}", response_serialized);
         
