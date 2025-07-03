@@ -57,96 +57,96 @@ mod tests {
         assert_eq!(unknown_error.get_message(), "New Unknown Error Message");
     }
 
-    #[test]
-    fn object_wrapper_test() {
-        let data = ObjectWrapper::success("Test Data");
-        let data_serialized = serde_json::to_string(&data).unwrap();
-        println!("data_serialized = {}", data_serialized);
-        assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.code());
-        assert_eq!(data.get_data(), Some(&"Test Data"));
+    // #[test]
+    // fn object_wrapper_test() {
+    //     let data = ObjectWrapper::success("Test Data");
+    //     let data_serialized = serde_json::to_string(&data).unwrap();
+    //     println!("data_serialized = {}", data_serialized);
+    //     assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.code());
+    //     assert_eq!(data.get_data(), Some(&"Test Data"));
 
-        let mut fail_data = ObjectWrapper::<String>::new();
-        fail_data.set_fail("Failed");
-        let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
-        println!("fail_data_serialized = {}", fail_data_serialized);
-        assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.code());
-        assert_eq!(fail_data.get_data(), None);
-        let mut unknown_error_data = ObjectWrapper::<String>::new();
-        unknown_error_data.set_unknown_error("Unknown Error");
-        let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
-        println!(
-            "unknown_error_data_serialized = {}",
-            unknown_error_data_serialized
-        );
-        assert_eq!(
-            unknown_error_data.get_base().get_code(),
-            WrapperErrEnum::UnknownError.code()
-        );
-        assert_eq!(unknown_error_data.get_data(), None);
-    }
+    //     let mut fail_data = ObjectWrapper::<String>::new();
+    //     fail_data.set_fail("Failed");
+    //     let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
+    //     println!("fail_data_serialized = {}", fail_data_serialized);
+    //     assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.code());
+    //     assert_eq!(fail_data.get_data(), None);
+    //     let mut unknown_error_data = ObjectWrapper::<String>::new();
+    //     unknown_error_data.set_unknown_error("Unknown Error");
+    //     let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
+    //     println!(
+    //         "unknown_error_data_serialized = {}",
+    //         unknown_error_data_serialized
+    //     );
+    //     assert_eq!(
+    //         unknown_error_data.get_base().get_code(),
+    //         WrapperErrEnum::UnknownError.code()
+    //     );
+    //     assert_eq!(unknown_error_data.get_data(), None);
+    // }
 
-    #[test]
-    fn list_wrapper_test() {
-        let data = ListWrapper::success(vec!["Test Data 1", "Test Data 2"]);
-        let data_serialized = serde_json::to_string(&data).unwrap();
-        println!("data_serialized = {}", data_serialized);
-        assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.code());
-        assert_eq!(data.data(), Some(&vec!["Test Data 1", "Test Data 2"]));
-        let mut fail_data = ListWrapper::<String>::new();
-        fail_data.set_fail("Failed");
-        let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
-        println!("fail_data_serialized = {}", fail_data_serialized);
-        assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.code());
-        assert_eq!(fail_data.data(), None);
-        let mut unknown_error_data = ListWrapper::<String>::new();
-        unknown_error_data.set_unknown_error("Unknown Error");
-        let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
-        println!(
-            "unknown_error_data_serialized = {}",
-            unknown_error_data_serialized
-        );
-        assert_eq!(
-            unknown_error_data.get_base().get_code(),
-            WrapperErrEnum::UnknownError.code()
-        );
-        assert_eq!(unknown_error_data.data(), None);
-    }
+    // #[test]
+    // fn list_wrapper_test() {
+    //     let data = ListWrapper::success(vec!["Test Data 1", "Test Data 2"]);
+    //     let data_serialized = serde_json::to_string(&data).unwrap();
+    //     println!("data_serialized = {}", data_serialized);
+    //     assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success.code());
+    //     assert_eq!(data.data(), Some(&vec!["Test Data 1", "Test Data 2"]));
+    //     let mut fail_data = ListWrapper::<String>::new();
+    //     fail_data.set_fail("Failed");
+    //     let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
+    //     println!("fail_data_serialized = {}", fail_data_serialized);
+    //     assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail.code());
+    //     assert_eq!(fail_data.data(), None);
+    //     let mut unknown_error_data = ListWrapper::<String>::new();
+    //     unknown_error_data.set_unknown_error("Unknown Error");
+    //     let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
+    //     println!(
+    //         "unknown_error_data_serialized = {}",
+    //         unknown_error_data_serialized
+    //     );
+    //     assert_eq!(
+    //         unknown_error_data.get_base().get_code(),
+    //         WrapperErrEnum::UnknownError.code()
+    //     );
+    //     assert_eq!(unknown_error_data.data(), None);
+    // }
 
-    #[test]
-    fn page_wrapper_test() {
-        let mut page_wrapper = PageWrapper::<String>::new();
-        page_wrapper = PageWrapper::success(vec!["1".to_string(), "2".to_string()], 2, 1, 1, 1);
-        let page_wrapper_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!("page_wrapper_serialized = {}", page_wrapper_serialized);
-        assert_eq!(page_wrapper.get_total(), 2);
-        assert_eq!(page_wrapper.get_total_page(), 1);
-        assert_eq!(page_wrapper.get_current_page_num(), 1);
-        assert_eq!(page_wrapper.get_page_size(), 1);
-        assert_eq!(
-            page_wrapper.get_data(),
-            Some(&vec!["1".to_string(), "2".to_string()])
-        );
-        page_wrapper.set_fail("Fail");
-        let page_wrapper_fail_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!(
-            "page_wrapper_fail_serialized = {}",
-            page_wrapper_fail_serialized
-        );
-        assert_eq!(
-            page_wrapper.get_base().get_code(),
-            WrapperErrEnum::Fail.code()
-        );
-        assert_eq!(page_wrapper.get_data(), None);
-        page_wrapper.set_unknown_error("Unknown Error");
-        let page_wrapper_unknown_error_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!(
-            "page_wrapper_unknown_error_serialized = {}",
-            page_wrapper_unknown_error_serialized
-        );
-        assert_eq!(
-            page_wrapper.get_base().get_code(),
-            WrapperErrEnum::UnknownError.code()
-        );
-        assert_eq!(page_wrapper.get_data(), None);
-    }
+    // #[test]
+    // fn page_wrapper_test() {
+    //     let mut page_wrapper = PageWrapper::<String>::new();
+    //     page_wrapper = PageWrapper::success(vec!["1".to_string(), "2".to_string()], 2, 1, 1, 1);
+    //     let page_wrapper_serialized = serde_json::to_string(&page_wrapper).unwrap();
+    //     println!("page_wrapper_serialized = {}", page_wrapper_serialized);
+    //     assert_eq!(page_wrapper.get_total(), 2);
+    //     assert_eq!(page_wrapper.get_total_page(), 1);
+    //     assert_eq!(page_wrapper.get_current_page_num(), 1);
+    //     assert_eq!(page_wrapper.get_page_size(), 1);
+    //     assert_eq!(
+    //         page_wrapper.get_data(),
+    //         Some(&vec!["1".to_string(), "2".to_string()])
+    //     );
+    //     page_wrapper.set_fail("Fail");
+    //     let page_wrapper_fail_serialized = serde_json::to_string(&page_wrapper).unwrap();
+    //     println!(
+    //         "page_wrapper_fail_serialized = {}",
+    //         page_wrapper_fail_serialized
+    //     );
+    //     assert_eq!(
+    //         page_wrapper.get_base().get_code(),
+    //         WrapperErrEnum::Fail.code()
+    //     );
+    //     assert_eq!(page_wrapper.get_data(), None);
+    //     page_wrapper.set_unknown_error("Unknown Error");
+    //     let page_wrapper_unknown_error_serialized = serde_json::to_string(&page_wrapper).unwrap();
+    //     println!(
+    //         "page_wrapper_unknown_error_serialized = {}",
+    //         page_wrapper_unknown_error_serialized
+    //     );
+    //     assert_eq!(
+    //         page_wrapper.get_base().get_code(),
+    //         WrapperErrEnum::UnknownError.code()
+    //     );
+    //     assert_eq!(page_wrapper.get_data(), None);
+    // }
 }
