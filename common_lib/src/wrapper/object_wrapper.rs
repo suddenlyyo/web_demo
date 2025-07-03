@@ -17,10 +17,19 @@ impl<T> ObjectWrapper<T> {
         }
     }
 
-    pub fn success(data: T) -> Self {
+    // 默认失败响应
+    pub fn fail_default(&mut self) -> Self {
         Self {
-            base: ResponseWrapper::success_default(),
-            data: Some(data),
+            base: ResponseWrapper::fail_default(),
+            data: None,
+        }
+    }
+
+    // 默认未知错误响应
+    pub fn unknown_error_default(&mut self) -> Self {
+        Self {
+            base: ResponseWrapper::unknown_error_default(),
+            data: None,
         }
     }
 
@@ -28,18 +37,6 @@ impl<T> ObjectWrapper<T> {
     pub fn set_success(&mut self, data: T) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
-    }
-    
-    // 默认失败响应
-    pub fn fail_default(&mut self) -> Self {
-        self.base = ResponseWrapper::fail_default();
-        self.data = None;
-    }
-
-    // 默认未知错误响应
-    pub fn unknown_error_default(&mut self) -> Self {
-        self.base = ResponseWrapper::unknown_error_default();
-        self.data = None;
     }
 
     pub fn get_base(&self) -> &ResponseWrapper {
