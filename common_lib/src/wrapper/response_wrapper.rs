@@ -17,19 +17,19 @@ impl ResponseWrapper {
         }
     }
 
-    // 默认成功响应
-    pub fn success_default(&self) -> Self {
-        self = ResponseWrapper::from(WrapperErrEnum::Success)
+   // 默认成功响应
+    pub fn success_default() -> Self {
+        ResponseWrapper::from(WrapperErrEnum::Success)
     }
 
     // 默认失败响应
-    pub fn fail_default(&self) -> Self {
-        self = ResponseWrapper::from(WrapperErrEnum::Fail)
+    pub fn fail_default() -> Self {
+        ResponseWrapper::from(WrapperErrEnum::Fail)
     }
 
     // 默认未知错误响应
-    pub fn unknown_error_default(&self) -> Self {
-        self = ResponseWrapper::from(WrapperErrEnum::UnknownError)
+    pub fn unknown_error_default() -> Self {
+        ResponseWrapper::from(WrapperErrEnum::UnknownError)
     }
 }
 
