@@ -21,21 +21,27 @@ impl WrapperErrEnum {
     }
 }
 
-impl From<WrapperErrEnum> for i32 {
-    fn from(value: WrapperErrEnum) -> Self {
-        value as i32
+impl From<i32> for WrapperErrEnum {
+    fn from(code: i32) -> Self {
+        match code {
+            0 => Self::Success,
+            1 => Self::Fail,
+            2 => Self::UnknownError,
+            // 处理非法值
+            _ => Self::UnknownError,
+        }
     }
 }
 
 impl TryFrom<i32> for WrapperErrEnum {
-    type Error = &'static str; // 使用有意义的错误类型
+    type Error = &'static str; 
 
     fn try_from(code: i32) -> Result<Self, Self::Error> {
         match code {
             code if code == Self::Success as i32 => Ok(Self::Success),
             code if code == Self::Fail as i32 => Ok(Self::Fail),
             code if code == Self::UnknownError as i32 => Ok(Self::UnknownError),
-            _ => Err("Fail code!"), // 提供有意义的错误信息
+            _ => Err("Fail code!"), 
         }
     }
 }
