@@ -15,14 +15,7 @@ impl ResponseWrapper {
             message: message.into(),
         }
     }
-
-    pub fn get_code(&self) -> i32 {
-        self.code
-    }
-
-    pub fn get_message(&self) -> &str {
-        &self.message
-    }
+    
     // 默认成功响应
     pub fn success_default() -> Self {
         Self::from(WrapperErrEnum::Success)
@@ -32,26 +25,33 @@ impl ResponseWrapper {
     pub fn fail_default() -> Self {
         Self::from(WrapperErrEnum::Fail)
     }
+    
     // 默认未知错误响应
     pub fn unknown_error_default() -> Self {
         Self::from(WrapperErrEnum::UnknownError)
     }
-    // 设置错误状态
-    pub fn fail(&mut self, message: impl Into<String>) {
-        self.code = WrapperErrEnum::Fail.code();
-        self.message = message.into();
+}
+
+impl ResponseTrait for ResponseWrapper {
+    fn get_code(&self) -> i32 {
+        self.code
     }
 
-    // 设置未知错误状态
-    pub fn unknown_error(&mut self, message: impl Into<String>) {
-        self.code = WrapperErrEnum::UnknownError.code();
-        self.message = message.into();
+    fn get_message(&self) -> &str {
+        &self.message
     }
-    // 从 WrapperErr 创建响应包装
-    pub fn from(err: WrapperErrEnum) -> Self {
-        Self {
-            code: err.code(),
-            message: err.message().to_string(),
-        }
+
+    fn is_success(&self) -> bool {
+        self.code == WrapperErrEnum::Success.code()
+    }
+
+    fn set_fail(&mut self, msg: impl Into<String>) {
+        self.code = WrapperErrEnum::Fail.code();
+        self.message = msg.into();
+    }
+
+    fn set_unknown_error(&mut self, msg: impl Into<String>) {
+        self.code = WrapperErrEnum::UnknownError.code();
+        self.message = msg.into();
     }
 }
