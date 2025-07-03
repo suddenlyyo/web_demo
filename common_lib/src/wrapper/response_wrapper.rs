@@ -1,4 +1,5 @@
 use crate::enums::WrapperErrEnum;
+use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 ///# 响应包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
