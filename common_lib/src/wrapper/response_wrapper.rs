@@ -16,20 +16,29 @@ impl ResponseWrapper {
             message: message.into(),
         }
     }
-    
+
     // 默认成功响应
-    pub fn success_default() -> Self {
-        Self::from(WrapperErrEnum::Success)
+    pub fn success_default(&self) -> Self {
+        self = ResponseWrapper::from(WrapperErrEnum::Success)
     }
 
     // 默认失败响应
-    pub fn fail_default() -> Self {
-        Self::from(WrapperErrEnum::Fail)
+    pub fn fail_default(&self) -> Self {
+        self = ResponseWrapper::from(WrapperErrEnum::Fail)
     }
-    
+
     // 默认未知错误响应
-    pub fn unknown_error_default() -> Self {
-        Self::from(WrapperErrEnum::UnknownError)
+    pub fn unknown_error_default(&self) -> Self {
+        self = ResponseWrapper::from(WrapperErrEnum::UnknownError)
+    }
+}
+
+impl From<WrapperErrEnum> for ResponseWrapper {
+    fn from(item: WrapperErrEnum) -> Self {
+        Self {
+            code: item.code(),
+            message: item.message(),
+        }
     }
 }
 
