@@ -52,16 +52,16 @@ impl ResponseTrait for ResponseWrapper {
     }
 
     fn is_success(&self) -> bool {
-        self.code == WrapperErrEnum::Success.into() as i32
+        self.code == WrapperErrEnum::Success as i32
     }
 
     fn set_fail(&mut self, msg: impl Into<String>) {
-        self.code = WrapperErrEnum::Fail.into() as i32;
+        self.code = WrapperErrEnum::Fail as i32;
         self.message = msg.into();
     }
 
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.code = WrapperErrEnum::UnknownError.into() as i32;
+        self.code = WrapperErrEnum::UnknownError as i32;
         self.message = msg.into();
     }
 }
