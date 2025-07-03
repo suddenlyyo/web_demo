@@ -42,6 +42,23 @@ impl<T> PageWrapper<T> {
         }
     }
 
+    // 设置成功状态和数据
+    pub fn set_success(
+        &mut self,
+        data: Vec<T>,
+        total: u64,
+        total_page: u64,
+        current_page_num: u64,
+        page_size: u64,
+    ) {
+        self.base = ResponseWrapper::success_default();
+        self.data = Some(data);
+        self.total = total;
+        self.total_page = total_page;
+        self.current_page_num = current_page_num;
+        self.page_size = page_size;
+    }
+
     // 默认失败响应
     pub fn fail_default(&mut self) -> Self {
         self.base = ResponseWrapper::fail_default();
@@ -54,7 +71,7 @@ impl<T> PageWrapper<T> {
 
     // 默认未知错误响应
     pub fn unknown_error_default(&mut self) -> Self {
-        self.base = ResponseWrapper::.unknown_error_default();
+        self.base = ResponseWrapper::unknown_error_default();
         self.data = None;
         self.total = 0u64;
         self.total_page = 0u64;
@@ -119,16 +136,16 @@ impl<T> ResponseTrait for PageWrapper<T> {
 #[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct PageInfo {
     /// 当前页数
-    page_num: Option<u64>,
+    current_page_num: Option<u64>,
     /// 页面大小
     page_size: Option<u64>,
 }
 
 impl PageInfo {
     /// 创建一个新的 PageInfo 实例
-    pub fn new(page_num: Option<u64>, page_size: Option<u64>) -> Self {
+    pub fn new(current_page_num: Option<u64>, page_size: Option<u64>) -> Self {
         Self {
-            page_num,
+            current_page_num,
             page_size,
         }
     }
@@ -148,7 +165,7 @@ impl PageInfo {
     /// 计算公式:offset=(currentPage-1)*pageSize
     ///
     pub fn get_page_offset(&self) -> u64 {
-        let page_num = self.page_num.unwrap_or(1);
+        let current_page_num = self.current_page_num.unwrap_or(1);
         let page_size = self.get_page_size();
 
         // 确保不会因减1导致下溢（当 page_num=0 时）
