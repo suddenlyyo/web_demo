@@ -17,7 +17,7 @@ impl ResponseWrapper {
         }
     }
 
-   // 默认成功响应
+    // 默认成功响应
     pub fn success_default() -> Self {
         ResponseWrapper::from(WrapperErrEnum::Success)
     }
@@ -36,7 +36,7 @@ impl ResponseWrapper {
 impl From<WrapperErrEnum> for ResponseWrapper {
     fn from(item: WrapperErrEnum) -> Self {
         Self {
-            code: item.code(),
+            code: item.into(),
             message: item.message().to_owned(),
         }
     }
@@ -52,16 +52,16 @@ impl ResponseTrait for ResponseWrapper {
     }
 
     fn is_success(&self) -> bool {
-        self.code == WrapperErrEnum::Success.code()
+        self.code == WrapperErrEnum::Success.into()
     }
 
     fn set_fail(&mut self, msg: impl Into<String>) {
-        self.code = WrapperErrEnum::Fail.code();
+        self.code = WrapperErrEnum::Fail.into();
         self.message = msg.into();
     }
 
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.code = WrapperErrEnum::UnknownError.code();
+        self.code = WrapperErrEnum::UnknownError.into();
         self.message = msg.into();
     }
 }
