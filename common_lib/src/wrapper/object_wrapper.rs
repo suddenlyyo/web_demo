@@ -62,12 +62,12 @@ impl<T> ResponseTrait for ObjectWrapper<T> {
     }
 
     fn set_fail(&mut self, msg: impl Into<String>) {
-        self.base.set_fail(msg);
-        self.data = None;
+        self.code = WrapperErrEnum::Fail.into();
+        self.message = msg.into();
     }
 
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.base.set_unknown_error(msg);
-        self.data = None;
+        self.code = WrapperErrEnum::UnknownError.into();
+        self.message = msg.into();
     }
 }
