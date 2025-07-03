@@ -24,6 +24,7 @@ impl<T> ObjectWrapper<T> {
             data: Some(data),
         }
     }
+    
     // 默认失败响应
     pub fn fail_default() -> Self {
         self.base.fail_default();
