@@ -1,4 +1,3 @@
-use crate::enums::WrapperErrEnum;
 use crate::wrapper::ResponseWrapper;
 use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
