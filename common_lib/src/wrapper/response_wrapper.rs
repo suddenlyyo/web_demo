@@ -52,7 +52,7 @@ impl ResponseTrait for ResponseWrapper {
     }
 
     fn is_success(&self) -> bool {
-         WrapperErrEnum::Success ==  WrapperErrEnum::from(self.code)
+        self.code == WrapperErrEnum::Success as i32
     }
 
     fn set_fail(&mut self, msg: impl Into<String>) {
