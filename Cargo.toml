@@ -1,8 +1,9 @@
 [workspace]
 resolver = "3"   
 members = [
-    "common_lib",
+    "common_wrapper",
     "axum_demo",
     "rocket_demo",
     "actix_web_demo",
+    "common_validation",
 ]
