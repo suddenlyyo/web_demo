@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 # 公共响应处理
-common_lib = { path = "../common_wrapper" }
+common_wrapper = { path = "../common_wrapper" }
