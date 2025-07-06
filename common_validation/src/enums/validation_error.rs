@@ -1,3 +1,4 @@
+use thiserror::Error;
 // 错误类型定义
 #[derive(Debug, Error)]
 pub enum ValidationErrorEnum {

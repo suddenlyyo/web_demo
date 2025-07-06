@@ -3,6 +3,9 @@ name = "common_validation"
 version = "0.0.0"
 edition = "2024"
 
+[lib]
+proc-macro = true
+
 [dependencies]
 # 简化自定义错误类型定义
 thiserror="2.0.12"
