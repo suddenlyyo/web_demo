@@ -5,7 +5,7 @@ mod wrapper;
 mod tests {
     use crate::{
         enums::WrapperErrEnum,
-        wrapper::{ListWrapper, ObjectWrapper, PageWrapper, ResponseWrapper,ResponseTrait},
+        wrapper::{ListWrapper, ObjectWrapper, PageWrapper, ResponseTrait, ResponseWrapper},
     };
 
     #[test]
@@ -26,37 +26,37 @@ mod tests {
     #[test]
     fn response_wrapper_test() {
         let response = ResponseWrapper::success_default();
-     
+
         let response_serialized = serde_json::to_string(&response).unwrap();
         println!("response_serialized = {}", response_serialized);
-        
+
         assert_eq!(response.get_code(), WrapperErrEnum::Success as i32);
         assert_eq!(response.get_message(), "Success");
-        
+
         let mut fail = ResponseWrapper::fail_default();
-        
+
         let fail_serialized = serde_json::to_string(&fail).unwrap();
         println!("fail_serialized = {}", fail_serialized);
-        
+
         assert_eq!(fail.get_code(), WrapperErrEnum::Fail as i32);
         assert_eq!(fail.get_message(), "Fail");
-        
+
         fail.set_fail("New Fail Message");
-        
+
         assert_eq!(fail.get_code(), WrapperErrEnum::Fail as i32);
         assert_eq!(fail.get_message(), "New Fail Message");
-        
+
         let mut unknown_error = ResponseWrapper::unknown_error_default();
-        
+
         let unknown_error_serialized = serde_json::to_string(&unknown_error).unwrap();
         println!("unknown_error_serialized = {}", unknown_error_serialized);
-        
+
         assert_eq!(
             unknown_error.get_code(),
             WrapperErrEnum::UnknownError as i32
         );
         assert_eq!(unknown_error.get_message(), "Unknown Error");
-        
+
         unknown_error.set_unknown_error("New Unknown Error Message");
         assert_eq!(
             unknown_error.get_code(),
@@ -67,34 +67,34 @@ mod tests {
 
     #[test]
     fn object_wrapper_test() {
-        let mut data=ObjectWrapper::new();
+        let mut data = ObjectWrapper::new();
         //设置成功
         data.set_success("Test Data");
         //序列化
         let data_serialized = serde_json::to_string(&data).unwrap();
         println!("data_serialized = {}", data_serialized);
-        
+
         assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success as i32);
         assert_eq!(data.get_data(), Some(&"Test Data"));
 
         let mut fail_data = ObjectWrapper::<String>::new();
         fail_data.set_fail("Failed");
-        
+
         let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
         println!("fail_data_serialized = {}", fail_data_serialized);
-        
+
         assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail as i32);
         assert_eq!(fail_data.get_data(), None);
-        
+
         let mut unknown_error_data = ObjectWrapper::<String>::new();
         unknown_error_data.set_unknown_error("Unknown Error");
-        
+
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
         println!(
             "unknown_error_data_serialized = {}",
             unknown_error_data_serialized
         );
-        
+
         assert_eq!(
             unknown_error_data.get_base().get_code(),
             WrapperErrEnum::UnknownError as i32
@@ -104,27 +104,27 @@ mod tests {
 
     #[test]
     fn list_wrapper_test() {
-        let mut data=ListWrapper::new();
+        let mut data = ListWrapper::new();
         data.set_success(vec!["Test Data 1", "Test Data 2"]);
-        
+
         let data_serialized = serde_json::to_string(&data).unwrap();
         println!("data_serialized = {}", data_serialized);
-        
+
         assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success as i32);
         assert_eq!(data.data(), Some(&vec!["Test Data 1", "Test Data 2"]));
-        
+
         let mut fail_data = ListWrapper::<String>::new();
         fail_data.set_fail("Failed");
-        
+
         let fail_data_serialized = serde_json::to_string(&fail_data).unwrap();
         println!("fail_data_serialized = {}", fail_data_serialized);
-        
+
         assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail as i32);
         assert_eq!(fail_data.data(), None);
-        
+
         let mut unknown_error_data = ListWrapper::<String>::new();
         unknown_error_data.set_unknown_error("Unknown Error");
-        
+
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
         println!(
             "unknown_error_data_serialized = {}",
@@ -141,10 +141,10 @@ mod tests {
     fn page_wrapper_test() {
         let mut page_wrapper = PageWrapper::<String>::new();
         page_wrapper.set_success(vec!["1".to_string(), "2".to_string()], 2, 1, 1, 1);
-        
+
         let page_wrapper_serialized = serde_json::to_string(&page_wrapper).unwrap();
         println!("page_wrapper_serialized = {}", page_wrapper_serialized);
-        
+
         assert_eq!(page_wrapper.get_total(), 2);
         assert_eq!(page_wrapper.get_total_page(), 1);
         assert_eq!(page_wrapper.get_current_page_num(), 1);
@@ -153,29 +153,29 @@ mod tests {
             page_wrapper.get_data(),
             Some(&vec!["1".to_string(), "2".to_string()])
         );
-        
+
         page_wrapper.set_fail("Fail");
-        
+
         let page_wrapper_fail_serialized = serde_json::to_string(&page_wrapper).unwrap();
         println!(
             "page_wrapper_fail_serialized = {}",
             page_wrapper_fail_serialized
         );
-        
+
         assert_eq!(
             page_wrapper.get_base().get_code(),
             WrapperErrEnum::Fail as i32
         );
         assert_eq!(page_wrapper.get_data(), None);
-        
+
         page_wrapper.set_unknown_error("Unknown Error");
-        
+
         let page_wrapper_unknown_error_serialized = serde_json::to_string(&page_wrapper).unwrap();
         println!(
             "page_wrapper_unknown_error_serialized = {}",
             page_wrapper_unknown_error_serialized
         );
-        
+
         assert_eq!(
             page_wrapper.get_base().get_code(),
             WrapperErrEnum::UnknownError as i32

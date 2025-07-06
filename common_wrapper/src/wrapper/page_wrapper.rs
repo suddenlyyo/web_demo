@@ -156,10 +156,10 @@ impl PageInfo {
         let page_size = self.get_page_size();
 
         // 确保不会因减1导致下溢（当 current_page_num =0 时）
-        if current_page_num  == 0 {
+        if current_page_num == 0 {
             0
         } else {
-            (current_page_num  - 1) * page_size
+            (current_page_num - 1) * page_size
         }
     }
 }
