@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 ///# 响应包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ResponseWrapper {
+    /// 响应码
     code: i32,
+    /// 响应消息
     message: String,
 }
 

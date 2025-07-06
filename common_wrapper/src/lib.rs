@@ -145,7 +145,7 @@ mod tests {
         let page_wrapper_serialized = serde_json::to_string(&page_wrapper).unwrap();
         println!("page_wrapper_serialized = {}", page_wrapper_serialized);
 
-        assert_eq!(page_wrapper.get_total(), 2);
+        assert_eq!(page_wrapper.get_total_count(), 2);
         assert_eq!(page_wrapper.get_total_page(), 1);
         assert_eq!(page_wrapper.get_current_page_num(), 1);
         assert_eq!(page_wrapper.get_page_size(), 1);

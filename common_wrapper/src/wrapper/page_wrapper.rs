@@ -4,12 +4,18 @@ use serde::{Deserialize, Serialize};
 /// 分页包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PageWrapper<T> {
+    /// 响应基础信息
     #[serde(flatten)]
     pub base: ResponseWrapper,
+    /// 数据
     pub data: Option<Vec<T>>,
-    pub total: u64,
+    /// 总条数
+    pub total_count: u64,
+    /// 总页数
     pub total_page: u64,
+    /// 当前页码
     pub current_page_num: u64,
+    /// 每页大小
     pub page_size: u64,
 }
 
@@ -18,7 +24,7 @@ impl<T> PageWrapper<T> {
         Self {
             base: ResponseWrapper::success_default(),
             data: None,
-            total: 0u64,
+            total_count: 0u64,
             total_page: 0u64,
             current_page_num: 1u64,
             page_size: 0u64,
@@ -30,7 +36,7 @@ impl<T> PageWrapper<T> {
         Self {
             base: ResponseWrapper::fail_default(),
             data: None,
-            total: 0u64,
+            total_count: 0u64,
             total_page: 0u64,
             current_page_num: 1u64,
             page_size: 0u64,
@@ -42,7 +48,7 @@ impl<T> PageWrapper<T> {
         Self {
             base: ResponseWrapper::unknown_error_default(),
             data: None,
-            total: 0u64,
+            total_count: 0u64,
             total_page: 0u64,
             current_page_num: 1u64,
             page_size: 0u64,
@@ -53,14 +59,14 @@ impl<T> PageWrapper<T> {
     pub fn set_success(
         &mut self,
         data: Vec<T>,
-        total: u64,
+        total_count: u64,
         total_page: u64,
         current_page_num: u64,
         page_size: u64,
     ) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
-        self.total = total;
+        self.total_count = total_count;
         self.total_page = total_page;
         self.current_page_num = current_page_num;
         self.page_size = page_size;
@@ -73,8 +79,8 @@ impl<T> PageWrapper<T> {
     pub fn get_data(&self) -> Option<&Vec<T>> {
         self.data.as_ref()
     }
-    pub fn get_total(&self) -> u64 {
-        self.total
+    pub fn get_total_count(&self) -> u64 {
+        self.total_count
     }
     pub fn get_total_page(&self) -> u64 {
         self.total_page
@@ -103,7 +109,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
     fn set_fail(&mut self, msg: impl Into<String>) {
         self.base.set_fail(msg);
         self.data = None;
-        self.total = 0u64;
+        self.total_count = 0u64;
         self.total_page = 0u64;
         self.current_page_num = 1u64;
         self.page_size = 0u64;
@@ -112,7 +118,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
         self.base.set_unknown_error(msg);
         self.data = None;
-        self.total = 0u64;
+        self.total_count = 0u64;
         self.total_page = 0u64;
         self.current_page_num = 1u64;
         self.page_size = 0u64;

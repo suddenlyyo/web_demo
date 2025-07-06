@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 // 带列表数据的包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ListWrapper<T> {
+    ///
     #[serde(flatten)]
     base: ResponseWrapper,
+    /// 数据
     data: Option<Vec<T>>,
 }
 

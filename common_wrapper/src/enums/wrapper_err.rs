@@ -1,8 +1,11 @@
 /// 错误枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WrapperErrEnum {
+    /// 成功
     Success = 1,
+    /// 失败
     Fail = -1,
+    /// 未知错误
     UnknownError = -2,
 }
 

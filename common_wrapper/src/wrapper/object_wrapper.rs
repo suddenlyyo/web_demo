@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 // 带数据的包装
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ObjectWrapper<T> {
+    /// 响应基础信息
     #[serde(flatten)] //扁平化，去掉json中的base把内部结构解构出来
     pub base: ResponseWrapper,
+    /// 数据
     pub data: Option<T>,
 }
 
