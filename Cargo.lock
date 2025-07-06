@@ -185,6 +185,8 @@ name = "common_validation"
 version = "0.0.0"
 dependencies = [
  "chrono",
+ "quote",
+ "syn",
  "thiserror",
 ]
 

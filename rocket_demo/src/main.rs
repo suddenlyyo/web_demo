@@ -1,5 +1,5 @@
 //#[macro_use] extern crate rocket; //Rust 2015 宏导入语法
-use rocket::*; //Rust 2018及以上
+use rocket::*; //Rust 2018+
 
 #[get("/")]
 fn index() -> &'static str {
