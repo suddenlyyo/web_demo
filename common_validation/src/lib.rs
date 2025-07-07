@@ -9,14 +9,11 @@ use syn::{
 
 mod enums;
 
-// 过程宏：为结构体生成验证方法,定义一个名为 Validate 的过程宏,并设置一个名为 `validation` 的属性宏。
+// 过程宏：为结构体生成验证方法
 #[proc_macro_derive(Validate, attributes(validation))]
 pub fn derive_validate(input: TokenStream) -> TokenStream {
-    // 解析输入的 TokenStream
     let input = parse_macro_input!(input as DeriveInput);
-    // 获取结构体名称
     let struct_name = &input.ident;
-    // 获取结构体的数据类型
     let fields = if let Data::Struct(s) = &input.data {
         &s.fields
     } else {
@@ -31,11 +28,7 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
     let validation_calls = field_validations.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
-
-        // 解析字段属性
         let config = parse_field_attributes(&field.attrs, &field_name_str);
-
-        // 为每个字段生成验证逻辑
         generate_field_validation(&field_name, &config)
     });
 
@@ -50,7 +43,7 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
 
     TokenStream::from(expanded)
 }
-/// 字段验证配置
+
 struct FieldValidation {
     desc: String,
     rules: Vec<ValidateRulesEnum>,
@@ -59,7 +52,7 @@ struct FieldValidation {
     number_min: i64,
     number_max: i64,
 }
-// 解析字段属性
+
 fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidation {
     let mut config = FieldValidation {
         desc: field_name.to_string(),
@@ -74,7 +67,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
         if attr.path().is_ident("validation") {
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("desc") {
-                    if let Some(Lit::Str(desc)) = meta.value().and_then(|v| v.parse().ok()) {
+                    if let Ok(Lit::Str(desc)) = meta.value().and_then(|v| v.parse()) {
                         config.desc = desc.value();
                     }
                     return Ok(());
@@ -99,17 +92,16 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                 }
 
                 if meta.path.is_ident("length") {
-                    if let Some(Lit::Str(length)) = meta.value().and_then(|v| v.parse().ok()) {
+                    if let Ok(Lit::Str(length)) = meta.value().and_then(|v| v.parse()) {
                         let parts: Vec<&str> = length.value().split('~').collect();
                         if parts.len() == 2 {
-                            config.length =
-                                Some((parts[0].parse().unwrap(), parts[1].parse().unwrap()));
+                            config.length = Some((parts[0].parse().unwrap(), parts[1].parse().unwrap()));
                         }
                     }
                 }
 
                 if meta.path.is_ident("date_format") {
-                    if let Some(Lit::Str(format)) = meta.value().and_then(|v| v.parse().ok()) {
+                    if let Ok(Lit::Str(format)) = meta.value().and_then(|v| v.parse()) {
                         config.date_format = match format.value().as_str() {
                             "TIME" => DateTimeFormatEnum::Time,
                             "DATE_TIME" => DateTimeFormatEnum::DateTime,
@@ -122,28 +114,28 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                     }
                 }
 
+               
                 if meta.path.is_ident("number_min") {
-                    if let Some(Lit::Int(min)) = meta.value().and_then(|v| v.parse().ok()) {
+                    if let Ok(Lit::Int(min)) = meta.value().and_then(|v| v.parse()) {
                         config.number_min = min.base10_parse().unwrap();
                     }
                 }
 
+                
                 if meta.path.is_ident("number_max") {
-                    if let Some(Lit::Int(max)) = meta.value().and_then(|v| v.parse().ok()) {
+                    if let Ok(Lit::Int(max)) = meta.value().and_then(|v| v.parse()) {
                         config.number_max = max.base10_parse().unwrap();
                     }
                 }
 
                 Ok(())
-            })
-            .unwrap();
+            }).unwrap();
         }
     }
 
     config
 }
 
-// 为字段生成验证代码
 fn generate_field_validation(
     field_name: &Ident,
     config: &FieldValidation,
@@ -228,9 +220,9 @@ fn generate_field_validation(
         checks.push(check);
     }
 
-    quote! {
+     TokenStream::from(quote! {
         #(#checks)*
-    }
+    })
 }
 // 函数验证属性宏
 #[proc_macro_attribute]
@@ -238,17 +230,11 @@ pub fn validate_parameters(_attr: TokenStream, item: TokenStream) -> TokenStream
     let mut input = parse_macro_input!(item as ItemFn);
 
     let body = &input.block;
-    let name = &input.sig.ident;
-    let inputs = &input.sig.inputs;
 
-    // 生成验证代码
     let expanded = quote! {
-        for param in [&self] {
-            param.validate()?;
-        }
+        self.validate()?;
     };
 
-    // 修改函数体
     input.block = parse_quote! {
         {
             #expanded
