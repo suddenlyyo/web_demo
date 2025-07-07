@@ -1,7 +1,7 @@
 use crate::enums::DateTimeFormatEnum;
 use crate::enums::ValidateRulesEnum;
-use crate::proc_macro::TokenStream;
-use proc_macro;
+use proc_macro2::TokenStream as TokenStream2;
+use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     Attribute, Data, DeriveInput, Fields, Ident, ItemFn, Lit, parse_macro_input, parse_quote,
@@ -9,7 +9,6 @@ use syn::{
 
 mod enums;
 
-// 过程宏：为结构体生成验证方法
 #[proc_macro_derive(Validate, attributes(validation))]
 pub fn derive_validate(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -29,7 +28,7 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
         let config = parse_field_attributes(&field.attrs, &field_name_str);
-        generate_field_validation(&field_name, &config)
+        generate_field_validation(&field_name, &config) 
     });
 
     let expanded = quote! {
@@ -92,10 +91,15 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                 }
 
                 if meta.path.is_ident("length") {
+                    // 修复：延长 length_str 的生命周期
                     if let Ok(Lit::Str(length)) = meta.value().and_then(|v| v.parse()) {
-                        let parts: Vec<&str> = length.value().split('~').collect();
+                        let length_str = length.value(); // 存储为局部变量
+                        let parts: Vec<&str> = length_str.split('~').collect();
                         if parts.len() == 2 {
-                            config.length = Some((parts[0].parse().unwrap(), parts[1].parse().unwrap()));
+                            config.length = Some((
+                                parts[0].parse().unwrap(),
+                                parts[1].parse().unwrap()
+                            ));
                         }
                     }
                 }
@@ -114,14 +118,12 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                     }
                 }
 
-               
                 if meta.path.is_ident("number_min") {
                     if let Ok(Lit::Int(min)) = meta.value().and_then(|v| v.parse()) {
                         config.number_min = min.base10_parse().unwrap();
                     }
                 }
 
-                
                 if meta.path.is_ident("number_max") {
                     if let Ok(Lit::Int(max)) = meta.value().and_then(|v| v.parse()) {
                         config.number_max = max.base10_parse().unwrap();
@@ -136,10 +138,11 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
     config
 }
 
+// 修改返回类型为 TokenStream2
 fn generate_field_validation(
     field_name: &Ident,
     config: &FieldValidation,
-) -> proc_macro::TokenStream {
+) -> TokenStream2 {
     let desc = &config.desc;
     let field_value = quote! { &self.#field_name };
 
@@ -216,15 +219,22 @@ fn generate_field_validation(
                     }
                 }
             }
+            // 添加对 Structure 规则的处理
+            ValidateRulesEnum::Structure => {
+                quote! {
+                    // 嵌套结构体验证
+                    #field_value.validate()?;
+                }
+            }
         };
         checks.push(check);
     }
 
-     TokenStream::from(quote! {
+    quote! {
         #(#checks)*
-    })
+    }
 }
-// 函数验证属性宏
+
 #[proc_macro_attribute]
 pub fn validate_parameters(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(item as ItemFn);
