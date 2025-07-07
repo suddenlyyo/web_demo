@@ -3,7 +3,9 @@ use crate::enums::ValidateRulesEnum;
 use crate::proc_macro::TokenStream;
 use proc_macro;
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput, Fields, ItemFn, Lit, parse_macro_input, parse_quote};
+use syn::{
+    Attribute, Data, DeriveInput, Fields, Ident, ItemFn, Lit, parse_macro_input, parse_quote,
+};
 
 mod enums;
 
