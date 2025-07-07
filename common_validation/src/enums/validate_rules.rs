@@ -17,6 +17,6 @@ pub enum ValidateRulesEnum {
     NumberMin,
     ///验证数字的最最值
     NumberMax,
-    ///验证整个结构体
-    Structure,
+ //   ///验证整个结构体
+ //   Structure,
 }
