@@ -1,5 +1,4 @@
-use crate::enums::DateTimeFormatEnum;
-use crate::enums::ValidateRulesEnum;
+use crate::{DateTimeFormatEnum,ValidateRulesEnum,ValidationErrorEnum};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
@@ -35,7 +34,7 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #struct_name {
-            pub fn validate(&self) -> Result<(), ValidationError> {
+            pub fn validate(&self) -> Result<(), ValidationErrorEnum> {
                 #(#validation_calls)*
                 Ok(())
             }
