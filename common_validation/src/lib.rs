@@ -1,11 +1,7 @@
-// 在 Rust 2015 中：所有外部 crate 必须显式声明 extern crate。
-// 在 Rust 2018+ 中：普通依赖可通过 Cargo.toml 自动引入，
-// 但 proc_macro 在宏实现代码中仍需显式声明（因为它是特殊系统库）。
-extern crate proc_macro;
-
 use crate::enums::DateTimeFormatEnum;
 use crate::enums::ValidateRulesEnum;
 use crate::proc_macro::TokenStream;
+use proc_macro;
 use quote::quote;
 use syn::{Attribute, Data, DeriveInput, Fields, ItemFn, Lit, parse_macro_input, parse_quote};
 
@@ -52,34 +48,6 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
 
     TokenStream::from(expanded)
 }
-// 函数验证属性宏
-#[proc_macro_attribute]
-pub fn validate_parameters(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let mut input = syn::parse_macro_input!(item as syn::ItemFn);
-
-    let body = &input.block;
-    let name = &input.sig.ident;
-    let inputs = &input.sig.inputs;
-
-    // 生成验证代码
-    let expanded = quote! {
-        for param in [&self] {
-            param.validate()?;
-        }
-    };
-
-    // 修改函数体
-    input.block = parse_quote! {
-        {
-            #expanded
-            #body
-        }
-    };
-
-    TokenStream::from(quote! {
-        #input
-    })
-}
 /// 字段验证配置
 struct FieldValidation {
     desc: String,
@@ -95,7 +63,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
         desc: field_name.to_string(),
         rules: Vec::new(),
         length: None,
-        date_format: DateTimeFormatEnum::Null,
+        date_format: DateTimeFormatEnum::None,
         number_min: i64::MIN,
         number_max: i64::MAX,
     };
@@ -175,7 +143,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
 
 // 为字段生成验证代码
 fn generate_field_validation(
-    field_name: &syn::Ident,
+    field_name: &Ident,
     config: &FieldValidation,
 ) -> proc_macro::TokenStream {
     let desc = &config.desc;
@@ -261,6 +229,34 @@ fn generate_field_validation(
     quote! {
         #(#checks)*
     }
+}
+// 函数验证属性宏
+#[proc_macro_attribute]
+pub fn validate_parameters(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let mut input = parse_macro_input!(item as ItemFn);
+
+    let body = &input.block;
+    let name = &input.sig.ident;
+    let inputs = &input.sig.inputs;
+
+    // 生成验证代码
+    let expanded = quote! {
+        for param in [&self] {
+            param.validate()?;
+        }
+    };
+
+    // 修改函数体
+    input.block = parse_quote! {
+        {
+            #expanded
+            #body
+        }
+    };
+
+    TokenStream::from(quote! {
+        #input
+    })
 }
 
 #[cfg(test)]
