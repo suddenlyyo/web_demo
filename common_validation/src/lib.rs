@@ -1,7 +1,7 @@
 use crate::enums::DateTimeFormatEnum;
 use crate::enums::ValidateRulesEnum;
-use proc_macro2::TokenStream as TokenStream2;
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
     Attribute, Data, DeriveInput, Fields, Ident, ItemFn, Lit, parse_macro_input, parse_quote,
@@ -28,7 +28,7 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
         let field_name = field.ident.as_ref().unwrap();
         let field_name_str = field_name.to_string();
         let config = parse_field_attributes(&field.attrs, &field_name_str);
-        generate_field_validation(&field_name, &config) 
+        generate_field_validation(&field_name, &config)
     });
 
     let expanded = quote! {
@@ -96,10 +96,8 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                         let length_str = length.value(); // 存储为局部变量
                         let parts: Vec<&str> = length_str.split('~').collect();
                         if parts.len() == 2 {
-                            config.length = Some((
-                                parts[0].parse().unwrap(),
-                                parts[1].parse().unwrap()
-                            ));
+                            config.length =
+                                Some((parts[0].parse().unwrap(), parts[1].parse().unwrap()));
                         }
                     }
                 }
@@ -131,7 +129,8 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                 }
 
                 Ok(())
-            }).unwrap();
+            })
+            .unwrap();
         }
     }
 
@@ -139,10 +138,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
 }
 
 // 修改返回类型为 TokenStream2
-fn generate_field_validation(
-    field_name: &Ident,
-    config: &FieldValidation,
-) -> TokenStream2 {
+fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> TokenStream2 {
     let desc = &config.desc;
     let field_value = quote! { &self.#field_name };
 
@@ -260,38 +256,43 @@ pub fn validate_parameters(_attr: TokenStream, item: TokenStream) -> TokenStream
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::enums::{DateTimeFormatEnum, ValidateRulesEnum};
+    use crate::enums::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
     use chrono::NaiveDate;
-     
+
     // 测试结构体
     #[derive(Validate)]
     struct User {
         #[validation(desc = "用户名", rules(NotNone, LENGTH), length = "3~20")]
         username: String,
-        
-        #[validation(desc = "年龄", rules(NUMBER_MIN, NUMBER_MAX), number_min = 1, number_max = 150)]
+
+        #[validation(
+            desc = "年龄",
+            rules(NUMBER_MIN, NUMBER_MAX),
+            number_min = 1,
+            number_max = 150
+        )]
         age: String,
-        
+
         #[validation(desc = "出生日期", rules(DATE), date_format = "DATE")]
         birthday: String,
-        
+
         #[validation(desc = "个人简介", rules(ExistLength), length = "10~200")]
         bio: String,
-        
+
         #[validation(desc = "地址", rules(Structure))]
         address: Address,
     }
-    
+
     // 嵌套结构体
     #[derive(Validate)]
     struct Address {
         #[validation(desc = "省份", rules(NotNone))]
         province: String,
-        
+
         #[validation(desc = "城市", rules(NotNone))]
         city: String,
     }
-    
+
     #[test]
     fn test_valid_user() {
         let user = User {
@@ -304,10 +305,10 @@ mod tests {
                 city: "深圳市".to_string(),
             },
         };
-        
+
         assert_eq!(user.validate(), Ok(()));
     }
-    
+
     #[test]
     fn test_username_validation() {
         // 测试用户名不能为空
@@ -323,30 +324,36 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::NotNone("用户名".to_string()))
+            Err(ValidationErrorEnum::NotNone("用户名".to_string()))
         );
-        
+
         // 测试用户名长度过短
         let user = User {
             username: "ab".to_string(), // 小于3
             ..valid_user_base()
         };
-        assert!(matches!(
+        assert_eq!(
             user.validate(),
-            Err(ValidationError::Length(_, msg)) if msg.contains("3~20")
-        ));
-        
+            Err(ValidationErrorEnum::Length(
+                "用户名".to_string(),
+                "长度必须在 3~20 之间".to_string()
+            ))
+        );
+
         // 测试用户名长度过长
         let user = User {
             username: "abcdefghijklmnopqrstuvwxyz".to_string(), // 大于20
             ..valid_user_base()
         };
-        assert!(matches!(
+        assert_eq!(
             user.validate(),
-            Err(ValidationError::Length(_, msg)) if msg.contains("3~20")
-        ));
+            Err(ValidationErrorEnum::Length(
+                "用户名".to_string(),
+                "长度必须在 3~20 之间".to_string()
+            ))
+        );
     }
-    
+
     #[test]
     fn test_age_validation() {
         // 测试年龄过小
@@ -356,9 +363,9 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::NumberMin("年龄".to_string(), 1))
+            Err(ValidationErrorEnum::NumberMin("年龄".to_string(), 1))
         );
-        
+
         // 测试年龄过大
         let user = User {
             age: "151".to_string(), // 大于最大值150
@@ -366,19 +373,17 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::NumberMax("年龄".to_string(), 150))
+            Err(ValidationErrorEnum::NumberMax("年龄".to_string(), 150))
         );
-        
-        // 测试无效数字
+
+        // 测试无效数字 - 注意：目前我们的验证在解析失败时不会报错，所以这里预期是OK
         let user = User {
             age: "twentyfive".to_string(), // 非数字
             ..valid_user_base()
         };
-        // 因为我们的验证只检查数字范围，所以非数字不会触发错误
-        // 但实际应用中应该添加数字格式验证
         assert_eq!(user.validate(), Ok(()));
     }
-    
+
     #[test]
     fn test_birthday_validation() {
         // 测试无效日期格式
@@ -388,9 +393,9 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::Format("出生日期".to_string()))
+            Err(ValidationErrorEnum::Format("出生日期".to_string()))
         );
-        
+
         // 测试不可能日期
         let user = User {
             birthday: "1998-13-15".to_string(), // 无效月份
@@ -398,9 +403,9 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::Format("出生日期".to_string()))
+            Err(ValidationErrorEnum::Format("出生日期".to_string()))
         );
-        
+
         // 测试有效日期
         let user = User {
             birthday: "2000-02-29".to_string(), // 闰年有效日期
@@ -408,7 +413,7 @@ mod tests {
         };
         assert_eq!(user.validate(), Ok(()));
     }
-    
+
     #[test]
     fn test_bio_validation() {
         // 测试空简介（应该通过，因为ExistLength允许为空）
@@ -417,28 +422,34 @@ mod tests {
             ..valid_user_base()
         };
         assert_eq!(user.validate(), Ok(()));
-        
+
         // 测试过短简介（当有内容时）
         let user = User {
             bio: "太短".to_string(), // 小于10
             ..valid_user_base()
         };
-        assert!(matches!(
+        assert_eq!(
             user.validate(),
-            Err(ValidationError::Length(_, msg)) if msg.contains("10~200")
-        ));
-        
+            Err(ValidationErrorEnum::Length(
+                "个人简介".to_string(),
+                "长度必须在 10~200 之间".to_string()
+            ))
+        );
+
         // 测试过长简介
         let user = User {
             bio: "a".repeat(201), // 大于200
             ..valid_user_base()
         };
-        assert!(matches!(
+        assert_eq!(
             user.validate(),
-            Err(ValidationError::Length(_, msg)) if msg.contains("10~200")
-        ));
+            Err(ValidationErrorEnum::Length(
+                "个人简介".to_string(),
+                "长度必须在 10~200 之间".to_string()
+            ))
+        );
     }
-    
+
     #[test]
     fn test_nested_structure_validation() {
         // 测试省份为空
@@ -451,9 +462,9 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::NotNone("省份".to_string()))
+            Err(ValidationErrorEnum::NotNone("省份".to_string()))
         );
-        
+
         // 测试城市为空
         let user = User {
             address: Address {
@@ -464,31 +475,31 @@ mod tests {
         };
         assert_eq!(
             user.validate(),
-            Err(ValidationError::NotNone("城市".to_string()))
+            Err(ValidationErrorEnum::NotNone("城市".to_string()))
         );
     }
-    
+
     #[test]
     fn test_validation_order() {
-        // 测试多个错误时，返回第一个遇到的错误
+        // 测试多个错误时，返回第一个遇到的错误（即username字段的错误）
         let user = User {
-            username: "".to_string(), // 错误1
-            age: "0".to_string(),    // 错误2
+            username: "".to_string(),        // 错误1
+            age: "0".to_string(),            // 错误2
             birthday: "invalid".to_string(), // 错误3
-            bio: "太短".to_string(),  // 错误4
+            bio: "太短".to_string(),         // 错误4
             address: Address {
                 province: "".to_string(), // 错误5
                 city: "".to_string(),     // 错误6
             },
         };
-        
+
         // 应该返回用户名不能为空的错误（第一个字段）
         assert_eq!(
             user.validate(),
-            Err(ValidationError::NotNone("用户名".to_string()))
+            Err(ValidationErrorEnum::NotNone("用户名".to_string()))
         );
     }
-    
+
     // 创建一个有效用户的基础数据
     fn valid_user_base() -> User {
         User {
