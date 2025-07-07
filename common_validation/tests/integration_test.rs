@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use common_validation::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
+use common_validation::ennum::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
 use common_validation::Validate;
 
 // 测试结构体
