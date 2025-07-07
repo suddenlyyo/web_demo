@@ -8,6 +8,8 @@ use syn::{
 };
 
 mod enums;
+// 重新导出
+pub use enums::*;
 
 #[proc_macro_derive(Validate, attributes(validation))]
 pub fn derive_validate(input: TokenStream) -> TokenStream {
