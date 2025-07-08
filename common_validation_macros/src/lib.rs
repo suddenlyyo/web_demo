@@ -5,9 +5,6 @@ use syn::{
     Attribute, Data, DeriveInput, Fields, Ident, ItemFn, Lit, parse_macro_input, parse_quote,
 };
 
-mod enums;
-
-
 #[proc_macro_derive(Validate, attributes(validation))]
 pub fn derive_validate(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
