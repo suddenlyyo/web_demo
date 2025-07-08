@@ -1,4 +1,3 @@
-use chrono::NaiveDate;
 use common_validation::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
 use common_validation_macros::Validate;
 
