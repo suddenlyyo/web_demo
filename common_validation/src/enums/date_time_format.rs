@@ -1,5 +1,5 @@
 // 日期格式枚举
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DateTimeFormatEnum {
     Time,
     DateTime,
