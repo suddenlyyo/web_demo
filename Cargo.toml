@@ -6,4 +6,5 @@ members = [
     "rocket_demo",
     "actix_web_demo",
     "common_validation",
+    "common_validation_macros",
 ]
