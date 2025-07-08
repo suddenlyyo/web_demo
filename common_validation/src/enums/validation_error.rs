@@ -1,6 +1,6 @@
 use thiserror::Error;
 // 错误类型定义
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash ,Error)]
 pub enum ValidationErrorEnum {
     #[error("{0} 不能为空")]
     NotNone(String),
