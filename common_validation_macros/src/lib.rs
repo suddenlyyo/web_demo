@@ -1,10 +1,8 @@
-use common_validation::{DateTimeFormatEnum, ValidateRulesEnum};
+use common_validation::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{
-    Attribute, Data, DeriveInput, Fields, Ident, ItemFn, Lit, parse_macro_input, parse_quote,
-};
+use syn::{Attribute, Data, DeriveInput, Fields, Ident, Lit, parse_macro_input};
 
 #[proc_macro_derive(Validate, attributes(validation))]
 pub fn derive_validate(input: TokenStream) -> TokenStream {
@@ -81,7 +79,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                             "NUMBER_MIN" => ValidateRulesEnum::NumberMin,
                             "NUMBER_MAX" => ValidateRulesEnum::NumberMax,
                             "Structure" => ValidateRulesEnum::Structure,
-                            _ => panic!("未知的验证规则!"),
+                            _ => panic!("未知的验证规则: {:?}", rule_meta.path),
                         };
                         config.rules.push(rule);
                         Ok(())
@@ -89,13 +87,13 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                 }
 
                 if meta.path.is_ident("length") {
-                    
                     if let Ok(Lit::Str(length)) = meta.value().and_then(|v| v.parse()) {
-                        let length_str = length.value(); // 存储为局部变量
+                        let length_str = length.value();
                         let parts: Vec<&str> = length_str.split('~').collect();
                         if parts.len() == 2 {
-                            config.length =
-                                Some((parts[0].parse().unwrap(), parts[1].parse().unwrap()));
+                            if let (Ok(min), Ok(max)) = (parts[0].parse(), parts[1].parse()) {
+                                config.length = Some((min, max));
+                            }
                         }
                     }
                 }
@@ -116,19 +114,22 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
 
                 if meta.path.is_ident("number_min") {
                     if let Ok(Lit::Int(min)) = meta.value().and_then(|v| v.parse()) {
-                        config.number_min = min.base10_parse().unwrap();
+                        if let Ok(value) = min.base10_parse() {
+                            config.number_min = value;
+                        }
                     }
                 }
 
                 if meta.path.is_ident("number_max") {
                     if let Ok(Lit::Int(max)) = meta.value().and_then(|v| v.parse()) {
-                        config.number_max = max.base10_parse().unwrap();
+                        if let Ok(value) = max.base10_parse() {
+                            config.number_max = value;
+                        }
                     }
                 }
 
                 Ok(())
-            })
-            .unwrap();
+            }).unwrap();
         }
     }
 
@@ -137,7 +138,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
 
 fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> TokenStream2 {
     let desc = &config.desc;
-    let field_value = quote! { &self.#field_name };
+    let field_value = quote! { self.#field_name };
 
     let mut checks = Vec::new();
 
@@ -145,8 +146,8 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
         let check = match rule {
             ValidateRulesEnum::NotNone => {
                 quote! {
-                    if #field_value.is_empty() {
-                        return Err(ValidationError::NotNone(#desc.to_string()));
+                    if #field_value.is_none() {
+                        return Err(ValidationErrorEnum::NotNone(#desc.to_string()));
                     }
                 }
             }
@@ -155,7 +156,7 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
                     quote! {
                         let len = #field_value.len();
                         if len < #min || len > #max {
-                            return Err(ValidationError::Length(
+                            return Err(ValidationErrorEnum::Length(
                                 #desc.to_string(),
                                 format!("长度必须在 {}~{} 之间", #min, #max)
                             ));
@@ -171,7 +172,7 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
                         if !#field_value.is_empty() {
                             let len = #field_value.len();
                             if len < #min || len > #max {
-                                return Err(ValidationError::Length(
+                                return Err(ValidationErrorEnum::Length(
                                     #desc.to_string(),
                                     format!("长度必须在 {}~{} 之间", #min, #max)
                                 ));
@@ -187,7 +188,7 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
                 quote! {
                     if !#field_value.is_empty() {
                         if chrono::NaiveDate::parse_from_str(#field_value, #format).is_err() {
-                            return Err(ValidationError::Format(#desc.to_string()));
+                            return Err(ValidationErrorEnum::Format(#desc.to_string()));
                         }
                     }
                 }
@@ -195,28 +196,24 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
             ValidateRulesEnum::NumberMin => {
                 let min = config.number_min;
                 quote! {
-                    if let Ok(num) = #field_value.parse::<i64>() {
-                        if num < #min {
-                            return Err(ValidationError::NumberMin(#desc.to_string(), #min));
-                        }
+                    if #field_value < #min {
+                        return Err(ValidationErrorEnum::NumberMin(#desc.to_string(), #min));
                     }
                 }
             }
             ValidateRulesEnum::NumberMax => {
                 let max = config.number_max;
                 quote! {
-                    if let Ok(num) = #field_value.parse::<i64>() {
-                        if num > #max {
-                            return Err(ValidationError::NumberMax(#desc.to_string(), #max));
-                        }
+                    if #field_value > #max {
+                        return Err(ValidationErrorEnum::NumberMax(#desc.to_string(), #max));
                     }
                 }
             }
-            // 添加对 Structure 规则的处理
             ValidateRulesEnum::Structure => {
                 quote! {
-                    // 嵌套结构体验证
-                    #field_value.validate()?;
+                    if let Err(e) = #field_value.validate() {
+                        return Err(e);
+                    }
                 }
             }
         };
@@ -227,33 +224,3 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
         #(#checks)*
     }
 }
-
-#[proc_macro_attribute]
-pub fn validate_parameters(_attr: TokenStream, item: TokenStream) -> TokenStream {
-    let mut input = parse_macro_input!(item as ItemFn);
-
-    let body = &input.block;
-
-    let expanded = quote! {
-        self.validate()?;
-    };
-
-    input.block = parse_quote! {
-        {
-            #expanded
-            #body
-        }
-    };
-
-    TokenStream::from(quote! {
-        #input
-    })
-}
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::enums::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
-//     use chrono::NaiveDate;
-
-// }
