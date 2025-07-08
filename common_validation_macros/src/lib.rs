@@ -2,7 +2,7 @@ use common_validation::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEn
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{Attribute, Data, DeriveInput, Fields, Ident, Lit, parse_macro_input};
+use syn::{Attribute, Data, DeriveInput, Fields, Ident, Lit, parse_macro_input, Type};
 
 #[proc_macro_derive(Validate, attributes(validation))]
 pub fn derive_validate(input: TokenStream) -> TokenStream {
@@ -21,9 +21,10 @@ pub fn derive_validate(input: TokenStream) -> TokenStream {
 
     let validation_calls = field_validations.iter().map(|field| {
         let field_name = field.ident.as_ref().unwrap();
+        let field_type = &field.ty;
         let field_name_str = field_name.to_string();
         let config = parse_field_attributes(&field.attrs, &field_name_str);
-        generate_field_validation(&field_name, &config)
+        generate_field_validation(&field_name, field_type, &config)
     });
 
     let expanded = quote! {
@@ -136,18 +137,35 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
     config
 }
 
-fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> TokenStream2 {
+fn generate_field_validation(field_name: &Ident, field_type: &Type, config: &FieldValidation) -> TokenStream2 {
     let desc = &config.desc;
-    let field_value = quote! { self.#field_name };
+    let field_value = quote! { &self.#field_name };
+    
+    // 判断字段类型是否是 Option
+    let is_option = if let Type::Path(type_path) = field_type {
+        type_path.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false)
+    } else {
+        false
+    };
 
     let mut checks = Vec::new();
 
     for rule in &config.rules {
         let check = match rule {
             ValidateRulesEnum::NotNone => {
-                quote! {
-                    if #field_value.is_none() {
-                        return Err(ValidationErrorEnum::NotNone(#desc.to_string()));
+                if is_option {
+                    // 处理 Option 类型
+                    quote! {
+                        if #field_value.is_none() {
+                            return Err(ValidationErrorEnum::NotNone(#desc.to_string()));
+                        }
+                    }
+                } else {
+                    // 处理非 Option 类型（如 String）
+                    quote! {
+                        if #field_value.is_empty() {
+                            return Err(ValidationErrorEnum::NotNone(#desc.to_string()));
+                        }
                     }
                 }
             }
@@ -168,14 +186,30 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
             }
             ValidateRulesEnum::ExistLength => {
                 if let Some((min, max)) = config.length {
-                    quote! {
-                        if !#field_value.is_empty() {
-                            let len = #field_value.len();
-                            if len < #min || len > #max {
-                                return Err(ValidationErrorEnum::Length(
-                                    #desc.to_string(),
-                                    format!("长度必须在 {}~{} 之间", #min, #max)
-                                ));
+                    if is_option {
+                        quote! {
+                            if let Some(val) = #field_value {
+                                if !val.is_empty() {
+                                    let len = val.len();
+                                    if len < #min || len > #max {
+                                        return Err(ValidationErrorEnum::Length(
+                                            #desc.to_string(),
+                                            format!("长度必须在 {}~{} 之间", #min, #max)
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        quote! {
+                            if !#field_value.is_empty() {
+                                let len = #field_value.len();
+                                if len < #min || len > #max {
+                                    return Err(ValidationErrorEnum::Length(
+                                        #desc.to_string(),
+                                        format!("长度必须在 {}~{} 之间", #min, #max)
+                                    ));
+                                }
                             }
                         }
                     }
@@ -185,34 +219,78 @@ fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> To
             }
             ValidateRulesEnum::Date | ValidateRulesEnum::Time | ValidateRulesEnum::DateTime => {
                 let format = config.date_format.pattern();
-                quote! {
-                    if !#field_value.is_empty() {
-                        if chrono::NaiveDate::parse_from_str(#field_value, #format).is_err() {
-                            return Err(ValidationErrorEnum::Format(#desc.to_string()));
+                if is_option {
+                    quote! {
+                        if let Some(val) = #field_value {
+                            if !val.is_empty() {
+                                // 将字符串转换为 &str 进行解析
+                                if chrono::NaiveDate::parse_from_str(val.as_str(), #format).is_err() {
+                                    return Err(ValidationErrorEnum::Format(#desc.to_string()));
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    quote! {
+                        if !#field_value.is_empty() {
+                            // 将字符串转换为 &str 进行解析
+                            if chrono::NaiveDate::parse_from_str(#field_value.as_str(), #format).is_err() {
+                                return Err(ValidationErrorEnum::Format(#desc.to_string()));
+                            }
                         }
                     }
                 }
             }
             ValidateRulesEnum::NumberMin => {
                 let min = config.number_min;
-                quote! {
-                    if #field_value < #min {
-                        return Err(ValidationErrorEnum::NumberMin(#desc.to_string(), #min));
+                if is_option {
+                    quote! {
+                        if let Some(val) = #field_value {
+                            if *val < #min {
+                                return Err(ValidationErrorEnum::NumberMin(#desc.to_string(), #min));
+                            }
+                        }
+                    }
+                } else {
+                    quote! {
+                        if *#field_value < #min {
+                            return Err(ValidationErrorEnum::NumberMin(#desc.to_string(), #min));
+                        }
                     }
                 }
             }
             ValidateRulesEnum::NumberMax => {
                 let max = config.number_max;
-                quote! {
-                    if #field_value > #max {
-                        return Err(ValidationErrorEnum::NumberMax(#desc.to_string(), #max));
+                if is_option {
+                    quote! {
+                        if let Some(val) = #field_value {
+                            if *val > #max {
+                                return Err(ValidationErrorEnum::NumberMax(#desc.to_string(), #max));
+                            }
+                        }
+                    }
+                } else {
+                    quote! {
+                        if *#field_value > #max {
+                            return Err(ValidationErrorEnum::NumberMax(#desc.to_string(), #max));
+                        }
                     }
                 }
             }
             ValidateRulesEnum::Structure => {
-                quote! {
-                    if let Err(e) = #field_value.validate() {
-                        return Err(e);
+                if is_option {
+                    quote! {
+                        if let Some(val) = #field_value {
+                            if let Err(e) = val.validate() {
+                                return Err(e);
+                            }
+                        }
+                    }
+                } else {
+                    quote! {
+                        if let Err(e) = #field_value.validate() {
+                            return Err(e);
+                        }
                     }
                 }
             }
