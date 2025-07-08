@@ -80,6 +80,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                             "DATE_TIME" => ValidateRulesEnum::DateTime,
                             "NUMBER_MIN" => ValidateRulesEnum::NumberMin,
                             "NUMBER_MAX" => ValidateRulesEnum::NumberMax,
+                            "Structure" => ValidateRulesEnum::Structure,
                             _ => panic!("未知的验证规则!"),
                         };
                         config.rules.push(rule);
@@ -88,7 +89,7 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
                 }
 
                 if meta.path.is_ident("length") {
-                    // 修复：延长 length_str 的生命周期
+                    
                     if let Ok(Lit::Str(length)) = meta.value().and_then(|v| v.parse()) {
                         let length_str = length.value(); // 存储为局部变量
                         let parts: Vec<&str> = length_str.split('~').collect();
@@ -134,7 +135,6 @@ fn parse_field_attributes(attrs: &[Attribute], field_name: &str) -> FieldValidat
     config
 }
 
-// 修改返回类型为 TokenStream2
 fn generate_field_validation(field_name: &Ident, config: &FieldValidation) -> TokenStream2 {
     let desc = &config.desc;
     let field_value = quote! { &self.#field_name };
