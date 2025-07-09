@@ -1,7 +1,5 @@
-use std::str::FromStr;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-
-
+use std::str::FromStr;
 
 mod enums;
 // 重新导出
@@ -267,14 +265,10 @@ pub trait Validatable {
     fn validate(&self) -> Result<(), ValidationErrorEnum>;
 }
 
-
-
-
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
 //     use crate::enums::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
 //     use chrono::NaiveDate;
 
-   
 // }

@@ -185,9 +185,18 @@ name = "common_validation"
 version = "0.0.0"
 dependencies = [
  "chrono",
+ "thiserror",
+]
+
+[[package]]
+name = "common_validation_macros"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "common_validation",
+ "proc-macro2",
  "quote",
  "syn",
- "thiserror",
 ]
 
 [[package]]

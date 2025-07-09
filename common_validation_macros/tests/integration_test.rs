@@ -1,6 +1,10 @@
-
+use common_validation::{
+    DateTimeFormatEnum, ParameterValidator, Validatable, ValidationErrorEnum, ValidationRule,
+    ValidationRulesEnum,
+};
+use common_validation_macros::ValidatableImpl;
 // ====================== 基本结构体验证 ======================
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 struct BasicUser {
     #[validate(NotNone, Length, desc = "用户名", length = "3~20")]
     username: String,
@@ -22,11 +26,12 @@ struct BasicUser {
 #[test]
 fn test_basic_struct_validation() {
     // 有效用户
-    let valid_user = BasicUser {
+    let basic_user = BasicUser {
         username: "john_doe".to_string(),
         age: 30,
         birthdate: "1990-01-01".to_string(),
     };
+    let valid_user = basic_user;
     assert!(valid_user.validate().is_ok());
 
     // 用户名太短
@@ -67,7 +72,7 @@ fn test_basic_struct_validation() {
 }
 
 // ====================== 嵌套结构体验证 ======================
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 struct Address {
     #[validate(NotNone, Length, desc = "街道", length = "5~50")]
     street: String,
@@ -79,7 +84,7 @@ struct Address {
     zipcode: Option<String>,
 }
 
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 struct UserProfile {
     #[validate(Structure, desc = "基础信息")]
     basic: BasicUser,
@@ -182,7 +187,7 @@ fn test_nested_struct_validation() {
 }
 
 // ====================== 枚举验证 ======================
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 enum PaymentMethod {
     #[validate(desc = "信用卡支付")]
     CreditCard {
@@ -284,7 +289,7 @@ fn test_enum_validation() {
 }
 
 // ====================== 嵌套枚举验证 ======================
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 enum OrderStatus {
     #[validate(desc = "待支付")]
     Pending {
@@ -311,7 +316,7 @@ enum OrderStatus {
     },
 }
 
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 struct Order {
     #[validate(NotNone, desc = "订单ID")]
     id: String,
@@ -398,7 +403,7 @@ fn test_nested_enum_validation() {
 }
 
 // ====================== 复杂嵌套验证 ======================
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 struct OrderItem {
     #[validate(NotNone, desc = "产品ID")]
     product_id: String,
@@ -407,7 +412,7 @@ struct OrderItem {
     quantity: i32,
 }
 
-#[derive(Debug, Validatable)]
+#[derive(Debug, ValidatableImpl)]
 struct CompleteOrder {
     #[validate(Structure, desc = "订单信息")]
     order: Order,
