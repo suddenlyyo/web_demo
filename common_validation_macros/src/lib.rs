@@ -140,15 +140,15 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                         if let Some(rule) = path.get_ident() {
                             let rule_str = rule.to_string();
                             match rule_str.as_str() {
-                                "NotNone" => rules.push(quote! { ValidateRulesEnum::NotNone }),
-                                "Length" => rules.push(quote! { ValidateRulesEnum::Length }),
-                                "ExistLength" => rules.push(quote! { ValidateRulesEnum::ExistLength }),
-                                "Date" => rules.push(quote! { ValidateRulesEnum::Date }),
-                                "Time" => rules.push(quote! { ValidateRulesEnum::Time }),
-                                "DateTime" => rules.push(quote! { ValidateRulesEnum::DateTime }),
-                                "NumberMin" => rules.push(quote! { ValidateRulesEnum::NumberMin }),
-                                "NumberMax" => rules.push(quote! { ValidateRulesEnum::NumberMax }),
-                                "Structure" => rules.push(quote! { ValidateRulesEnum::Structure }),
+                                "NotNone" => rules.push(quote! { ValidationRulesEnum::NotNone }),
+                                "Length" => rules.push(quote! { ValidationRulesEnum::Length }),
+                                "ExistLength" => rules.push(quote! { ValidationRulesEnum::ExistLength }),
+                                "Date" => rules.push(quote! { ValidationRulesEnum::Date }),
+                                "Time" => rules.push(quote! { ValidationRulesEnum::Time }),
+                                "DateTime" => rules.push(quote! { ValidationRulesEnum::DateTime }),
+                                "NumberMin" => rules.push(quote! { ValidationRulesEnum::NumberMin }),
+                                "NumberMax" => rules.push(quote! { ValidationRulesEnum::NumberMax }),
+                                "Structure" => rules.push(quote! { ValidationRulesEnum::Structure }),
                                 _ => {}
                             }
                         }
