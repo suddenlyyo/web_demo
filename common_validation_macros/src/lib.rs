@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Data, Fields, Attribute, Meta, NestedMeta, Lit, Ident, Type, Path, PathArguments, GenericArgument};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Data, Fields, Attribute, Meta, NestedMeta, Lit, Ident, Type, Path, PathArguments, GenericArgument, Expr, ExprLit};
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
 
@@ -157,17 +157,20 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                         let key = nv.path.get_ident()?.to_string();
                         match key.as_str() {
                             "desc" => {
-                                if let Lit::Str(s) = nv.lit {
+                                // 修复：使用 nv.value 而不是 nv.lit
+                                if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     desc = s.value();
                                 }
                             }
                             "length" => {
-                                if let Lit::Str(s) = nv.lit {
+                                // 修复：使用 nv.value 而不是 nv.lit
+                                if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     length = Some(s.value());
                                 }
                             }
                             "date_format" => {
-                                if let Lit::Str(s) = nv.lit {
+                                // 修复：使用 nv.value 而不是 nv.lit
+                                if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     let fmt = match s.value().as_str() {
                                         "Time" => quote! { DateTimeFormatEnum::Time },
                                         "DateTime" => quote! { DateTimeFormatEnum::DateTime },
@@ -182,12 +185,14 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                                 }
                             }
                             "number_min" => {
-                                if let Lit::Int(i) = nv.lit {
+                                // 修复：使用 nv.value 而不是 nv.lit
+                                if let Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) = &nv.value {
                                     number_min = Some(i.base10_parse::<i64>().ok()?);
                                 }
                             }
                             "number_max" => {
-                                if let Lit::Int(i) = nv.lit {
+                                // 修复：使用 nv.value 而不是 nv.lit
+                                if let Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) = &nv.value {
                                     number_max = Some(i.base10_parse::<i64>().ok()?);
                                 }
                             }
