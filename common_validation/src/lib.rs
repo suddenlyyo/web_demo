@@ -13,7 +13,7 @@ pub struct ValidationRule {
     /// 参数描述
     pub desc: String,
     /// 验证规则列表
-    pub rules: Vec<ValidateRulesEnum>,
+    pub rules: Vec<ValidationRulesEnum>,
     /// 长度规则 (例如 "5", "5~20")
     pub length: Option<String>,
     /// 日期格式
@@ -38,7 +38,7 @@ impl ValidationRule {
     }
 
     /// 添加验证规则
-    pub fn with_rule(mut self, rule: ValidateRulesEnum) -> Self {
+    pub fn with_rule(mut self, rule: ValidationRulesEnum) -> Self {
         self.rules.push(rule);
         self
     }
