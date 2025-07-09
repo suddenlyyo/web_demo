@@ -1,4 +1,6 @@
+use std::str::FromStr;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+
 
 
 mod enums;
