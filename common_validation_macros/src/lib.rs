@@ -121,7 +121,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
         let field_ident_str = field_name.to_string();
         
         // 查找 validate 属性
-        let validate_attr = f.attrs.iter().find(|attr| attr.path.is_ident("validate"))?;
+        let validate_attr = f.attrs.iter().find(|attr| attr.path().is_ident("validate"))?;
         
         // 解析属性参数
         let mut desc = field_ident_str.clone();
