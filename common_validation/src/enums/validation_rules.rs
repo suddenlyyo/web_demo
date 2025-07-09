@@ -1,6 +1,6 @@
 // 验证规则枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ValidateRulesEnum {
+pub enum ValidationRulesEnum {
     ///验证不允许为空
     NotNone,
     ///验证指定长度
