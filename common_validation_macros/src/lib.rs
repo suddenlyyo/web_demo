@@ -1,9 +1,13 @@
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Data, Fields, Attribute, Meta, NestedMeta, Lit, Ident, Type, Path, PathArguments, GenericArgument, Expr, ExprLit};
+use syn::{
+    parse_macro_input, spanned::Spanned, Attribute, Data, DeriveInput, Expr, ExprLit, Fields,
+    GenericArgument, Ident, Lit, Meta, NestedMeta, Path, PathArguments, Type,
+};
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
+use syn::parse::Parser;
 
 /// 检查类型是否是 Option<T>
 fn is_option_type(ty: &Type) -> bool {
@@ -71,13 +75,15 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
             let variants = data.variants;
             let variant_validations = variants.iter().map(|variant| {
                 let variant_name = &variant.ident;
+                
+                // 修复：统一返回 Punctuated<Field> 类型
                 let fields = match &variant.fields {
                     Fields::Named(fields) => &fields.named,
                     Fields::Unnamed(fields) => return syn::Error::new(
                         fields.span(),
                         "枚举变体必须使用命名字段"
                     ).to_compile_error(),
-                    Fields::Unit => quote! {},
+                    Fields::Unit => &Punctuated::new(), // 返回空字段列表
                 };
                 
                 let field_validations = fields.iter().filter_map(|f| {
@@ -131,12 +137,20 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
         let mut number_min = None;
         let mut number_max = None;
         
-        let meta = validate_attr.parse_meta().ok()?;
+        // 修复：直接访问 attr.meta 而不是使用 parse_meta()
+        let meta = &validate_attr.meta;
         
+        // 修复：使用新的方式解析 MetaList
         if let Meta::List(list) = meta {
-            for nested in list.nested {
-                match nested {
-                    NestedMeta::Meta(Meta::Path(path)) => {
+            let parser = Punctuated::<Meta, Comma>::parse_terminated;
+            let nested = match parser.parse2(list.tokens.clone()) {
+                Ok(n) => n,
+                Err(_) => return None,
+            };
+            
+            for meta in nested {
+                match meta {
+                    Meta::Path(path) => {
                         if let Some(rule) = path.get_ident() {
                             let rule_str = rule.to_string();
                             match rule_str.as_str() {
@@ -153,23 +167,20 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                             }
                         }
                     }
-                    NestedMeta::Meta(Meta::NameValue(nv)) => {
+                    Meta::NameValue(nv) => {
                         let key = nv.path.get_ident()?.to_string();
                         match key.as_str() {
                             "desc" => {
-                                // 修复：使用 nv.value 而不是 nv.lit
                                 if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     desc = s.value();
                                 }
                             }
                             "length" => {
-                                // 修复：使用 nv.value 而不是 nv.lit
                                 if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     length = Some(s.value());
                                 }
                             }
                             "date_format" => {
-                                // 修复：使用 nv.value 而不是 nv.lit
                                 if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     let fmt = match s.value().as_str() {
                                         "Time" => quote! { DateTimeFormatEnum::Time },
@@ -185,13 +196,11 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                                 }
                             }
                             "number_min" => {
-                                // 修复：使用 nv.value 而不是 nv.lit
                                 if let Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) = &nv.value {
                                     number_min = Some(i.base10_parse::<i64>().ok()?);
                                 }
                             }
                             "number_max" => {
-                                // 修复：使用 nv.value 而不是 nv.lit
                                 if let Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) = &nv.value {
                                     number_max = Some(i.base10_parse::<i64>().ok()?);
                                 }
