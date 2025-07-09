@@ -121,7 +121,7 @@ impl ParameterValidator {
         value: &T,
         rule: &ValidationRule,
     ) -> Result<(), ValidationErrorEnum> {
-        if rule.rules.contains(&ValidateRulesEnum::Structure) {
+        if rule.rules.contains(&ValidationRulesEnum::Structure) {
             value.validate()
         } else {
             Err(ValidationErrorEnum::Format(
