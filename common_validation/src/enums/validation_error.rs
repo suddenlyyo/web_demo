@@ -1,6 +1,6 @@
 use thiserror::Error;
 // 错误类型定义
-#[derive(Debug, PartialEq, Eq, Hash ,Error)]
+#[derive(Debug, PartialEq, Eq, Hash, Error)]
 pub enum ValidationErrorEnum {
     #[error("{0} 不能为空")]
     NotNone(String),
@@ -12,4 +12,10 @@ pub enum ValidationErrorEnum {
     NumberMin(String, i64),
     #[error("{0} 值不能大于 {1}")]
     NumberMax(String, i64),
+    #[error("长度区间设置错误: {0}")]
+    LengthRangeError(String),
+    #[error("日期时间格式未设置")]
+    DateTimeFormatNotSet,
+    #[error("数字格式错误")]
+    NumberFormatError,
 }
