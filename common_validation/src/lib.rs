@@ -73,39 +73,39 @@ impl ParameterValidator {
     pub fn validate_value(value: &str, rule: &ValidationRule) -> Result<(), ValidationErrorEnum> {
         for &rule_type in &rule.rules {
             match rule_type {
-                ValidateRulesEnum::NotNone => Self::validate_not_none(value, &rule.desc)?,
-                ValidateRulesEnum::Length => {
+                ValidationRulesEnum::NotNone => Self::validate_not_none(value, &rule.desc)?,
+                ValidationRulesEnum::Length => {
                     if let Some(length) = &rule.length {
                         Self::validate_length(value, length, &rule.desc)?
                     }
                 }
-                ValidateRulesEnum::ExistLength => {
+                ValidationRulesEnum::ExistLength => {
                     if !value.is_empty() {
                         if let Some(length) = &rule.length {
                             Self::validate_length(value, length, &rule.desc)?
                         }
                     }
                 }
-                ValidateRulesEnum::Date => {
+                ValidationRulesEnum::Date => {
                     Self::validate_date(value, rule.date_format, &rule.desc)?
                 }
-                ValidateRulesEnum::Time => {
+                ValidationRulesEnum::Time => {
                     Self::validate_time(value, rule.date_format, &rule.desc)?
                 }
-                ValidateRulesEnum::DateTime => {
+                ValidationRulesEnum::DateTime => {
                     Self::validate_datetime(value, rule.date_format, &rule.desc)?
                 }
-                ValidateRulesEnum::NumberMin => {
+                ValidationRulesEnum::NumberMin => {
                     if let Some(min) = rule.number_min {
                         Self::validate_number_min(value, min, &rule.desc)?
                     }
                 }
-                ValidateRulesEnum::NumberMax => {
+                ValidationRulesEnum::NumberMax => {
                     if let Some(max) = rule.number_max {
                         Self::validate_number_max(value, max, &rule.desc)?
                     }
                 }
-                ValidateRulesEnum::Structure => {
+                ValidationRulesEnum::Structure => {
                     // 结构体验证需要特殊处理
                     return Err(ValidationErrorEnum::Format(
                         "结构体验证需使用validate_structure方法".to_string(),
