@@ -7,3 +7,9 @@ edition = "2024"
 thiserror="2.0.12"
 # 时间计算、时区转换、格式化/解析
 chrono = "0.4"
+# syn 是一个用于解析 Rust 代码的库。它将 Rust 代码解析成抽象语法树（AST），使得你可以方便地操作和分析代码结构
+syn = { version = "2.0.104", features = ["full"] }
+# quote 是一个用于生成 Rust 代码的库。它提供了一种简洁的方式来构建和输出 Rust 代码片段
+quote = "1.0.40"
+# 过程宏单元测试、非宏环境代码复用支持
+proc-macro2 = "1.0.95"
