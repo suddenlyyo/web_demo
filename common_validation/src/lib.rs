@@ -1,10 +1,6 @@
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use std::str::FromStr;
 
-mod enums;
-// 重新导出
-pub use enums::*;
-
 // ====================== 验证规则配置 ======================
 
 /// 参数验证规则配置
@@ -69,7 +65,6 @@ impl ValidationRule {
 pub struct ParameterValidator;
 
 impl ParameterValidator {
-    /// 验证单个值
     pub fn validate_value(value: &str, rule: &ValidationRule) -> Result<(), ValidationErrorEnum> {
         for &rule_type in &rule.rules {
             match rule_type {
@@ -106,31 +101,21 @@ impl ParameterValidator {
                     }
                 }
                 ValidationRulesEnum::Structure => {
-                    // 结构体验证需要特殊处理
-                    return Err(ValidationErrorEnum::Format(
-                        "结构体验证需使用validate_structure方法".to_string(),
-                    ));
+                   Self::validate_structure(value)?
                 }
             }
         }
         Ok(())
     }
 
-    /// 验证结构体
-    pub fn validate_structure<T: Validatable>(
-        value: &T,
-        rule: &ValidationRule,
-    ) -> Result<(), ValidationErrorEnum> {
-        if rule.rules.contains(&ValidationRulesEnum::Structure) {
-            value.validate()
-        } else {
-            Err(ValidationErrorEnum::Format(
-                "未启用结构体验证规则".to_string(),
-            ))
-        }
-    }
-
     // =============== 具体验证方法 ===============
+
+    /// 验证结构体
+    fn validate_structure<T: Validatable>(
+        value: &T,
+    ) -> Result<(), ValidationErrorEnum> {
+        
+    }
 
     /// 验证非空
     fn validate_not_none(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
@@ -264,6 +249,13 @@ pub trait Validatable {
     /// 验证结构体
     fn validate(&self) -> Result<(), ValidationErrorEnum>;
 }
+
+mod enums;
+mod macros;
+// 重新导出
+pub use enums::*;
+pub use macros::*;
+
 
 // #[cfg(test)]
 // mod tests {
