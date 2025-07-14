@@ -15,7 +15,7 @@ pub enum ValidationRulesEnum {
     DateTime,
     /// 验证数字的最小值
     NumberMin,
-    /// 验证数字的最最值
+    /// 验证数字的最大值
     NumberMax,
     /// 验证整个结构体
     Structure,
