@@ -27,7 +27,7 @@ impl ValidationRule {
             desc: desc.to_string(),
             rules: Vec::new(),
             length: None,
-            date_format: DateTimeFormatEnum::None,
+            date_format: None,
             number_min: None,
             number_max: None,
         }
