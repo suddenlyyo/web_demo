@@ -7,20 +7,18 @@ pub enum DateTimeFormatEnum {
     Year,
     YearNoSplit,
     DateTimePattern,
-    None,
 }
 
 impl DateTimeFormatEnum {
     /// 获取日期时间格式的字符串模式
-    pub const fn pattern(&self) -> &'static str {
+    pub const fn pattern(&self) -> Option<&'static str> {
         match self {
-            DateTimeFormatEnum::Time => "%H:%M",
-            DateTimeFormatEnum::DateTime => "%Y-%m-%d %H:%M:%S",
-            DateTimeFormatEnum::DateTimeStr => "%Y%m%d%H%M%S",
-            DateTimeFormatEnum::Year => "%Y-%m-%d",
-            DateTimeFormatEnum::YearNoSplit => "%Y%m%d",
-            DateTimeFormatEnum::DateTimePattern => "%H%M%S",
-            DateTimeFormatEnum::None => "",
+            DateTimeFormatEnum::Time => Some("%H:%M"),
+            DateTimeFormatEnum::DateTime => Some("%Y-%m-%d %H:%M:%S"),
+            DateTimeFormatEnum::DateTimeStr => Some("%Y%m%d%H%M%S"),
+            DateTimeFormatEnum::Year => Some("%Y-%m-%d"),
+            DateTimeFormatEnum::YearNoSplit => Some("%Y%m%d"),
+            DateTimeFormatEnum::DateTimePattern => Some("%H%M%S"),
         }
     }
 }
