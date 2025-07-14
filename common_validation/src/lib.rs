@@ -46,7 +46,7 @@ impl ValidationRule {
     }
 
     /// 设置日期格式
-    pub fn with_date_format(mut self, format: DateTimeFormatEnum) -> Self {
+    pub fn with_date_format(mut self, format: Option<DateTimeFormatEnum>) -> Self {
         self.date_format = format;
         self
     }
@@ -72,36 +72,60 @@ impl ParameterValidator {
                 ValidationRulesEnum::Length => {
                     if let Some(length) = &rule.length {
                         Self::validate_length(value, length, &rule.desc)?
+                    } else {
+                        // 当规则要求长度验证但未设置长度规则时
+                        return Err(ValidationErrorEnum::LengthRangeError(
+                            "长度规则未设置".to_string(),
+                        ));
                     }
                 }
                 ValidationRulesEnum::ExistLength => {
                     if !value.is_empty() {
                         if let Some(length) = &rule.length {
                             Self::validate_length(value, length, &rule.desc)?
+                        } else {
+                            // 当规则要求长度验证但未设置长度规则时
+                            return Err(ValidationErrorEnum::LengthRangeError(
+                                "长度规则未设置".to_string(),
+                            ));
                         }
                     }
                 }
                 ValidationRulesEnum::Date => {
-                    Self::validate_date(value, rule.date_format, &rule.desc)?
+                    Self::validate_date(value, rule.date_format.clone(), &rule.desc)?
                 }
                 ValidationRulesEnum::Time => {
-                    Self::validate_time(value, rule.date_format, &rule.desc)?
+                    Self::validate_time(value, rule.date_format.clone(), &rule.desc)?
                 }
                 ValidationRulesEnum::DateTime => {
-                    Self::validate_datetime(value, rule.date_format, &rule.desc)?
+                    Self::validate_datetime(value, rule.date_format.clone(), &rule.desc)?
                 }
                 ValidationRulesEnum::NumberMin => {
                     if let Some(min) = rule.number_min {
                         Self::validate_number_min(value, min, &rule.desc)?
+                    } else {
+                        // 当规则要求最小值验证但未设置最小值时
+                        return Err(ValidationErrorEnum::NumberMin(
+                            rule.desc.clone(),
+                            i64::MIN,
+                        ));
                     }
                 }
                 ValidationRulesEnum::NumberMax => {
                     if let Some(max) = rule.number_max {
                         Self::validate_number_max(value, max, &rule.desc)?
+                    } else {
+                        // 当规则要求最大值验证但未设置最大值时
+                        return Err(ValidationErrorEnum::NumberMax(
+                            rule.desc.clone(),
+                            i64::MAX,
+                        ));
                     }
                 }
                 ValidationRulesEnum::Structure => {
-                   Self::validate_structure(value)?
+                    return Err(ValidationErrorEnum::Format(
+                        "结构体验证需要单独处理".to_string(),
+                    ));
                 }
             }
         }
@@ -109,13 +133,6 @@ impl ParameterValidator {
     }
 
     // =============== 具体验证方法 ===============
-
-    /// 验证结构体
-    fn validate_structure<T: Validatable>(
-        value: &T,
-    ) -> Result<(), ValidationErrorEnum> {
-        
-    }
 
     /// 验证非空
     fn validate_not_none(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
@@ -138,7 +155,7 @@ impl ParameterValidator {
             if value_len != expected_len {
                 return Err(ValidationErrorEnum::Length(
                     desc.to_string(),
-                    format!("长度必须为 {}", expected_len),
+                    format!("必须为 {} 个字符", expected_len),
                 ));
             }
             return Ok(());
@@ -169,7 +186,7 @@ impl ParameterValidator {
         if value_len < min || value_len > max {
             return Err(ValidationErrorEnum::Length(
                 desc.to_string(),
-                format!("长度必须在 {}~{} 之间", min, max),
+                format!("长度必须在 {}~{} 个字符之间", min, max),
             ));
         }
 
@@ -179,46 +196,49 @@ impl ParameterValidator {
     /// 验证日期
     fn validate_date(
         value: &str,
-        format: DateTimeFormatEnum,
+        format: Option<DateTimeFormatEnum>,
         desc: &str,
     ) -> Result<(), ValidationErrorEnum> {
-        if format == DateTimeFormatEnum::None {
-            return Err(ValidationErrorEnum::DateTimeFormatNotSet);
+        match format {
+            Some(fmt) => {
+                NaiveDate::parse_from_str(value, fmt.pattern())
+                    .map_err(|_| ValidationErrorEnum::Format(desc.to_string()))?;
+                Ok(())
+            }
+            None => Err(ValidationErrorEnum::DateTimeFormatNotSet),
         }
-
-        NaiveDate::parse_from_str(value, format.pattern())
-            .map_err(|_| ValidationErrorEnum::Format(desc.to_string()))?;
-        Ok(())
     }
 
     /// 验证时间
     fn validate_time(
         value: &str,
-        format: DateTimeFormatEnum,
+        format: Option<DateTimeFormatEnum>,
         desc: &str,
     ) -> Result<(), ValidationErrorEnum> {
-        if format == DateTimeFormatEnum::None {
-            return Err(ValidationErrorEnum::DateTimeFormatNotSet);
+        match format {
+            Some(fmt) => {
+                NaiveTime::parse_from_str(value, fmt.pattern())
+                    .map_err(|_| ValidationErrorEnum::Format(desc.to_string()))?;
+                Ok(())
+            }
+            None => Err(ValidationErrorEnum::DateTimeFormatNotSet),
         }
-
-        NaiveTime::parse_from_str(value, format.pattern())
-            .map_err(|_| ValidationErrorEnum::Format(desc.to_string()))?;
-        Ok(())
     }
 
     /// 验证日期时间
     fn validate_datetime(
         value: &str,
-        format: DateTimeFormatEnum,
+        format: Option<DateTimeFormatEnum>,
         desc: &str,
     ) -> Result<(), ValidationErrorEnum> {
-        if format == DateTimeFormatEnum::None {
-            return Err(ValidationErrorEnum::DateTimeFormatNotSet);
+        match format {
+            Some(fmt) => {
+                NaiveDateTime::parse_from_str(value, fmt.pattern())
+                    .map_err(|_| ValidationErrorEnum::Format(desc.to_string()))?;
+                Ok(())
+            }
+            None => Err(ValidationErrorEnum::DateTimeFormatNotSet),
         }
-
-        NaiveDateTime::parse_from_str(value, format.pattern())
-            .map_err(|_| ValidationErrorEnum::Format(desc.to_string()))?;
-        Ok(())
     }
 
     /// 验证最小值
@@ -255,12 +275,3 @@ mod macros;
 // 重新导出
 pub use enums::*;
 pub use macros::*;
-
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::enums::{DateTimeFormatEnum, ValidateRulesEnum, ValidationErrorEnum};
-//     use chrono::NaiveDate;
-
-// }
