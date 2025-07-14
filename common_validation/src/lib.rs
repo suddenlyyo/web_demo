@@ -13,7 +13,7 @@ pub struct ValidationRule {
     /// 长度规则 (例如 "5", "5~20")
     pub length: Option<String>,
     /// 日期格式
-    pub date_format: DateTimeFormatEnum,
+    pub date_format: Option<DateTimeFormatEnum>,
     /// 最小值
     pub number_min: Option<i64>,
     /// 最大值
