@@ -15,5 +15,5 @@ chrono = "0.4"
 syn = { version = "2.0.104", features = ["full"] }
 # quote 是一个用于生成 Rust 代码的库。它提供了一种简洁的方式来构建和输出 Rust 代码片段
 quote = "1.0.40"
-#
+# proc-macro2 是一个用于处理 Rust 过程宏的库。它提供了对 TokenStream 的更高层次的抽象，使得编写过程宏更加方便
 proc-macro2 = "1.0.95"

@@ -1,7 +1,4 @@
-use common_validation::{
-    DateTimeFormatEnum, ParameterValidator, Validatable, ValidationErrorEnum, ValidationRule,
-    ValidationRulesEnum,
-};
+use common_validation::{DateTimeFormatEnum, ParameterValidator, Validatable, ValidationErrorEnum, ValidationRule, ValidationRulesEnum};
 
 #[derive(Debug)]
 struct User {
@@ -31,7 +28,7 @@ impl Validatable for User {
         // 生日验证规则
         let birthdate_rule = ValidationRule::new("生日")
             .with_rule(ValidationRulesEnum::Date)
-            .with_date_format(DateTimeFormatEnum::Year);
+            .with_date_format(Some(DateTimeFormatEnum::Year));
 
         ParameterValidator::validate_value(&self.birthdate, &birthdate_rule)?;
 
@@ -39,12 +36,14 @@ impl Validatable for User {
     }
 }
 
-fn main() {
+#[test]
+fn validate_test() {
+    // 打印输出测试命令: cargo test -p common_validation --test integration_test -- --show-output 
     // 创建测试用户
     let valid_user = User {
         username: "john_doe".to_string(),
         age: "30".to_string(),
-        birthdate: "1990-01-01".to_string(),
+        birthdate: "1990-01-011".to_string(),
     };
 
     let invalid_user = User {

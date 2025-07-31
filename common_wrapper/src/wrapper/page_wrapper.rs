@@ -56,14 +56,7 @@ impl<T> PageWrapper<T> {
     }
 
     // 设置成功状态和数据
-    pub fn set_success(
-        &mut self,
-        data: Vec<T>,
-        total_count: u64,
-        total_page: u64,
-        current_page_num: u64,
-        page_size: u64,
-    ) {
+    pub fn set_success(&mut self, data: Vec<T>, total_count: u64, total_page: u64, current_page_num: u64, page_size: u64) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
         self.total_count = total_count;
@@ -137,10 +130,7 @@ pub struct PageInfo {
 impl PageInfo {
     /// 创建一个新的 PageInfo 实例
     pub fn new(current_page_num: Option<u64>, page_size: Option<u64>) -> Self {
-        Self {
-            current_page_num,
-            page_size,
-        }
+        Self { current_page_num, page_size }
     }
 
     /// 获取页面大小（带默认值逻辑）
@@ -162,10 +152,6 @@ impl PageInfo {
         let page_size = self.get_page_size();
 
         // 确保不会因减1导致下溢（当 current_page_num =0 时）
-        if current_page_num == 0 {
-            0
-        } else {
-            (current_page_num - 1) * page_size
-        }
+        if current_page_num == 0 { 0 } else { (current_page_num - 1) * page_size }
     }
 }

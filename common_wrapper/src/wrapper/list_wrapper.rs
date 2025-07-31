@@ -13,18 +13,12 @@ pub struct ListWrapper<T> {
 
 impl<T> ListWrapper<T> {
     pub fn new() -> Self {
-        Self {
-            base: ResponseWrapper::success_default(),
-            data: None,
-        }
+        Self { base: ResponseWrapper::success_default(), data: None }
     }
 
     // 默认失败响应
     pub fn fail_default(&mut self) -> Self {
-        Self {
-            base: ResponseWrapper::fail_default(),
-            data: None,
-        }
+        Self { base: ResponseWrapper::fail_default(), data: None }
     }
 
     // 默认未知错误响应

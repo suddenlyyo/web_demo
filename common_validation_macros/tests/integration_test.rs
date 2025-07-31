@@ -1,7 +1,4 @@
-use common_validation::{
-    DateTimeFormatEnum, ParameterValidator, Validatable, ValidationErrorEnum, ValidationRule,
-    ValidationRulesEnum,
-};
+use common_validation::{DateTimeFormatEnum, ParameterValidator, Validatable, ValidationErrorEnum, ValidationRule, ValidationRulesEnum};
 use common_validation_macros::ValidatableImpl;
 // ====================== 基本结构体验证 ======================
 #[derive(Debug, ValidatableImpl)]
@@ -9,14 +6,7 @@ struct BasicUser {
     #[validate(NotNone, Length, desc = "用户名", length = "3~20")]
     username: String,
 
-    #[validate(
-        NotNone,
-        NumberMin,
-        NumberMax,
-        desc = "年龄",
-        number_min = 1,
-        number_max = 120
-    )]
+    #[validate(NotNone, NumberMin, NumberMax, desc = "年龄", number_min = 1, number_max = 120)]
     age: i32,
 
     #[validate(Date, desc = "生日", date_format = "Year")]
@@ -40,13 +30,7 @@ fn test_basic_struct_validation() {
         age: 30,
         birthdate: "1990-01-01".to_string(),
     };
-    assert_eq!(
-        invalid_username.validate(),
-        Err(ValidationErrorEnum::Length(
-            "用户名".to_string(),
-            "长度必须在 3~20 之间".to_string()
-        ))
-    );
+    assert_eq!(invalid_username.validate(), Err(ValidationErrorEnum::Length("用户名".to_string(), "长度必须在 3~20 之间".to_string())));
 
     // 年龄超出范围
     let invalid_age = BasicUser {
@@ -54,10 +38,7 @@ fn test_basic_struct_validation() {
         age: 150, // 超出最大值
         birthdate: "1990-01-01".to_string(),
     };
-    assert_eq!(
-        invalid_age.validate(),
-        Err(ValidationErrorEnum::NumberMax("年龄".to_string(), 120))
-    );
+    assert_eq!(invalid_age.validate(), Err(ValidationErrorEnum::NumberMax("年龄".to_string(), 120)));
 
     // 日期格式错误
     let invalid_date = BasicUser {
@@ -65,10 +46,7 @@ fn test_basic_struct_validation() {
         age: 30,
         birthdate: "1990/01/01".to_string(), // 格式错误
     };
-    assert_eq!(
-        invalid_date.validate(),
-        Err(ValidationErrorEnum::Format("生日".to_string()))
-    );
+    assert_eq!(invalid_date.validate(), Err(ValidationErrorEnum::Format("生日".to_string())));
 }
 
 // ====================== 嵌套结构体验证 ======================
@@ -132,13 +110,7 @@ fn test_nested_struct_validation() {
         },
         secondary_address: None,
     };
-    assert_eq!(
-        invalid_basic.validate(),
-        Err(ValidationErrorEnum::Length(
-            "用户名".to_string(),
-            "长度必须在 3~20 之间".to_string()
-        ))
-    );
+    assert_eq!(invalid_basic.validate(), Err(ValidationErrorEnum::Length("用户名".to_string(), "长度必须在 3~20 之间".to_string())));
 
     // 嵌套结构体中的错误 - 地址错误
     let invalid_address = UserProfile {
@@ -154,13 +126,7 @@ fn test_nested_struct_validation() {
         },
         secondary_address: None,
     };
-    assert_eq!(
-        invalid_address.validate(),
-        Err(ValidationErrorEnum::Length(
-            "街道".to_string(),
-            "长度必须在 5~50 之间".to_string()
-        ))
-    );
+    assert_eq!(invalid_address.validate(), Err(ValidationErrorEnum::Length("街道".to_string(), "长度必须在 5~50 之间".to_string())));
 
     // 可选嵌套结构体中的错误
     let invalid_secondary = UserProfile {
@@ -180,10 +146,7 @@ fn test_nested_struct_validation() {
             zipcode: None,
         }),
     };
-    assert_eq!(
-        invalid_secondary.validate(),
-        Err(ValidationErrorEnum::NotNone("城市".to_string()))
-    );
+    assert_eq!(invalid_secondary.validate(), Err(ValidationErrorEnum::NotNone("城市".to_string())));
 }
 
 // ====================== 枚举验证 ======================
@@ -233,13 +196,7 @@ fn test_enum_validation() {
         expiry: "202512".to_string(),
         cvv: "123".to_string(),
     };
-    assert_eq!(
-        invalid_credit_number.validate(),
-        Err(ValidationErrorEnum::Length(
-            "卡号".to_string(),
-            "长度必须为 16".to_string()
-        ))
-    );
+    assert_eq!(invalid_credit_number.validate(), Err(ValidationErrorEnum::Length("卡号".to_string(), "长度必须为 16".to_string())));
 
     // 无效的信用卡支付 - 过期日期格式错误
     let invalid_credit_expiry = PaymentMethod::CreditCard {
@@ -247,25 +204,17 @@ fn test_enum_validation() {
         expiry: "2025-12".to_string(), // 格式错误
         cvv: "123".to_string(),
     };
-    assert_eq!(
-        invalid_credit_expiry.validate(),
-        Err(ValidationErrorEnum::Format("过期日期".to_string()))
-    );
+    assert_eq!(invalid_credit_expiry.validate(), Err(ValidationErrorEnum::Format("过期日期".to_string())));
 
     // 有效的PayPal支付
-    let valid_paypal = PaymentMethod::PayPal {
-        email: "user@example.com".to_string(),
-    };
+    let valid_paypal = PaymentMethod::PayPal { email: "user@example.com".to_string() };
     assert!(valid_paypal.validate().is_ok());
 
     // 无效的PayPal支付 - 邮箱为空
     let invalid_paypal = PaymentMethod::PayPal {
         email: "".to_string(), // 不能为空
     };
-    assert_eq!(
-        invalid_paypal.validate(),
-        Err(ValidationErrorEnum::NotNone("PayPal邮箱".to_string()))
-    );
+    assert_eq!(invalid_paypal.validate(), Err(ValidationErrorEnum::NotNone("PayPal邮箱".to_string())));
 
     // 有效的银行转账
     let valid_bank = PaymentMethod::BankTransfer {
@@ -279,13 +228,7 @@ fn test_enum_validation() {
         account: "123".to_string(), // 太短
         routing: "123456789".to_string(),
     };
-    assert_eq!(
-        invalid_bank_account.validate(),
-        Err(ValidationErrorEnum::Length(
-            "账号".to_string(),
-            "长度必须在 10~20 之间".to_string()
-        ))
-    );
+    assert_eq!(invalid_bank_account.validate(), Err(ValidationErrorEnum::Length("账号".to_string(), "长度必须在 10~20 之间".to_string())));
 }
 
 // ====================== 嵌套枚举验证 ======================
@@ -330,9 +273,7 @@ fn test_nested_enum_validation() {
     // 有效的待支付订单
     let valid_pending = Order {
         id: "ORD-12345".to_string(),
-        status: OrderStatus::Pending {
-            created_at: "2023-10-01 10:00:00".to_string(),
-        },
+        status: OrderStatus::Pending { created_at: "2023-10-01 10:00:00".to_string() },
     };
     assert!(valid_pending.validate().is_ok());
 
@@ -343,18 +284,13 @@ fn test_nested_enum_validation() {
             created_at: "".to_string(), // 不能为空
         },
     };
-    assert_eq!(
-        invalid_pending.validate(),
-        Err(ValidationErrorEnum::NotNone("创建时间".to_string()))
-    );
+    assert_eq!(invalid_pending.validate(), Err(ValidationErrorEnum::NotNone("创建时间".to_string())));
 
     // 有效的已支付订单
     let valid_paid = Order {
         id: "ORD-67890".to_string(),
         status: OrderStatus::Paid {
-            payment_method: PaymentMethod::PayPal {
-                email: "user@example.com".to_string(),
-            },
+            payment_method: PaymentMethod::PayPal { email: "user@example.com".to_string() },
             paid_at: "2023-10-01 11:30:00".to_string(),
         },
     };
@@ -370,10 +306,7 @@ fn test_nested_enum_validation() {
             paid_at: "2023-10-01 11:30:00".to_string(),
         },
     };
-    assert_eq!(
-        invalid_paid.validate(),
-        Err(ValidationErrorEnum::NotNone("PayPal邮箱".to_string()))
-    );
+    assert_eq!(invalid_paid.validate(), Err(ValidationErrorEnum::NotNone("PayPal邮箱".to_string())));
 
     // 有效的已发货订单
     let valid_shipped = Order {
@@ -393,13 +326,7 @@ fn test_nested_enum_validation() {
             tracking_number: "TRACK123".to_string(), // 太短
         },
     };
-    assert_eq!(
-        invalid_shipped.validate(),
-        Err(ValidationErrorEnum::Length(
-            "物流单号".to_string(),
-            "长度必须为 12".to_string()
-        ))
-    );
+    assert_eq!(invalid_shipped.validate(), Err(ValidationErrorEnum::Length("物流单号".to_string(), "长度必须为 12".to_string())));
 }
 
 // ====================== 复杂嵌套验证 ======================
@@ -435,16 +362,7 @@ fn test_complex_nested_validation() {
                 tracking_number: "SHIP12345678".to_string(),
             },
         },
-        items: vec![
-            OrderItem {
-                product_id: "PROD-100".to_string(),
-                quantity: 2,
-            },
-            OrderItem {
-                product_id: "PROD-200".to_string(),
-                quantity: 1,
-            },
-        ],
+        items: vec![OrderItem { product_id: "PROD-100".to_string(), quantity: 2 }, OrderItem { product_id: "PROD-200".to_string(), quantity: 1 }],
         shipping_address: Address {
             street: "789 Pine Road".to_string(),
             city: "Gotham".to_string(),
@@ -472,10 +390,7 @@ fn test_complex_nested_validation() {
             zipcode: Some("67890".to_string()),
         },
     };
-    assert_eq!(
-        invalid_item_quantity.validate(),
-        Err(ValidationErrorEnum::NumberMin("数量".to_string(), 1))
-    );
+    assert_eq!(invalid_item_quantity.validate(), Err(ValidationErrorEnum::NumberMin("数量".to_string(), 1)));
 
     // 订单状态无效
     let invalid_order_status = CompleteOrder {
@@ -490,20 +405,14 @@ fn test_complex_nested_validation() {
                 paid_at: "2023-10-03 12:00:00".to_string(),
             },
         },
-        items: vec![OrderItem {
-            product_id: "PROD-100".to_string(),
-            quantity: 2,
-        }],
+        items: vec![OrderItem { product_id: "PROD-100".to_string(), quantity: 2 }],
         shipping_address: Address {
             street: "789 Pine Road".to_string(),
             city: "Gotham".to_string(),
             zipcode: Some("67890".to_string()),
         },
     };
-    assert_eq!(
-        invalid_order_status.validate(),
-        Err(ValidationErrorEnum::Format("过期日期".to_string()))
-    );
+    assert_eq!(invalid_order_status.validate(), Err(ValidationErrorEnum::Format("过期日期".to_string())));
 
     // 配送地址无效
     let invalid_address = CompleteOrder {
@@ -514,21 +423,12 @@ fn test_complex_nested_validation() {
                 tracking_number: "SHIP12345678".to_string(),
             },
         },
-        items: vec![OrderItem {
-            product_id: "PROD-100".to_string(),
-            quantity: 2,
-        }],
+        items: vec![OrderItem { product_id: "PROD-100".to_string(), quantity: 2 }],
         shipping_address: Address {
             street: "789 Pine".to_string(), // 太短
             city: "Gotham".to_string(),
             zipcode: Some("67890".to_string()),
         },
     };
-    assert_eq!(
-        invalid_address.validate(),
-        Err(ValidationErrorEnum::Length(
-            "街道".to_string(),
-            "长度必须在 5~50 之间".to_string()
-        ))
-    );
+    assert_eq!(invalid_address.validate(), Err(ValidationErrorEnum::Length("街道".to_string(), "长度必须在 5~50 之间".to_string())));
 }

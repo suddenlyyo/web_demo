@@ -1,0 +1,22 @@
+# rustfmt.toml - Rust 代码格式化配置文件
+
+# Rust 代码格式化配置文件（稳定版可用）
+
+# ================ 基础配置 ================
+max_width = 300       # 最大行宽
+hard_tabs = false    # 使用空格缩进
+tab_spaces = 4       # 缩进空格数
+
+# ================ 换行相关配置 ================
+# 链式方法调用的最大宽度，超过此值会换行（默认值：60）
+chain_width = 60
+
+# 函数参数换行风格（可选 "Vertical" 或 "Compressed"）
+# - Tall（默认值）:参数较多或较长时垂直换行
+# - Vertical:参数过多时垂直换行
+# - Compressed:尽量保持在同一行
+fn_params_layout = "Compressed"
+
+# ================ 其他稳定版可用配置 ================
+reorder_imports = true    # 自动排序导入
+match_block_trailing_comma = true  # match最后分支加逗号

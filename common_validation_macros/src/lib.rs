@@ -4,10 +4,7 @@ use quote::{ToTokens, quote};
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 use syn::token::Comma;
-use syn::{
-    Attribute, Data, DeriveInput, Expr, ExprLit, Fields, GenericArgument, Ident, Lit, Meta,
-    NestedMeta, Path, PathArguments, Type, parse_macro_input, spanned::Spanned,
-};
+use syn::{Attribute, Data, DeriveInput, Expr, ExprLit, Fields, GenericArgument, Ident, Lit, Meta, NestedMeta, Path, PathArguments, Type, parse_macro_input, spanned::Spanned};
 
 /// 检查类型是否是 Option<T>
 fn is_option_type(ty: &Type) -> bool {
@@ -45,14 +42,11 @@ fn is_validatable_type(ty: &Type) -> bool {
         Type::Path(type_path) => {
             if type_path.path.segments.len() == 1 {
                 let ident = type_path.path.segments[0].ident.to_string();
-                ![
-                    "String", "str", "i32", "i64", "u32", "u64", "f32", "f64", "bool", "char",
-                ]
-                .contains(&ident.as_str())
+                !["String", "str", "i32", "i64", "u32", "u64", "f32", "f64", "bool", "char"].contains(&ident.as_str())
             } else {
                 true
             }
-        }
+        },
         _ => false,
     }
 }
@@ -71,7 +65,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                 return syn::Error::new(input.span(), "只支持包含命名字段的结构体")
                     .to_compile_error()
                     .into();
-            }
+            },
         },
         Data::Enum(data) => {
             // 枚举处理逻辑
@@ -83,9 +77,8 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                 let fields = match &variant.fields {
                     Fields::Named(fields) => &fields.named,
                     Fields::Unnamed(fields) => {
-                        return syn::Error::new(fields.span(), "枚举变体必须使用命名字段")
-                            .to_compile_error();
-                    }
+                        return syn::Error::new(fields.span(), "枚举变体必须使用命名字段").to_compile_error();
+                    },
                     Fields::Unit => &Punctuated::new(), // 返回空字段列表
                 };
 
@@ -116,12 +109,12 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
             };
 
             return TokenStream::from(expanded);
-        }
+        },
         _ => {
             return syn::Error::new(input.span(), "只支持结构体和枚举")
                 .to_compile_error()
                 .into();
-        }
+        },
     };
 
     // 为每个字段生成验证代码
@@ -163,49 +156,32 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                             match rule_str.as_str() {
                                 "NotNone" => rules.push(quote! { ValidationRulesEnum::NotNone }),
                                 "Length" => rules.push(quote! { ValidationRulesEnum::Length }),
-                                "ExistLength" => {
-                                    rules.push(quote! { ValidationRulesEnum::ExistLength })
-                                }
+                                "ExistLength" => rules.push(quote! { ValidationRulesEnum::ExistLength }),
                                 "Date" => rules.push(quote! { ValidationRulesEnum::Date }),
                                 "Time" => rules.push(quote! { ValidationRulesEnum::Time }),
                                 "DateTime" => rules.push(quote! { ValidationRulesEnum::DateTime }),
-                                "NumberMin" => {
-                                    rules.push(quote! { ValidationRulesEnum::NumberMin })
-                                }
-                                "NumberMax" => {
-                                    rules.push(quote! { ValidationRulesEnum::NumberMax })
-                                }
-                                "Structure" => {
-                                    rules.push(quote! { ValidationRulesEnum::Structure })
-                                }
-                                _ => {}
+                                "NumberMin" => rules.push(quote! { ValidationRulesEnum::NumberMin }),
+                                "NumberMax" => rules.push(quote! { ValidationRulesEnum::NumberMax }),
+                                "Structure" => rules.push(quote! { ValidationRulesEnum::Structure }),
+                                _ => {},
                             }
                         }
-                    }
+                    },
                     Meta::NameValue(nv) => {
                         let key = nv.path.get_ident()?.to_string();
                         match key.as_str() {
                             "desc" => {
-                                if let Expr::Lit(ExprLit {
-                                    lit: Lit::Str(s), ..
-                                }) = &nv.value
-                                {
+                                if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     desc = s.value();
                                 }
-                            }
+                            },
                             "length" => {
-                                if let Expr::Lit(ExprLit {
-                                    lit: Lit::Str(s), ..
-                                }) = &nv.value
-                                {
+                                if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     length = Some(s.value());
                                 }
-                            }
+                            },
                             "date_format" => {
-                                if let Expr::Lit(ExprLit {
-                                    lit: Lit::Str(s), ..
-                                }) = &nv.value
-                                {
+                                if let Expr::Lit(ExprLit { lit: Lit::Str(s), .. }) = &nv.value {
                                     let fmt = match s.value().as_str() {
                                         "Time" => quote! { DateTimeFormatEnum::Time },
                                         "DateTime" => quote! { DateTimeFormatEnum::DateTime },
@@ -214,33 +190,27 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                                         "YearNoSplit" => quote! { DateTimeFormatEnum::YearNoSplit },
                                         "DateTimePattern" => {
                                             quote! { DateTimeFormatEnum::DateTimePattern }
-                                        }
+                                        },
                                         "None" => quote! { DateTimeFormatEnum::None },
                                         _ => return None,
                                     };
                                     date_format = Some(fmt);
                                 }
-                            }
+                            },
                             "number_min" => {
-                                if let Expr::Lit(ExprLit {
-                                    lit: Lit::Int(i), ..
-                                }) = &nv.value
-                                {
+                                if let Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) = &nv.value {
                                     number_min = Some(i.base10_parse::<i64>().ok()?);
                                 }
-                            }
+                            },
                             "number_max" => {
-                                if let Expr::Lit(ExprLit {
-                                    lit: Lit::Int(i), ..
-                                }) = &nv.value
-                                {
+                                if let Expr::Lit(ExprLit { lit: Lit::Int(i), .. }) = &nv.value {
                                     number_max = Some(i.base10_parse::<i64>().ok()?);
                                 }
-                            }
-                            _ => {}
+                            },
+                            _ => {},
                         }
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -261,13 +231,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                             }
                         }
                     } else {
-                        return Some(
-                            syn::Error::new(
-                                field_ty.span(),
-                                "嵌套结构体必须实现 Validatable trait",
-                            )
-                            .to_compile_error(),
-                        );
+                        return Some(syn::Error::new(field_ty.span(), "嵌套结构体必须实现 Validatable trait").to_compile_error());
                     }
                 } else {
                     return None;
@@ -279,10 +243,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                         self.#field_name.validate()?;
                     }
                 } else {
-                    return Some(
-                        syn::Error::new(field_ty.span(), "嵌套结构体必须实现 Validatable trait")
-                            .to_compile_error(),
-                    );
+                    return Some(syn::Error::new(field_ty.span(), "嵌套结构体必须实现 Validatable trait").to_compile_error());
                 }
             };
 

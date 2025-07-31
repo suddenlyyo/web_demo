@@ -51,17 +51,11 @@ mod tests {
         let unknown_error_serialized = serde_json::to_string(&unknown_error).unwrap();
         println!("unknown_error_serialized = {}", unknown_error_serialized);
 
-        assert_eq!(
-            unknown_error.get_code(),
-            WrapperErrEnum::UnknownError as i32
-        );
+        assert_eq!(unknown_error.get_code(), WrapperErrEnum::UnknownError as i32);
         assert_eq!(unknown_error.get_message(), "Unknown Error");
 
         unknown_error.set_unknown_error("New Unknown Error Message");
-        assert_eq!(
-            unknown_error.get_code(),
-            WrapperErrEnum::UnknownError as i32
-        );
+        assert_eq!(unknown_error.get_code(), WrapperErrEnum::UnknownError as i32);
         assert_eq!(unknown_error.get_message(), "New Unknown Error Message");
     }
 
@@ -90,15 +84,9 @@ mod tests {
         unknown_error_data.set_unknown_error("Unknown Error");
 
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
-        println!(
-            "unknown_error_data_serialized = {}",
-            unknown_error_data_serialized
-        );
+        println!("unknown_error_data_serialized = {}", unknown_error_data_serialized);
 
-        assert_eq!(
-            unknown_error_data.get_base().get_code(),
-            WrapperErrEnum::UnknownError as i32
-        );
+        assert_eq!(unknown_error_data.get_base().get_code(), WrapperErrEnum::UnknownError as i32);
         assert_eq!(unknown_error_data.get_data(), None);
     }
 
@@ -126,14 +114,8 @@ mod tests {
         unknown_error_data.set_unknown_error("Unknown Error");
 
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
-        println!(
-            "unknown_error_data_serialized = {}",
-            unknown_error_data_serialized
-        );
-        assert_eq!(
-            unknown_error_data.get_base().get_code(),
-            WrapperErrEnum::UnknownError as i32
-        );
+        println!("unknown_error_data_serialized = {}", unknown_error_data_serialized);
+        assert_eq!(unknown_error_data.get_base().get_code(), WrapperErrEnum::UnknownError as i32);
         assert_eq!(unknown_error_data.data(), None);
     }
 
@@ -149,37 +131,22 @@ mod tests {
         assert_eq!(page_wrapper.get_total_page(), 1);
         assert_eq!(page_wrapper.get_current_page_num(), 1);
         assert_eq!(page_wrapper.get_page_size(), 1);
-        assert_eq!(
-            page_wrapper.get_data(),
-            Some(&vec!["1".to_string(), "2".to_string()])
-        );
+        assert_eq!(page_wrapper.get_data(), Some(&vec!["1".to_string(), "2".to_string()]));
 
         page_wrapper.set_fail("Fail");
 
         let page_wrapper_fail_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!(
-            "page_wrapper_fail_serialized = {}",
-            page_wrapper_fail_serialized
-        );
+        println!("page_wrapper_fail_serialized = {}", page_wrapper_fail_serialized);
 
-        assert_eq!(
-            page_wrapper.get_base().get_code(),
-            WrapperErrEnum::Fail as i32
-        );
+        assert_eq!(page_wrapper.get_base().get_code(), WrapperErrEnum::Fail as i32);
         assert_eq!(page_wrapper.get_data(), None);
 
         page_wrapper.set_unknown_error("Unknown Error");
 
         let page_wrapper_unknown_error_serialized = serde_json::to_string(&page_wrapper).unwrap();
-        println!(
-            "page_wrapper_unknown_error_serialized = {}",
-            page_wrapper_unknown_error_serialized
-        );
+        println!("page_wrapper_unknown_error_serialized = {}", page_wrapper_unknown_error_serialized);
 
-        assert_eq!(
-            page_wrapper.get_base().get_code(),
-            WrapperErrEnum::UnknownError as i32
-        );
+        assert_eq!(page_wrapper.get_base().get_code(), WrapperErrEnum::UnknownError as i32);
         assert_eq!(page_wrapper.get_data(), None);
     }
 }

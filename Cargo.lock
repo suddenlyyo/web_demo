@@ -185,6 +185,9 @@ name = "common_validation"
 version = "0.0.0"
 dependencies = [
  "chrono",
+ "proc-macro2",
+ "quote",
+ "syn",
  "thiserror",
 ]
 

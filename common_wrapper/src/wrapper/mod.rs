@@ -4,6 +4,4 @@ mod page_wrapper;
 mod response_trait;
 mod response_wrapper;
 // 单行重新导出（按字母顺序）
-pub use {
-    list_wrapper::*, object_wrapper::*, page_wrapper::*, response_trait::*, response_wrapper::*,
-};
+pub use {list_wrapper::*, object_wrapper::*, page_wrapper::*, response_trait::*, response_wrapper::*};
