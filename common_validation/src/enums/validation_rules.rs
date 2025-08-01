@@ -1,22 +1,22 @@
+use crate::DateTimeFormatEnum;
+
 // 验证规则枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ValidationRulesEnum {
-    /// 验证不允许为空
-    NotNone,
-    /// 验证指定长度
-    Length,
-    /// 如果存在则验证长度，否则不验证
-    ExistLength,
-    /// 验证指定格式的Date
-    Date,
-    /// 验证指定格式的Time
-    Time,
-    /// 验证指定格式的DateTime
-    DateTime,
-    /// 验证数字的最小值
-    NumberMin,
-    /// 验证数字的最大值
-    NumberMax,
-    /// 验证整个结构体
-    Structure,
+    /// 不允许为空
+    NotNull,
+    /// 固定长度，如 "5" 表示长度为5
+    Length(usize),
+    /// 长度区间，如 "5~20" 表示5到20之间
+    LengthRange(usize, usize),
+    /// 存在时验证固定长度
+    ExistLength(usize),
+    /// 存在时验证长度区间
+    ExistLengthRange(usize, usize),
+    /// 指定格式的日期时间
+    DateFormat(DateTimeFormatEnum),
+    /// 数字最小值
+    NumberMin(i64),
+    /// 数字最大值    
+    NumberMax(i64),
 }

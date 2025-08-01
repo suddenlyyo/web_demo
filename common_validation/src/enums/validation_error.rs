@@ -3,7 +3,7 @@ use thiserror::Error;
 #[derive(Debug, PartialEq, Eq, Hash, Error)]
 pub enum ValidationErrorEnum {
     #[error("{0} 不能为空")]
-    NotNone(String),
+    NotNull(String),
     #[error("{0} 长度不符合要求: {1}")]
     Length(String, String),
     #[error("{0} 格式不正确")]
