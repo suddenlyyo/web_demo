@@ -1,13 +1,15 @@
 use crate::wrapper::ResponseWrapper;
 use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
-/// 分页包装
+
+/// # 分页响应包装结构体
+/// 用于统一 API 响应格式，包含分页相关信息和数据列表
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PageWrapper<T> {
     /// 响应基础信息
     #[serde(flatten)]
     pub base: ResponseWrapper,
-    /// 数据
+    /// 可选的数据列表
     pub data: Option<Vec<T>>,
     /// 总条数
     pub total_count: u64,
@@ -20,6 +22,7 @@ pub struct PageWrapper<T> {
 }
 
 impl<T> PageWrapper<T> {
+    /// 创建一个默认成功的 PageWrapper，数据为空，分页信息为初始值
     pub fn new() -> Self {
         Self {
             base: ResponseWrapper::success_default(),
@@ -31,7 +34,7 @@ impl<T> PageWrapper<T> {
         }
     }
 
-    // 默认失败响应
+    /// 创建一个默认失败的 PageWrapper，数据为空，分页信息为初始值
     pub fn fail_default(&mut self) -> Self {
         Self {
             base: ResponseWrapper::fail_default(),
@@ -43,7 +46,7 @@ impl<T> PageWrapper<T> {
         }
     }
 
-    // 默认未知错误响应
+    /// 创建一个默认未知错误的 PageWrapper，数据为空，分页信息为初始值
     pub fn unknown_error_default(&mut self) -> Self {
         Self {
             base: ResponseWrapper::unknown_error_default(),
@@ -55,7 +58,7 @@ impl<T> PageWrapper<T> {
         }
     }
 
-    // 设置成功状态和数据
+    /// 设置为成功状态并附带数据和分页信息
     pub fn set_success(&mut self, data: Vec<T>, total_count: u64, total_page: u64, current_page_num: u64, page_size: u64) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
@@ -65,40 +68,51 @@ impl<T> PageWrapper<T> {
         self.page_size = page_size;
     }
 
+    /// 获取基础响应包装的引用
     pub fn get_base(&self) -> &ResponseWrapper {
         &self.base
     }
 
+    /// 获取数据列表的引用
     pub fn get_data(&self) -> Option<&Vec<T>> {
         self.data.as_ref()
     }
+    /// 获取总条数
     pub fn get_total_count(&self) -> u64 {
         self.total_count
     }
+    /// 获取总页数
     pub fn get_total_page(&self) -> u64 {
         self.total_page
     }
+    /// 获取当前页码
     pub fn get_current_page_num(&self) -> u64 {
         self.current_page_num
     }
+    /// 获取每页大小
     pub fn get_page_size(&self) -> u64 {
         self.page_size
     }
 }
 
+/// 实现 ResponseTrait 以便统一处理响应包装
 impl<T> ResponseTrait for PageWrapper<T> {
+    /// 获取响应码
     fn get_code(&self) -> i32 {
         self.base.get_code()
     }
 
+    /// 获取响应消息
     fn get_message(&self) -> &str {
         self.base.get_message()
     }
 
+    /// 判断是否为成功响应
     fn is_success(&self) -> bool {
         self.base.is_success()
     }
 
+    /// 设置为失败响应，并自定义消息，数据和分页信息重置
     fn set_fail(&mut self, msg: impl Into<String>) {
         self.base.set_fail(msg);
         self.data = None;
@@ -108,6 +122,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
         self.page_size = 0u64;
     }
 
+    /// 设置为未知错误响应，并自定义消息，数据和分页信息重置
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
         self.base.set_unknown_error(msg);
         self.data = None;
@@ -118,7 +133,8 @@ impl<T> ResponseTrait for PageWrapper<T> {
     }
 }
 
-/// 分页信息结构体
+/// # 分页信息结构体
+/// 用于描述分页请求参数
 #[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct PageInfo {
     /// 当前页数
