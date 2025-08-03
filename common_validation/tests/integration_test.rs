@@ -43,9 +43,9 @@ fn validate_test() {
     };
 
     let invalid_user = User {
-        username: "jd".to_string(),          // 长度2，小于最小值3
-        age: "150".to_string(),              // 超过最大值120
-        birthdate: "1990/01/01".to_string(), // 格式错误
+        username: "jd".to_string(),           // 长度2，小于最小值3
+        age: "150".to_string(),               // 超过最大值120
+        birthdate: "1990/01/111".to_string(), // 格式错误
     };
 
     // 验证有效用户

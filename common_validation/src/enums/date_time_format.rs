@@ -1,3 +1,7 @@
+//! # 日期时间格式枚举
+//!
+//! 定义支持的日期时间格式类型和对应的字符串模式
+
 // 日期格式枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DateTimeFormatEnum {
@@ -17,6 +21,10 @@ pub enum DateTimeFormatEnum {
 
 impl DateTimeFormatEnum {
     /// 获取日期时间格式的字符串模式
+    ///
+    /// # 返回值
+    ///
+    /// 返回与枚举值对应的日期时间格式字符串模式
     pub const fn pattern(&self) -> Option<&'static str> {
         match self {
             DateTimeFormatEnum::Time => Some("%H:%M"),

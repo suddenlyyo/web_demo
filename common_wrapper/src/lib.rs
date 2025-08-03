@@ -1,3 +1,32 @@
+//! # Common Wrapper 通用包装库
+//!
+//! 提供统一的API响应格式包装，包括单对象、列表、分页等不同类型的响应。
+//!
+//! ## 功能特性
+//!
+//! - 统一的响应格式
+//! - 支持多种数据类型（单对象、列表、分页）
+//! - 可自定义响应码和消息
+//! - 与serde集成，支持序列化和反序列化
+//!
+//! ## 使用示例
+//!
+//! ```rust
+//! use common_wrapper::{ObjectWrapper, ListWrapper, PageWrapper};
+//!
+//! // 单对象响应
+//! let mut obj_wrapper = ObjectWrapper::new();
+//! obj_wrapper.set_success("Hello World");
+//!
+//! // 列表响应
+//! let mut list_wrapper = ListWrapper::new();
+//! list_wrapper.set_success(vec!["item1", "item2"]);
+//!
+//! // 分页响应
+//! let mut page_wrapper = PageWrapper::new();
+//! page_wrapper.set_success(vec!["item1", "item2"], 100, 10, 1, 10);
+//! ```
+
 mod enums;
 mod wrapper;
 
