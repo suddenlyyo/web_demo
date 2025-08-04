@@ -31,4 +31,7 @@ pub enum ValidationErrorEnum {
     /// 数字格式错误
     #[error("数字格式错误")]
     NumberFormatError,
+    /// 类型不支持错误，第一个参数为类型名称，第二个参数为规则名称
+    #[error("类型 {0} 不支持验证规则 {1}")]
+    UnsupportedType(String, String),
 }

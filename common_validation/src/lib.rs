@@ -219,7 +219,7 @@ impl ParameterValidator {
                 ValidationRulesEnum::NumberMin(min) => Self::validate_number_min(value, min, &rule.desc)?,
                 ValidationRulesEnum::NumberMax(max) => Self::validate_number_max(value, max, &rule.desc)?,
                 ValidationRulesEnum::Structure => {
-                    // 手动实现trait 不需要使用这个枚举，仅用于派生实现中递归处理嵌套结构体
+                    //TODO 手动实现trait 不需要使用这个枚举，仅用于派生实现中递归处理嵌套结构体,这种方式暂未解决数组、vec等类型内部结构有验证逻辑的场景
                 },
             }
         }
