@@ -205,16 +205,8 @@ impl ParameterValidator {
                 ValidationRulesEnum::NotNull => Self::validate_not_null(value, &rule.desc)?,
                 ValidationRulesEnum::Length(len) => Self::validate_length(value, len, &rule.desc)?,
                 ValidationRulesEnum::LengthRange(min, max) => Self::validate_length_range(value, min, max, &rule.desc)?,
-                ValidationRulesEnum::ExistLength(len) => {
-                    if !value.is_empty() {
-                        Self::validate_length(value, len, &rule.desc)?
-                    }
-                },
-                ValidationRulesEnum::ExistLengthRange(min, max) => {
-                    if !value.is_empty() {
-                        Self::validate_length_range(value, min, max, &rule.desc)?
-                    }
-                },
+                ValidationRulesEnum::ExistLength(len) => Self::validate_exist_length(value, len, &rule.desc)?,
+                ValidationRulesEnum::ExistLengthRange(min, max) => Self::validate_exist_length_range(value, min, max, &rule.desc)?,
                 ValidationRulesEnum::DateFormat(format) => Self::validate_datetime(value, format, &rule.desc)?,
                 ValidationRulesEnum::NumberMin(min) => Self::validate_number_min(value, min, &rule.desc)?,
                 ValidationRulesEnum::NumberMax(max) => Self::validate_number_max(value, max, &rule.desc)?,
@@ -252,6 +244,45 @@ impl ParameterValidator {
         } else {
             Ok(())
         }
+    }
+
+    /// 验证存在时的固定长度（只有当值不为空时才验证长度）
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `expected_len` - 期望的长度
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::Length(desc, format!("必须为 {expected_len} 个字符")) 如果长度不符合预期
+    fn validate_exist_length(value: &str, expected_len: usize, desc: &str) -> Result<(), ValidationErrorEnum> {
+        if !value.is_empty() { Self::validate_length(value, expected_len, desc) } else { Ok(()) }
+    }
+
+    /// 验证存在时的长度范围（只有当值不为空时才验证长度范围）
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `min` - 最小长度
+    /// * `max` - 最大长度
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::Length(desc, format!("必须在 {min}~{max} 个字符之间"))
+    fn validate_exist_length_range(value: &str, min: usize, max: usize, desc: &str) -> Result<(), ValidationErrorEnum> {
+        if !value.is_empty() { Self::validate_length_range(value, min, max, desc) } else { Ok(()) }
     }
 
     /// 验证固定长度
