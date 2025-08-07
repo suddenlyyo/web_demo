@@ -24,5 +24,5 @@ pub enum ValidationRulesEnum {
     /// 数字最大值，max：最大值
     NumberMax(i64),
     /// 用于判断是否递归校验自定义类型，使用此枚举值表示需要递归校验
-    Structure,
+    Nested,
 }
