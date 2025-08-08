@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```rust
-/// use common_wrapper::PageWrapper;
+/// use common_wrapper::{PageWrapper,ResponseTrait};
 ///
 /// let mut wrapper = PageWrapper::new();
 /// wrapper.set_success(vec!["item1", "item2"], 100, 10, 1, 10);
@@ -118,7 +118,7 @@ impl<T> PageWrapper<T> {
     ///
     /// # 返回值
     ///
-    /// 如果存在数据列表则返回Some(&Vec<T>)，否则返回None
+    /// 如果存在数据列表则返回Some(&`Vec<T>`)，否则返回None
     pub fn get_data(&self) -> Option<&Vec<T>> {
         self.data.as_ref()
     }
@@ -227,7 +227,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
 /// use common_wrapper::PageWrapper;
 ///
 /// let page_info = PageWrapper::<String>::new();
-/// assert_eq!(page_info.get_page_offset(), 0);
+/// assert_eq!(page_info.get_page_size(), 0);
 /// ```
 #[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct PageInfo {

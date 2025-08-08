@@ -29,9 +29,9 @@
 
 mod enums;
 mod wrapper;
-//重新导出 enums、wrapper公共项
-pub use enums::{WrapperErrEnum};
-pub use wrapper::{ObjectWrapper, ListWrapper, PageWrapper, ResponseTrait, ResponseWrapper};
+//重新导出 enums、wrapper公共项,方便第三方使用
+pub use enums::WrapperErrEnum;
+pub use wrapper::{ListWrapper, ObjectWrapper, PageInfo, PageWrapper, ResponseTrait, ResponseWrapper};
 
 #[cfg(test)]
 mod tests {
@@ -131,7 +131,7 @@ mod tests {
         println!("data_serialized = {}", data_serialized);
 
         assert_eq!(data.get_base().get_code(), WrapperErrEnum::Success as i32);
-        assert_eq!(data.data(), Some(&vec!["Test Data 1", "Test Data 2"]));
+        assert_eq!(data.get_data(), Some(&vec!["Test Data 1", "Test Data 2"]));
 
         let mut fail_data = ListWrapper::<String>::new();
         fail_data.set_fail("Failed");
@@ -140,7 +140,7 @@ mod tests {
         println!("fail_data_serialized = {}", fail_data_serialized);
 
         assert_eq!(fail_data.get_base().get_code(), WrapperErrEnum::Fail as i32);
-        assert_eq!(fail_data.data(), None);
+        assert_eq!(fail_data.get_data(), None);
 
         let mut unknown_error_data = ListWrapper::<String>::new();
         unknown_error_data.set_unknown_error("Unknown Error");
@@ -148,7 +148,7 @@ mod tests {
         let unknown_error_data_serialized = serde_json::to_string(&unknown_error_data).unwrap();
         println!("unknown_error_data_serialized = {}", unknown_error_data_serialized);
         assert_eq!(unknown_error_data.get_base().get_code(), WrapperErrEnum::UnknownError as i32);
-        assert_eq!(unknown_error_data.data(), None);
+        assert_eq!(unknown_error_data.get_data(), None);
     }
 
     #[test]

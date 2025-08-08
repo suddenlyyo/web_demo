@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```rust
-/// use common_wrapper::ObjectWrapper;
+/// use common_wrapper::{ObjectWrapper,ResponseTrait};
 ///
 /// let mut wrapper = ObjectWrapper::new();
 /// wrapper.set_success("Hello World");

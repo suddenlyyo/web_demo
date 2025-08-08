@@ -12,12 +12,12 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```rust
-/// use common_wrapper::ListWrapper;
+///  use common_wrapper::{ListWrapper,ResponseTrait};;
 ///
 /// let mut wrapper = ListWrapper::new();
 /// wrapper.set_success(vec!["item1", "item2"]);
 /// assert!(wrapper.is_success());
-/// assert_eq!(wrapper.data(), Some(&vec!["item1", "item2"]));
+/// assert_eq!(wrapper.get_data(), Some(&vec!["item1", "item2"]));
 /// ```
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ListWrapper<T> {
@@ -82,8 +82,8 @@ impl<T> ListWrapper<T> {
     ///
     /// # 返回值
     ///
-    /// 如果存在数据列表则返回Some(&Vec<T>)，否则返回None
-    pub fn data(&self) -> Option<&Vec<T>> {
+    /// 如果存在数据列表则返回Some(&`Vec<T>`)，否则返回None
+    pub fn get_data(&self) -> Option<&Vec<T>> {
         self.data.as_ref()
     }
 }

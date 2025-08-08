@@ -46,9 +46,9 @@ impl From<i32> for WrapperErrEnum {
     /// 对应的WrapperErrEnum枚举值，如果找不到则返回UnknownError
     fn from(code: i32) -> Self {
         match code {
-            0 => Self::Success,
-            1 => Self::Fail,
-            2 => Self::UnknownError,
+            1 => Self::Success,
+            -1 => Self::Fail,
+            -2 => Self::UnknownError,
             // 处理非法值
             _ => Self::UnknownError,
         }

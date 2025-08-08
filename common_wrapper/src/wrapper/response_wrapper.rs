@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```rust
-/// use common_wrapper::{ResponseWrapper, WrapperErrEnum};
+/// use common_wrapper::{ResponseWrapper,ResponseTrait, WrapperErrEnum};
 ///
 /// let success_response = ResponseWrapper::success_default();
 /// assert_eq!(success_response.get_code(), WrapperErrEnum::Success as i32);
