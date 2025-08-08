@@ -67,13 +67,13 @@ struct Address {
 
 #[derive(Debug, ValidatableImpl)]
 struct UserProfile {
-    #[validate(structure, desc = "基础信息")]
+    #[validate(nested, desc = "基础信息")]
     basic: BasicUser,
 
-    #[validate(structure, desc = "地址")]
+    #[validate(nested, desc = "地址")]
     address: Address,
 
-    #[validate(structure, desc = "备用地址")]
+    #[validate(nested, desc = "备用地址")]
     secondary_address: Option<Address>,
 }
 
@@ -243,7 +243,7 @@ fn test_complex_types() {
     // 测试嵌套Vec验证 - 这部分逻辑是合理的
     #[derive(Debug, ValidatableImpl)]
     struct NestedVecTest {
-        #[validate(desc = "嵌套验证")]
+        #[validate(nested, desc = "嵌套验证")]
         items: Vec<BasicUser>,
     }
 

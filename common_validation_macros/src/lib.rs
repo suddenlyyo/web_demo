@@ -12,7 +12,8 @@
 //! ## 使用示例
 //!
 //! ```rust
-//! use common_validation::{Validatable, DateTimeFormatEnum};
+//! use common_validation::{Validatable, DateTimeFormatEnum, ValidationErrorEnum, ValidationRule, ValidationRulesEnum, ParameterValidator};
+//! use common_validation_macros::ValidatableImpl;
 //!
 //! #[derive(ValidatableImpl)]
 //! struct User {
@@ -77,29 +78,6 @@ fn is_number_type(ty: &Type) -> bool {
     false
 }
 
-/// 检查类型是否为字符串类型
-///
-/// # 参数
-///
-/// * `ty` - 要检查的类型
-///
-/// # 返回值
-///
-/// 如果是字符串类型返回true，否则返回false
-fn is_string_type(ty: &Type) -> bool {
-    match ty {
-        Type::Path(type_path) => {
-            if let Some(segment) = type_path.path.segments.last() {
-                let ident = segment.ident.to_string();
-                ident == "String" || ident == "str"
-            } else {
-                false
-            }
-        },
-        _ => false,
-    }
-}
-
 /// 获取 Option<T> 或 Vec<T> 的内部类型
 ///
 /// # 参数
@@ -139,11 +117,13 @@ fn extract_inner_type(ty: &Type) -> Option<Type> {
 /// - `number_min = N`: 数值最小值验证
 /// - `number_max = N`: 数值最大值验证
 /// - `desc = "描述"`: 字段描述
+/// - `nested`: 嵌套结构体验证（用于标记需要递归验证的结构体字段）
 ///
 /// # 示例
 ///
 /// ```rust
-/// use common_validation::{Validatable, DateTimeFormatEnum};
+/// use common_validation::{Validatable, DateTimeFormatEnum, ValidationErrorEnum, ValidationRule, ValidationRulesEnum, ParameterValidator};
+/// use common_validation_macros::ValidatableImpl;
 ///
 /// #[derive(ValidatableImpl)]
 /// struct User {
@@ -204,14 +184,13 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
         let mut date_format_rule = None;
         let mut length_rules = Vec::new();
         let mut number_rules = Vec::new();
-        let mut structure_rule = None;
+        let mut nested_rule = false;
         let mut length_range = Option::<(usize, usize)>::None;
-        let mut pending_length_range: Option<(usize, usize)> = None;
         let mut number_min = Option::<i64>::None;
         let mut number_max = Option::<i64>::None;
 
         // 类型辅助判断
-        let is_string = is_string_type(field_ty);
+        let is_string = is_type_of(field_ty, "String") || is_type_of(field_ty, "str");
         let is_number = is_number_type(field_ty);
         let is_vec = is_type_of(field_ty, "Vec");
 
@@ -241,7 +220,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                         Ok(())
                     })?;
                     if let (Some(min), Some(max)) = (min, max) {
-                        pending_length_range = Some((min, max));
+                        length_range = Some((min, max));
                     }
                 } else if meta.path.is_ident("desc") {
                     let value = meta.value()?;
@@ -303,103 +282,54 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                     if let Ok(val) = value.parse::<LitInt>() {
                         number_max = val.base10_parse().ok();
                     }
-                } else if meta.path.is_ident("structure") {
-                    structure_rule = Some(quote! { ValidationRulesEnum::Structure });
+                } else if meta.path.is_ident("nested") {
+                    nested_rule = true;
                 }
                 Ok(())
             });
         }
 
-        // 处理递归验证逻辑 - 如果有Structure规则或字段类型是可验证类型
-        if structure_rule.is_some() {
-            match (field_ty, is_type_of(field_ty, "Option"), is_type_of(field_ty, "Vec")) {
-                // Option<T> 类型
-                (Type::Path(ty_path), true, false) => {
-                    if let Some(GenericArgument::Type(inner_ty)) = ty_path
-                        .path
-                        .segments
-                        .last()
-                        .and_then(|s| if let PathArguments::AngleBracketed(args) = &s.arguments { args.args.first().cloned() } else { None })
-                    {
-                        // 处理 Option<T> 和 Option<Vec<T>>
-                        match (&inner_ty, is_type_of(&inner_ty, "Vec")) {
-                            // Option<Vec<T>> 类型
-                            (Type::Path(vec_ty), true) => {
-                                if let Some(GenericArgument::Type(_vec_inner_ty)) = vec_ty
-                                    .path
-                                    .segments
-                                    .last()
-                                    .and_then(|s| if let PathArguments::AngleBracketed(args) = &s.arguments { args.args.first().cloned() } else { None })
-                                {
-                                    if structure_rule.is_some() {
-                                        return Some(quote! {
-                                            if let Some(vec_val) = &self.#field_name {
-                                                for item in vec_val {
-                                                    item.validate()?;
-                                                }
-                                            }
-                                        });
-                                    }
-                                }
-                            },
-                            // Option<T> 类型
-                            (_, false) => {
-                                if structure_rule.is_some() {
-                                    return Some(quote! {
-                                        if let Some(inner) = &self.#field_name {
-                                            inner.validate()?;
-                                        }
-                                    });
-                                }
-                            },
-                            _ => {},
-                        }
+        // 处理递归验证逻辑 - 如果有Nested规则
+        if nested_rule {
+            // 对于Option<T>类型，需要特殊处理
+            if is_type_of(field_ty, "Option") {
+                return Some(quote! {
+                    if let Some(ref val) = self.#field_name {
+                        val.validate()?;
                     }
-                },
-                // Vec<T> 类型
-                (_, false, true) => {
-                    if structure_rule.is_some() {
-                        return Some(quote! {
-                            for item in &self.#field_name {
-                                item.validate()?;
-                            }
-                        });
+                });
+            }
+            // 对于Vec<T>类型，需要遍历每个元素进行验证
+            else if is_type_of(field_ty, "Vec") {
+                return Some(quote! {
+                    for item in &self.#field_name {
+                        item.validate()?;
                     }
-                },
-                // T 类型（非Option非Vec）
-                (_, false, false) => {
-                    if structure_rule.is_some() {
-                        return Some(quote! {
-                            self.#field_name.validate()?;
-                        });
-                    }
-                },
-                // 不可能的情况（Option<Vec<T>>已经在上面处理了）
-                (..) => unreachable!(),
+                });
+            }
+            // 对于普通类型
+            else {
+                return Some(quote! {
+                    self.#field_name.validate()?;
+                });
             }
         }
 
-        // 优先处理 length_range
-        let length_range_builder = if let Some((min, max)) = pending_length_range.or(length_range) {
+        // 处理 length_range
+        if let Some((min, max)) = length_range {
             if is_string || is_vec {
                 length_rules.push(quote! { ValidationRulesEnum::LengthRange(#min, #max) });
             }
-            quote! {}
-        } else {
-            quote! {}
-        };
+        }
 
-        let number_range_builder = if is_number {
+        if is_number {
             if let Some(min) = number_min {
                 number_rules.push(quote! { ValidationRulesEnum::NumberMin(#min) });
             }
             if let Some(max) = number_max {
                 number_rules.push(quote! { ValidationRulesEnum::NumberMax(#max) });
             }
-            quote! {}
-        } else {
-            quote! {}
-        };
+        }
 
         // 统一按顺序 push 规则
         let rules_builder = {
@@ -410,8 +340,9 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
             if let Some(r) = date_format_rule {
                 all_rules.push(r);
             }
-            if let Some(ref r) = structure_rule {
-                all_rules.push(r.clone());
+            // 添加Nested规则
+            if nested_rule {
+                all_rules.push(quote! { ValidationRulesEnum::Nested });
             }
             all_rules.extend(length_rules);
             all_rules.extend(number_rules);
@@ -430,7 +361,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                     quote! {
                         self.#field_name.as_ref().map(|v| v.len().to_string()).unwrap_or_default()
                     }
-                } else if is_type_of(&inner_ty, "String") || is_number_type(&inner_ty) {
+                } else if is_type_of(&inner_ty, "String") || is_type_of(&inner_ty, "str") || is_number_type(&inner_ty) {
                     // Option<String> 或 Option<数字类型>
                     quote! {
                         self.#field_name.as_ref().map(|v| v.to_string()).unwrap_or_default()
@@ -449,7 +380,7 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
             quote! {
                 self.#field_name.len().to_string()
             }
-        } else if structure_rule.is_some() {
+        } else if nested_rule {
             // 对于结构体类型，不需要获取值字符串进行验证
             quote! { String::new() }
         } else if is_string || is_number {
@@ -465,13 +396,11 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
             let mut rule = ValidationRule::new(#desc);
         };
 
-        // 生成最终验证代码，保证规则顺序：not_null -> date_format -> structure -> length/length_range -> number_range
+        // 生成最终验证代码，保证规则顺序：not_null -> date_format -> nested -> length/length_range -> number_range
         Some(quote! {
             {
                 #rule_builder
                 #rules_builder
-                #length_range_builder
-                #number_range_builder
                 let value = #value_access;
                 ParameterValidator::validate_value(&value, &rule)?;
             }

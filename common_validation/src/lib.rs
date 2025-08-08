@@ -211,7 +211,8 @@ impl ParameterValidator {
                 ValidationRulesEnum::NumberMin(min) => Self::validate_number_min(value, min, &rule.desc)?,
                 ValidationRulesEnum::NumberMax(max) => Self::validate_number_max(value, max, &rule.desc)?,
                 ValidationRulesEnum::Nested => {
-                    //TODO 手动实现trait 不需要使用这个枚举，仅用于派生实现中递归处理嵌套结构体,这种方式暂未解决数组、vec等类型内部结构有验证逻辑的场景
+                    // Nested规则不在此处处理，它应该在宏生成的代码中通过直接调用validate()处理
+                    // 此处保留空处理以避免编译错误
                 },
             }
         }
