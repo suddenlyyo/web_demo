@@ -4,7 +4,7 @@
 //!
 //! ## 功能特性
 //!
-//! - 为结构体自动生成 [Validatable] 实现
+//! - 为结构体自动生成 [`Validatable`](common_validation::Validatable) 实现
 //! - 支持多种验证属性（not_null、length、date_format等）
 //! - 自动处理嵌套结构体的验证
 //! - 支持Option和Vec类型的验证
@@ -102,7 +102,7 @@ fn extract_inner_type(ty: &Type) -> Option<Type> {
 
 /// 实现 Validatable trait 的派生宏
 ///
-/// 为结构体自动生成 [Validatable] trait 的实现，支持各种验证属性。
+/// 为结构体自动生成 [`Validatable`](common_validation::Validatable) trait 的实现，支持各种验证属性。
 ///
 /// # 支持的属性
 ///
