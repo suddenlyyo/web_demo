@@ -29,6 +29,9 @@
 
 mod enums;
 mod wrapper;
+//重新导出 enums、wrapper公共项
+pub use enums::{WrapperErrEnum};
+pub use wrapper::{ObjectWrapper, ListWrapper, PageWrapper, ResponseTrait, ResponseWrapper};
 
 #[cfg(test)]
 mod tests {
