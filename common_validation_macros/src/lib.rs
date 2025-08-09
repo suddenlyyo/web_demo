@@ -72,7 +72,7 @@ fn is_number_type(ty: &Type) -> bool {
     if let Type::Path(type_path) = ty {
         if let Some(segment) = type_path.path.segments.last() {
             let ident = segment.ident.to_string();
-            return ["i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64"].contains(&ident.as_str());
+            return ["i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "usize", "f32", "f64"].contains(&ident.as_str());
         }
     }
     false
