@@ -40,23 +40,36 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, GenericArgument, LitInt, LitStr, PathArguments, Type, parse_macro_input};
 
-/// 检查类型是否是指定的类型名
+/// 判断给定类型是否匹配目标类型名称
+///
+/// 本函数检查类型是否为路径类型（如 `String` 或 `std::vec::Vec`），
+/// 且路径的最后一段标识符是否与 `type_name` 相同。
+/// 注意：不处理泛型参数（如 `Vec<i32>` 只会检查 `Vec` 部分）
 ///
 /// # 参数
-///
-/// * `ty` - 要检查的类型
-/// * `type_name` - 目标类型名称
+/// - `ty`: 要检查的类型（`syn::Type` 类型）
+/// - `type_name`: 目标类型名称（如 `"String"`）
 ///
 /// # 返回值
+/// 当类型为路径类型且最后段匹配时返回 `true`，否则返回 `false`
 ///
-/// 如果类型匹配返回true，否则返回false
+/// # 示例
+/// ```
+/// use syn::{parse_quote, Type};
+///
+/// let ty: Type = parse_quote!(String);
+/// assert!(is_type_of(&ty, "String"));
+/// ```
 fn is_type_of(ty: &Type, type_name: &str) -> bool {
-    if let Type::Path(type_path) = ty {
-        if let Some(segment) = type_path.path.segments.last() {
-            return segment.ident == type_name;
-        }
-    }
-    false
+    // 若非路径类型则直接返回
+    let Type::Path(type_path) = ty else { return false };
+
+    // 获取路径最后一段，若无则返回 false
+    type_path
+        .path
+        .segments
+        .last()
+        .map_or(false, |segment| segment.ident == type_name)
 }
 
 /// 检查类型是否为数字类型
@@ -69,35 +82,58 @@ fn is_type_of(ty: &Type, type_name: &str) -> bool {
 ///
 /// 如果是数字类型返回true，否则返回false
 fn is_number_type(ty: &Type) -> bool {
-    if let Type::Path(type_path) = ty {
-        if let Some(segment) = type_path.path.segments.last() {
-            let ident = segment.ident.to_string();
-            return ["i8", "i16", "i32", "i64", "i128", "isize", "u8", "u16", "u32", "u64", "usize", "f32", "f64"].contains(&ident.as_str());
-        }
-    }
-    false
+    let Type::Path(type_path) = ty else { return false };
+    let Some(segment) = type_path.path.segments.last() else { return false };
+
+    matches!(segment.ident.to_string().as_str(), "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "usize" | "f32" | "f64")
 }
 
-/// 获取 Option<T> 或 Vec<T> 的内部类型
+/// 从泛型类型中提取内部类型参数
+///
+/// 本函数用于解析类似 `Container<T>` 这样的泛型类型，并返回其第一个类型参数 `T`。
+/// 适用于处理 `Vec<T>`、`Option<T>`、`Result<T, E>` 等常见泛型类型。
 ///
 /// # 参数
-///
-/// * `ty` - 要提取内部类型的容器类型
+/// - `ty`: 要解析的类型，通常是 `syn::Type` 的实例
 ///
 /// # 返回值
+/// - `Some(Type)`: 成功提取到内部类型时返回（如 `Vec<i32>` 返回 `i32`）
+/// - `None`: 当输入类型不是泛型、没有类型参数或解析失败时返回
 ///
-/// 如果是容器类型返回内部类型，否则返回None
+/// # 示例
+/// ```
+/// use syn::{parse_quote, Type};
+///
+/// // 提取 Vec<String> 中的 String
+/// let ty: Type = parse_quote!(Vec<String>);
+/// assert_eq!(
+///     extract_inner_type(&ty).map(|t| t.to_token_stream().to_string()),
+///     Some("String".to_string())
+/// );
+///
+/// // 非泛型类型返回 None
+/// let ty: Type = parse_quote!(i32);
+/// assert!(extract_inner_type(&ty).is_none());
+/// ```
 fn extract_inner_type(ty: &Type) -> Option<Type> {
-    if let Type::Path(type_path) = ty {
-        if let Some(segment) = type_path.path.segments.last() {
-            if let PathArguments::AngleBracketed(args) = &segment.arguments {
-                if let Some(GenericArgument::Type(inner_ty)) = args.args.first() {
-                    return Some(inner_ty.clone());
-                }
-            }
-        }
-    }
-    None
+    // 第一步：匹配类型是否为路径类型（如 `std::vec::Vec`）
+    // 如果不是路径类型（如原始类型 i32），直接返回 None
+    let Type::Path(type_path) = ty else { return None };
+
+    // 第二步：获取路径的最后一段（如 `std::vec::Vec` 中的 `Vec`）
+    // 如果路径为空（理论上不应该发生），返回 None
+    let Some(segment) = type_path.path.segments.last() else { return None };
+
+    // 第三步：检查路径段是否包含尖括号泛型参数（即 `<...>` 部分）
+    // 如果不是泛型实例（如单纯的 `Vec` 类型），返回 None
+    let PathArguments::AngleBracketed(args) = &segment.arguments else { return None };
+
+    // 第四步：从泛型参数中提取第一个参数
+    // 注意：这里只处理类型参数（GenericArgument::Type），忽略生命周期或常量参数
+    let Some(GenericArgument::Type(inner_ty)) = args.args.first() else { return None };
+
+    // 返回内部类型的克隆（需要克隆因为要转移所有权）
+    Some(inner_ty.clone())
 }
 
 /// 实现 Validatable trait 的派生宏
