@@ -4,7 +4,7 @@ use diesel::sql_types::{BigInt, Integer, Text, Timestamp};
 use diesel::{QueryableByName, RunQueryDsl, sql_query};
 
 use crate::models::{User, UserQuery};
-use crate::repositories::user::UserRepository;
+use crate::repositories::user::user_repository::UserRepository;
 use common_wrapper::PageInfo;
 
 /// 用户表的所有字段，用于SQL查询
@@ -32,243 +32,219 @@ impl UserRepositoryDieselImpl {
 
         Self { connection }
     }
+
+    /// 构建查询条件
+    fn build_where_clause(query: &UserQuery) -> (String, Vec<String>) {
+        let mut where_conditions = Vec::new();
+        let mut params = Vec::new();
+
+        // 添加ID查询条件
+        if let Some(id) = &query.id {
+            where_conditions.push("id = ?");
+            params.push(id.clone());
+        }
+
+        // 添加名称查询条件
+        if let Some(name) = &query.name {
+            where_conditions.push("name LIKE ?");
+            params.push(format!("%{}%", name));
+        }
+
+        // 添加部门ID查询条件
+        if let Some(dept_id) = &query.dept_id {
+            where_conditions.push("dept_id = ?");
+            params.push(dept_id.clone());
+        }
+
+        // 添加邮箱查询条件
+        if let Some(email) = &query.email {
+            where_conditions.push("email LIKE ?");
+            params.push(format!("%{}%", email));
+        }
+
+        // 添加手机号码查询条件
+        if let Some(phone_number) = &query.phone_number {
+            where_conditions.push("phone_number LIKE ?");
+            params.push(format!("%{}%", phone_number));
+        }
+
+        // 添加性别查询条件
+        if let Some(sex) = &query.sex {
+            where_conditions.push("sex = ?");
+            params.push(sex.clone());
+        }
+
+        // 添加状态查询条件
+        if let Some(status) = query.status {
+            where_conditions.push("status = ?");
+            params.push(status.to_string());
+        }
+
+        // 添加备注查询条件
+        if let Some(remark) = &query.remark {
+            where_conditions.push("remark LIKE ?");
+            params.push(format!("%{}%", remark));
+        }
+
+        // 添加日期范围查询条件
+        if let (Some(start_date), Some(end_date)) = (&query.start_date, &query.end_date) {
+            where_conditions.push("create_time BETWEEN ? AND ?");
+            params.push(start_date.naive_utc().to_string());
+            params.push(end_date.naive_utc().to_string());
+        } else if let Some(start_date) = &query.start_date {
+            where_conditions.push("create_time >= ?");
+            params.push(start_date.naive_utc().to_string());
+        } else if let Some(end_date) = &query.end_date {
+            where_conditions.push("create_time <= ?");
+            params.push(end_date.naive_utc().to_string());
+        }
+
+        let where_clause = if !where_conditions.is_empty() { format!("WHERE {}", where_conditions.join(" AND ")) } else { String::new() };
+
+        (where_clause, params)
+    }
 }
 
 #[rocket::async_trait]
 impl UserRepository for UserRepositoryDieselImpl {
     /// 根据ID获取用户信息
-    async fn get_user_by_id(&self, id: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
         // 使用Diesel查询用户信息
-        let user_query = sql_query("SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE id = ?")
+        let result = sql_query(format!("SELECT {} FROM sys_user WHERE id = ?", USER_FIELDS))
             .bind::<Text, _>(id)
-            .get_result::<User>(&mut self.connection)?;
+            .get_result::<User>(&mut self.connection);
 
-        Ok(user_query)
-    }
-
-    /// 获取用户列表
-    async fn list_users(&self) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel查询用户列表
-        let users_query = sql_query("SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user").load::<User>(&mut self.connection)?;
-
-        Ok(users_query)
-    }
-
-    /// 根据查询条件分页查询用户列表
-    async fn list_users_by_query(&self, query: UserQuery) -> Result<(Vec<User>, u64, u64), Box<dyn std::error::Error + Send + Sync>> {
-        // 直接使用已处理过的分页参数
-        let current_page = query
-            .current_page_num
-            .unwrap_or(PageInfo::DEFAULT_CURRENT_PAGE);
-        let page_size = query
-            .page_size
-            .unwrap_or(PageInfo::DEFAULT_PAGE_SIZE)
-            .min(PageInfo::MAX_PAGE_SIZE);
-        let offset = (current_page - 1) * page_size;
-
-        // 构建动态查询SQL
-        let mut sql = "SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
-        let mut count_sql = "SELECT COUNT(*) as count FROM sys_user WHERE 1=1".to_string();
-        let mut params: Vec<String> = Vec::new();
-
-        // 添加查询条件
-        if let Some(id) = &query.id {
-            sql.push_str(" AND id = ?");
-            count_sql.push_str(" AND id = ?");
-            params.push(id.clone());
+        match result {
+            Ok(user) => Ok(Some(user)),
+            Err(diesel::result::Error::NotFound) => Ok(None),
+            Err(e) => Err(Box::new(e)),
         }
-
-        if let Some(name) = &query.name {
-            sql.push_str(" AND name LIKE ?");
-            count_sql.push_str(" AND name LIKE ?");
-            params.push(format!("%{}%", name));
-        }
-
-        if let Some(dept_id) = &query.dept_id {
-            sql.push_str(" AND dept_id = ?");
-            count_sql.push_str(" AND dept_id = ?");
-            params.push(dept_id.clone());
-        }
-
-        if let Some(email) = &query.email {
-            sql.push_str(" AND email LIKE ?");
-            count_sql.push_str(" AND email LIKE ?");
-            params.push(format!("%{}%", email));
-        }
-
-        if let Some(phone_number) = &query.phone_number {
-            sql.push_str(" AND phone_number LIKE ?");
-            count_sql.push_str(" AND phone_number LIKE ?");
-            params.push(format!("%{}%", phone_number));
-        }
-
-        if let Some(sex) = &query.sex {
-            sql.push_str(" AND sex = ?");
-            count_sql.push_str(" AND sex = ?");
-            params.push(sex.clone());
-        }
-
-        if let Some(status) = query.status {
-            sql.push_str(" AND status = ?");
-            count_sql.push_str(" AND status = ?");
-            params.push(status.to_string());
-        }
-
-        if let Some(remark) = &query.remark {
-            sql.push_str(" AND remark LIKE ?");
-            count_sql.push_str(" AND remark LIKE ?");
-            params.push(format!("%{}%", remark));
-        }
-
-        if let Some(start_date) = query.start_date {
-            sql.push_str(" AND create_time >= ?");
-            count_sql.push_str(" AND create_time >= ?");
-            params.push(start_date.to_rfc3339());
-        }
-
-        if let Some(end_date) = query.end_date {
-            sql.push_str(" AND create_time <= ?");
-            count_sql.push_str(" AND create_time <= ?");
-            params.push(end_date.to_rfc3339());
-        }
-
-        sql.push_str(" ORDER BY create_time DESC LIMIT ? OFFSET ?");
-
-        // 构建查询参数
-        let mut query_builder = sql_query(&sql);
-        // 绑定条件参数
-        for param in &params {
-            query_builder = query_builder.bind::<Text, _>(param);
-        }
-        // 绑定分页参数
-        query_builder = query_builder
-            .bind::<BigInt, _>(page_size as i64)
-            .bind::<BigInt, _>(offset as i64);
-
-        // 构建统计查询
-        let mut count_query_builder = sql_query(&count_sql);
-        for param in &params {
-            count_query_builder = count_query_builder.bind::<Text, _>(param);
-        }
-
-        // 查询总记录数
-        let total_count = match count_query {
-            Ok(count_result) => count_result.count,
-            Err(_) => {
-                result
-                    .base
-                    .set_fail("Failed to fetch user count".to_string());
-                return result;
-            },
-        };
-
-        // 计算总页数
-        let total_pages = (total_count + page_size - 1) / page_size;
-
-        // 查询当前页数据
-        let users_result = query_builder.load::<User>(&mut self.connection)?;
-
-        Ok((users_result, total_count, total_pages))
     }
 
     /// 根据用户名查找用户
-    async fn get_user_by_name(&self, name: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel查询用户信息
-        let user_query = sql_query("SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE name = ?")
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let result = sql_query(format!("SELECT {} FROM sys_user WHERE name = ?", USER_FIELDS))
             .bind::<Text, _>(name)
-            .get_result::<User>(&mut self.connection)?;
+            .get_result::<User>(&mut self.connection);
 
-        Ok(user_query)
+        match result {
+            Ok(user) => Ok(Some(user)),
+            Err(diesel::result::Error::NotFound) => Ok(None),
+            Err(e) => Err(Box::new(e)),
+        }
     }
 
-    /// 根据部门ID查找用户列表
-    async fn list_users_by_dept_id(&self, dept_id: &str) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel查询用户列表
-        let users_query = sql_query("SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE dept_id = ?")
-            .bind::<Text, _>(dept_id)
+    /// 查询用户列表
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let user_query: UserQuery = user.into();
+        let (where_clause, _params) = Self::build_where_clause(&user_query);
+
+        let sql = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
+        let users_query = sql_query(&sql).load::<User>(&mut self.connection)?;
+        Ok(users_query)
+    }
+
+    /// 获取用户列表数量
+    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let (where_clause, _params) = Self::build_where_clause(query);
+
+        let sql = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
+        let count_result = sql_query(&sql).get_result::<CountResult>(&mut self.connection)?;
+        Ok(count_result.count)
+    }
+
+    /// 分页获取用户列表
+    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let page_info = PageInfo::new(query.current_page_num, query.page_size);
+        let offset = page_info.get_page_offset();
+        let limit = page_info.get_page_size();
+
+        let (where_clause, _params) = Self::build_where_clause(query);
+
+        let sql = format!("SELECT {} FROM sys_user {} ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS, where_clause);
+        let users_query = sql_query(&sql)
+            .bind::<Integer, _>(limit as i32)
+            .bind::<Integer, _>(offset as i32)
             .load::<User>(&mut self.connection)?;
 
         Ok(users_query)
     }
 
-    /// 新增用户
-    async fn add_user(&self, user: User) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel新增用户
-        let insert_query = sql_query("INSERT INTO sys_user (id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind::<Text, _>(user.id)
-            .bind::<Text, _>(user.dept_id.unwrap_or_default())
-            .bind::<Text, _>(user.name.unwrap_or_default())
-            .bind::<Text, _>(user.email.unwrap_or_default())
-            .bind::<Text, _>(user.phone_number.unwrap_or_default())
-            .bind::<Text, _>(user.sex.unwrap_or_default())
-            .bind::<Text, _>(user.password.unwrap_or_default())
-            .bind::<Text, _>(user.avatar.unwrap_or_default())
-            .bind::<Integer, _>(user.status.unwrap_or_default())
-            .bind::<Text, _>(user.login_ip.unwrap_or_default())
-            .bind::<Timestamp, _>(user.login_time.unwrap_or_default())
-            .bind::<Text, _>(user.create_by.unwrap_or_default())
-            .bind::<Timestamp, _>(user.create_time.unwrap_or_default())
-            .bind::<Text, _>(user.update_by.unwrap_or_default())
-            .bind::<Timestamp, _>(user.update_time.unwrap_or_default())
-            .bind::<Text, _>(user.remark.unwrap_or_default());
+    /// 插入用户记录
+    async fn insert(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 构建插入语句
+        let result = sql_query("INSERT INTO sys_user (id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind::<Text, _>(&user.id)
+            .bind::<Text, _>(&user.dept_id.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.name.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.email.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.phone_number.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.sex.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.password.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.avatar.clone().unwrap_or_default())
+            .bind::<Integer, _>(user.status.unwrap_or(0))
+            .bind::<Text, _>(&user.login_ip.clone().unwrap_or_default())
+            .bind::<Text, _>("") // login_time
+            .bind::<Text, _>(&user.create_by.clone().unwrap_or_default())
+            .bind::<Text, _>("") // create_time
+            .bind::<Text, _>(&user.update_by.clone().unwrap_or_default())
+            .bind::<Text, _>("") // update_time
+            .bind::<Text, _>(&user.remark.clone().unwrap_or_default())
+            .execute(&mut self.connection);
 
-        insert_query.execute(&mut self.connection)?;
-
-        Ok(user)
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Box::new(e)),
+        }
     }
 
-    /// 修改用户
-    async fn update_user(&self, user: User) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel修改用户
-        let update_query = sql_query("UPDATE sys_user SET dept_id = ?, name = ?, email = ?, phone_number = ?, sex = ?, password = ?, avatar = ?, status = ?, login_ip = ?, login_time = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?")
-            .bind::<Text, _>(user.dept_id.unwrap_or_default())
-            .bind::<Text, _>(user.name.unwrap_or_default())
-            .bind::<Text, _>(user.email.unwrap_or_default())
-            .bind::<Text, _>(user.phone_number.unwrap_or_default())
-            .bind::<Text, _>(user.sex.unwrap_or_default())
-            .bind::<Text, _>(user.password.unwrap_or_default())
-            .bind::<Text, _>(user.avatar.unwrap_or_default())
-            .bind::<Integer, _>(user.status.unwrap_or_default())
-            .bind::<Text, _>(user.login_ip.unwrap_or_default())
-            .bind::<Timestamp, _>(user.login_time.unwrap_or_default())
-            .bind::<Text, _>(user.create_by.unwrap_or_default())
-            .bind::<Timestamp, _>(user.create_time.unwrap_or_default())
-            .bind::<Text, _>(user.update_by.unwrap_or_default())
-            .bind::<Timestamp, _>(user.update_time.unwrap_or_default())
-            .bind::<Text, _>(user.remark.unwrap_or_default())
-            .bind::<Text, _>(user.id);
-
-        update_query.execute(&mut self.connection)?;
-
-        Ok(user)
+    /// 选择性插入用户记录
+    async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 与insert方法实现相同，在实际应用中可以根据需要进行区分
+        self.insert(user).await
     }
 
-    /// 删除用户
-    async fn delete_user(&self, id: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel删除用户
-        let delete_query = sql_query("DELETE FROM sys_user WHERE id = ?").bind::<Text, _>(id);
-        delete_query.execute(&mut self.connection)?;
+    /// 根据ID更新用户信息
+    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let result = sql_query("UPDATE sys_user SET dept_id = ?, name = ?, email = ?, phone_number = ?, sex = ?, password = ?, avatar = ?, status = ?, login_ip = ?, login_time = ?, create_by = ?, create_time = ?, update_by = ?, update_time = datetime('now'), remark = ? WHERE id = ?")
+            .bind::<Text, _>(&user.dept_id.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.name.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.email.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.phone_number.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.sex.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.password.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.avatar.clone().unwrap_or_default())
+            .bind::<Integer, _>(user.status.unwrap_or(0))
+            .bind::<Text, _>(&user.login_ip.clone().unwrap_or_default())
+            .bind::<Text, _>("") // login_time
+            .bind::<Text, _>(&user.create_by.clone().unwrap_or_default())
+            .bind::<Text, _>("") // create_time
+            .bind::<Text, _>(&user.update_by.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.remark.clone().unwrap_or_default())
+            .bind::<Text, _>(&user.id)
+            .execute(&mut self.connection);
 
-        // 查询删除的用户信息（模拟返回）
-        let user = User { id: id.to_string(), ..Default::default() };
-
-        Ok(user)
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Box::new(e)),
+        }
     }
 
-    /// 修改用户状态
-    async fn update_user_status(&self, id: &str, status: i32) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel修改用户状态
-        let update_query = sql_query("UPDATE sys_user SET status = ?, update_time = CURRENT_TIMESTAMP WHERE id = ?")
-            .bind::<Integer, _>(status)
-            .bind::<Text, _>(id);
+    /// 根据ID选择性更新用户信息
+    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 与update_by_primary_key方法实现相同，在实际应用中可以根据需要进行区分
+        self.update_by_primary_key(user).await
+    }
 
-        update_query.execute(&mut self.connection)?;
-
-        // 查询更新后的用户信息
-        let user_query = sql_query("SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE id = ?")
+    /// 根据ID删除用户
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let result = sql_query("DELETE FROM sys_user WHERE id = ?")
             .bind::<Text, _>(id)
-            .get_result::<User>(&mut self.connection)?;
+            .execute(&mut self.connection);
 
-        Ok(user_query)
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Box::new(e)),
+        }
     }
 }

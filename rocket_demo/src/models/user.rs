@@ -70,3 +70,45 @@ pub struct UserQuery {
     /// 每页条数
     pub page_size: Option<u64>,
 }
+
+impl From<&User> for UserQuery {
+    fn from(user: &User) -> Self {
+        UserQuery {
+            id: if user.id.is_empty() { None } else { Some(user.id.clone()) },
+            name: user.name.clone(),
+            dept_id: user.dept_id.clone(),
+            email: user.email.clone(),
+            phone_number: user.phone_number.clone(),
+            sex: user.sex.clone(),
+            status: user.status,
+            remark: user.remark.clone(),
+            // User模型中没有时间范围查询字段，所以设置为None
+            start_date: None,
+            end_date: None,
+            // 分页字段在User模型中不存在，所以设置为None
+            current_page_num: None,
+            page_size: None,
+        }
+    }
+}
+
+impl From<User> for UserQuery {
+    fn from(user: User) -> Self {
+        UserQuery {
+            id: if user.id.is_empty() { None } else { Some(user.id) },
+            name: user.name,
+            dept_id: user.dept_id,
+            email: user.email,
+            phone_number: user.phone_number,
+            sex: user.sex,
+            status: user.status,
+            remark: user.remark,
+            // User模型中没有时间范围查询字段，所以设置为None
+            start_date: None,
+            end_date: None,
+            // 分页字段在User模型中不存在，所以设置为None
+            current_page_num: None,
+            page_size: None,
+        }
+    }
+}

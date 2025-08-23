@@ -40,7 +40,7 @@ use std::error::Error as StdError;
 
 use sqlx::{MySqlPool, Row};
 
-use crate::models::user::User;
+use crate::models::{User, UserQuery};
 use crate::repositories::user::user_repository::UserRepository;
 use common_wrapper::PageInfo;
 
@@ -64,12 +64,83 @@ impl UserRepositorySqlxImpl {
         let pool = MySqlPool::connect(database_url).await.unwrap();
         Self { pool }
     }
+
+    /// 构建查询条件
+    fn build_where_clause(query: &UserQuery) -> (String, Vec<String>) {
+        let mut where_conditions = Vec::new();
+        let mut params = Vec::new();
+
+        // 添加ID查询条件
+        if let Some(id) = &query.id {
+            where_conditions.push("id = ?");
+            params.push(id.clone());
+        }
+
+        // 添加名称查询条件
+        if let Some(name) = &query.name {
+            where_conditions.push("name LIKE ?");
+            params.push(format!("%{}%", name));
+        }
+
+        // 添加部门ID查询条件
+        if let Some(dept_id) = &query.dept_id {
+            where_conditions.push("dept_id = ?");
+            params.push(dept_id.clone());
+        }
+
+        // 添加邮箱查询条件
+        if let Some(email) = &query.email {
+            where_conditions.push("email LIKE ?");
+            params.push(format!("%{}%", email));
+        }
+
+        // 添加手机号码查询条件
+        if let Some(phone_number) = &query.phone_number {
+            where_conditions.push("phone_number LIKE ?");
+            params.push(format!("%{}%", phone_number));
+        }
+
+        // 添加性别查询条件
+        if let Some(sex) = &query.sex {
+            where_conditions.push("sex = ?");
+            params.push(sex.clone());
+        }
+
+        // 添加状态查询条件
+        if let Some(status) = query.status {
+            where_conditions.push("status = ?");
+            params.push(status.to_string());
+        }
+
+        // 添加备注查询条件
+        if let Some(remark) = &query.remark {
+            where_conditions.push("remark LIKE ?");
+            params.push(format!("%{}%", remark));
+        }
+
+        // 添加日期范围查询条件
+        if let (Some(start_date), Some(end_date)) = (&query.start_date, &query.end_date) {
+            where_conditions.push("create_time BETWEEN ? AND ?");
+            params.push(start_date.naive_utc().to_string());
+            params.push(end_date.naive_utc().to_string());
+        } else if let Some(start_date) = &query.start_date {
+            where_conditions.push("create_time >= ?");
+            params.push(start_date.naive_utc().to_string());
+        } else if let Some(end_date) = &query.end_date {
+            where_conditions.push("create_time <= ?");
+            params.push(end_date.naive_utc().to_string());
+        }
+
+        let where_clause = if !where_conditions.is_empty() { format!("WHERE {}", where_conditions.join(" AND ")) } else { String::new() };
+
+        (where_clause, params)
+    }
 }
 
 #[rocket::async_trait]
 impl UserRepository for UserRepositorySqlxImpl {
     /// 根据ID获取用户信息
-    async fn get_user_by_id(&self, id: &str) -> Result<User, Box<dyn StdError + Send + Sync>> {
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn StdError + Send + Sync>> {
         let user_query = sqlx::query(&format!("SELECT {} FROM sys_user WHERE id = ?", USER_FIELDS))
             .bind(id)
             .fetch_optional(&self.pool)
@@ -78,48 +149,84 @@ impl UserRepository for UserRepositorySqlxImpl {
         match user_query {
             Some(row) => {
                 let user = DbMapper::map_to_user(&row)?;
-                Ok(user)
+                Ok(Some(user))
             },
-            None => Err("User not found".into()),
+            None => Ok(None),
         }
     }
 
-    /// 获取所有用户列表
-    async fn list_users(&self) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
-        let users_query = sqlx::query(&format!("SELECT {} FROM sys_user", USER_FIELDS))
-            .fetch_all(&self.pool)
+    /// 根据用户名查找用户
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn StdError + Send + Sync>> {
+        let user_query = sqlx::query(&format!("SELECT {} FROM sys_user WHERE name = ?", USER_FIELDS))
+            .bind(name)
+            .fetch_optional(&self.pool)
             .await?;
 
+        match user_query {
+            Some(row) => {
+                let user = DbMapper::map_to_user(&row)?;
+                Ok(Some(user))
+            },
+            None => Ok(None),
+        }
+    }
+
+    /// 查询用户列表
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
+        let user_query: UserQuery = user.into();
+        let (where_clause, params) = Self::build_where_clause(&user_query);
+
+        let sql = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
+        let mut query = sqlx::query(&sql);
+
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let users_query = query.fetch_all(&self.pool).await?;
         let users: Result<Vec<User>, _> = users_query.iter().map(DbMapper::map_to_user).collect();
         Ok(users?)
     }
 
+    /// 获取用户列表数量
+    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let (where_clause, params) = Self::build_where_clause(query);
+
+        let sql = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
+        let mut query_builder = sqlx::query(&sql);
+
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+
+        let count_row = query_builder.fetch_one(&self.pool).await?;
+        let total: u64 = count_row.try_get("count")?;
+        Ok(total)
+    }
+
     /// 分页获取用户列表
-    async fn list_users_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<User>, u64), Box<dyn StdError + Send + Sync>> {
-        let page_info = PageInfo::new(page_num, page_size);
+    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
+        let page_info = PageInfo::new(query.current_page_num, query.page_size);
         let offset = page_info.get_page_offset();
         let limit = page_info.get_page_size();
 
-        let user_query = format!("SELECT {} FROM sys_user ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS);
-        let users_query = sqlx::query(&user_query)
-            .bind(limit as i64)
-            .bind(offset as i64)
-            .fetch_all(&self.pool)
-            .await?;
+        let (where_clause, params) = Self::build_where_clause(query);
 
+        let user_query = format!("SELECT {} FROM sys_user {} ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS, where_clause);
+        let mut query_builder = sqlx::query(&user_query);
+
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+
+        query_builder = query_builder.bind(limit as i64).bind(offset as i64);
+        let users_query = query_builder.fetch_all(&self.pool).await?;
         let users: Result<Vec<User>, _> = users_query.iter().map(DbMapper::map_to_user).collect();
-
-        // 获取总记录数
-        let count_query = "SELECT COUNT(*) as count FROM sys_user";
-        let count_row = sqlx::query(count_query).fetch_one(&self.pool).await?;
-
-        let total: u64 = count_row.try_get("count")?;
-        Ok((users?, total))
+        Ok(users?)
     }
 
-    /// 新增用户
-    async fn add_user(&self, user: User) -> Result<User, Box<dyn StdError + Send + Sync>> {
-        // 构建插入语句
+    /// 插入用户记录
+    async fn insert(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let login_time: Option<chrono::NaiveDateTime> = user.login_time.map(|t| t.naive_utc());
         let create_time: Option<chrono::NaiveDateTime> = user.create_time.map(|t| t.naive_utc());
         let update_time: Option<chrono::NaiveDateTime> = user.update_time.map(|t| t.naive_utc());
@@ -144,12 +251,17 @@ impl UserRepository for UserRepositorySqlxImpl {
             .execute(&self.pool)
             .await?;
 
-        if result.rows_affected() > 0 { Ok(user) } else { Err("Failed to add user".into()) }
+        if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to add user".into()) }
     }
 
-    /// 修改用户
-    async fn update_user(&self, user: User) -> Result<User, Box<dyn StdError + Send + Sync>> {
-        // 构建更新语句
+    /// 选择性插入用户记录
+    async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 与insert方法实现相同，在实际应用中可以根据需要进行区分
+        self.insert(user).await
+    }
+
+    /// 根据ID更新用户信息
+    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let login_time: Option<chrono::NaiveDateTime> = user.login_time.map(|t| t.naive_utc());
         let create_time: Option<chrono::NaiveDateTime> = user.create_time.map(|t| t.naive_utc());
 
@@ -172,68 +284,22 @@ impl UserRepository for UserRepositorySqlxImpl {
             .execute(&self.pool)
             .await?;
 
-        if result.rows_affected() > 0 { Ok(user) } else { Err("Failed to update user".into()) }
+        if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to update user".into()) }
     }
 
-    /// 删除用户
-    async fn delete_user(&self, id: &str) -> Result<User, Box<dyn StdError + Send + Sync>> {
-        // 先查询用户信息
-        let user = self.get_user_by_id(id).await?;
+    /// 根据ID选择性更新用户信息
+    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 与update_by_primary_key方法实现相同，在实际应用中可以根据需要进行区分
+        self.update_by_primary_key(user).await
+    }
 
-        // 执行删除操作
+    /// 根据ID删除用户
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let result = sqlx::query("DELETE FROM sys_user WHERE id = ?")
             .bind(id)
             .execute(&self.pool)
             .await?;
 
-        if result.rows_affected() > 0 { Ok(user) } else { Err("Failed to delete user".into()) }
-    }
-
-    /// 修改用户状态
-    async fn update_user_status(&self, id: &str, status: i32) -> Result<User, Box<dyn StdError + Send + Sync>> {
-        // 先查询用户信息
-        let mut user = self.get_user_by_id(id).await?;
-
-        // 执行更新操作
-        let result = sqlx::query("UPDATE sys_user SET status = ?, update_time = NOW() WHERE id = ?")
-            .bind(status)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-
-        if result.rows_affected() > 0 {
-            user.status = Some(status);
-            Ok(user)
-        } else {
-            Err("Failed to update user status".into())
-        }
-    }
-
-    /// 分页查询用户列表
-    async fn list_users_by_page_with_conditions(&self, page_num: Option<u64>, page_size: Option<u64>, where_clause: String) -> Result<(Vec<User>, u64, u64), Box<dyn StdError + Send + Sync>> {
-        let page_info = PageInfo::new(page_num, page_size);
-        let offset = page_info.get_page_offset();
-        let limit = page_info.get_page_size();
-
-        let mut query_builder = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
-        query_builder.push_str(" ORDER BY create_time DESC LIMIT ? OFFSET ?");
-
-        let query = sqlx::query(&query_builder)
-            .bind(limit as i64)
-            .bind(offset as i64);
-
-        let users_query = query.fetch_all(&self.pool).await?;
-
-        let users: Result<Vec<User>, _> = users_query.iter().map(DbMapper::map_to_user).collect();
-
-        // 构建 COUNT 查询
-        let count_query = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
-        let count_query_builder = sqlx::query(&count_query);
-
-        let count_row = count_query_builder.fetch_one(&self.pool).await?;
-        let total: u64 = count_row.try_get("count")?;
-        let total_page = (total + limit - 1) / limit; // 向上取整计算总页数
-
-        Ok((users?, total, total_page))
+        if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to delete user".into()) }
     }
 }

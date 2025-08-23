@@ -4,7 +4,7 @@ use sea_orm::sea_query::{Condition, Order};
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
 
 use crate::models::{User, UserQuery};
-use crate::repositories::user::UserRepository;
+use crate::repositories::user::user_repository::UserRepository;
 use common_wrapper::PageInfo;
 
 // 导入SeaORM实体
@@ -31,131 +31,89 @@ impl UserRepositorySeaormImpl {
 
         Self { connection }
     }
+
+    /// 构建查询条件
+    fn build_condition(query: &UserQuery) -> Condition {
+        let mut condition = Condition::all();
+
+        // 添加ID查询条件
+        if let Some(id) = &query.id {
+            condition = condition.add(Column::Id.eq(id));
+        }
+
+        // 添加名称查询条件
+        if let Some(name) = &query.name {
+            condition = condition.add(Column::Name.contains(name));
+        }
+
+        // 添加部门ID查询条件
+        if let Some(dept_id) = &query.dept_id {
+            condition = condition.add(Column::DeptId.eq(dept_id));
+        }
+
+        // 添加邮箱查询条件
+        if let Some(email) = &query.email {
+            condition = condition.add(Column::Email.contains(email));
+        }
+
+        // 添加手机号码查询条件
+        if let Some(phone_number) = &query.phone_number {
+            condition = condition.add(Column::PhoneNumber.contains(phone_number));
+        }
+
+        // 添加性别查询条件
+        if let Some(sex) = &query.sex {
+            condition = condition.add(Column::Sex.eq(sex));
+        }
+
+        // 添加状态查询条件
+        if let Some(status) = query.status {
+            condition = condition.add(Column::Status.eq(status));
+        }
+
+        // 添加备注查询条件
+        if let Some(remark) = &query.remark {
+            condition = condition.add(Column::Remark.contains(remark));
+        }
+
+        // 添加日期范围查询条件
+        if let (Some(start_date), Some(end_date)) = (&query.start_date, &query.end_date) {
+            condition = condition.add(Column::CreateTime.between(start_date.naive_utc(), end_date.naive_utc()));
+        } else if let Some(start_date) = &query.start_date {
+            condition = condition.add(Column::CreateTime.gte(start_date.naive_utc()));
+        } else if let Some(end_date) = &query.end_date {
+            condition = condition.add(Column::CreateTime.lte(end_date.naive_utc()));
+        }
+
+        condition
+    }
 }
 
 #[rocket::async_trait]
 impl UserRepository for UserRepositorySeaormImpl {
     /// 根据ID获取用户信息
-    async fn get_user_by_id(&self, id: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
         // 使用SeaORM查询用户信息
         let user = Entity::find_by_id(id).one(&self.connection).await?;
-
-        match user {
-            Some(user) => Ok(user.into()),
-            None => Err("User not found".into()),
-        }
-    }
-
-    /// 获取用户列表
-    async fn list_users(&self) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM查询用户列表
-        let users = Entity::find()
-            .limit(100)
-            .all(&self.connection)
-            .await?
-            .into_iter()
-            .map(|u| u.into())
-            .collect();
-
-        Ok(users)
-    }
-
-    /// 根据查询条件分页查询用户列表
-    async fn list_users_by_query(&self, query: UserQuery) -> Result<(Vec<User>, u64, u64), Box<dyn std::error::Error + Send + Sync>> {
-        // 直接使用已处理过的分页参数
-        let current_page = query
-            .current_page_num
-            .unwrap_or(PageInfo::DEFAULT_CURRENT_PAGE);
-        let page_size = query
-            .page_size
-            .unwrap_or(PageInfo::DEFAULT_PAGE_SIZE)
-            .min(PageInfo::MAX_PAGE_SIZE);
-
-        // 构建查询条件
-        let mut condition = Condition::all();
-
-        if let Some(id) = &query.id {
-            condition = condition.add(Column::Id.eq(id));
-        }
-
-        if let Some(name) = &query.name {
-            condition = condition.add(Column::Name.contains(name));
-        }
-
-        if let Some(dept_id) = &query.dept_id {
-            condition = condition.add(Column::DeptId.eq(dept_id));
-        }
-
-        if let Some(email) = &query.email {
-            condition = condition.add(Column::Email.contains(email));
-        }
-
-        if let Some(phone_number) = &query.phone_number {
-            condition = condition.add(Column::PhoneNumber.contains(phone_number));
-        }
-
-        if let Some(sex) = &query.sex {
-            condition = condition.add(Column::Sex.eq(sex));
-        }
-
-        if let Some(status) = query.status {
-            condition = condition.add(Column::Status.eq(status));
-        }
-
-        if let Some(remark) = &query.remark {
-            condition = condition.add(Column::Remark.contains(remark));
-        }
-
-        if let Some(start_date) = query.start_date {
-            condition = condition.add(Column::CreateTime.gte(start_date));
-        }
-
-        if let Some(end_date) = query.end_date {
-            condition = condition.add(Column::CreateTime.lte(end_date));
-        }
-
-        // 查询总记录数
-        let total_count = Entity::find()
-            .filter(condition.clone())
-            .count(&self.connection)
-            .await? as u64;
-
-        // 计算总页数
-        let total_pages = (total_count + page_size - 1) / page_size;
-
-        // 查询当前页数据
-        let users = Entity::find()
-            .filter(condition)
-            .order_by(Column::CreateTime, Order::Desc)
-            .paginate(&self.connection, page_size)
-            .fetch_page(current_page - 1) // SeaORM的分页从0开始
-            .await?
-            .into_iter()
-            .map(|u| u.into())
-            .collect();
-
-        Ok((users, total_count, total_pages))
+        Ok(user.map(|u| u.into()))
     }
 
     /// 根据用户名查找用户
-    async fn get_user_by_name(&self, name: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM查询用户信息
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
         let user = Entity::find()
             .filter(Column::Name.eq(name))
             .one(&self.connection)
             .await?;
-
-        match user {
-            Some(user) => Ok(user.into()),
-            None => Err("User not found".into()),
-        }
+        Ok(user.map(|u| u.into()))
     }
 
-    /// 根据部门ID查找用户列表
-    async fn list_users_by_dept_id(&self, dept_id: &str) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM查询用户列表
+    /// 查询用户列表
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let user_query: UserQuery = user.into();
+        let condition = Self::build_condition(&user_query);
+
         let users = Entity::find()
-            .filter(Column::DeptId.eq(dept_id))
+            .filter(condition)
             .all(&self.connection)
             .await?
             .into_iter()
@@ -165,60 +123,83 @@ impl UserRepository for UserRepositorySeaormImpl {
         Ok(users)
     }
 
-    /// 新增用户
-    async fn add_user(&self, user: User) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM新增用户
-        let user_model: sys_user::ActiveModel = user.into();
-        let inserted_user = sys_user::Entity::insert(user_model)
-            .exec_with_returning(&self.connection)
+    /// 获取用户列表数量
+    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let condition = Self::build_condition(query);
+
+        let count = Entity::find()
+            .filter(condition)
+            .count(&self.connection)
             .await?;
 
-        Ok(inserted_user.into())
+        Ok(count)
     }
 
-    /// 修改用户
-    async fn update_user(&self, user: User) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM修改用户
-        let user_model: sys_user::ActiveModel = user.into();
-        let updated_user = sys_user::Entity::update(user_model)
-            .filter(Column::Id.eq(user_model.id.clone().unwrap()))
-            .exec(&self.connection)
-            .await?;
+    /// 分页获取用户列表
+    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let page_info = PageInfo::new(query.current_page_num, query.page_size);
+        let page_num = page_info.get_current_page_num();
+        let page_size = page_info.get_page_size();
 
-        Ok(updated_user.into())
+        let condition = Self::build_condition(query);
+
+        let paginator = Entity::find()
+            .filter(condition)
+            .order_by(Column::CreateTime, Order::Desc)
+            .paginate(&self.connection, page_size);
+
+        let users = paginator
+            .fetch_page(page_num - 1)
+            .await?
+            .into_iter()
+            .map(|u| u.into())
+            .collect();
+
+        Ok(users)
     }
 
-    /// 删除用户
-    async fn delete_user(&self, id: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM删除用户
-        let deleted_user = sys_user::Entity::delete_by_id(id)
-            .exec(&self.connection)
-            .await?;
+    /// 插入用户记录
+    async fn insert(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use sea_orm::ActiveModelTrait;
 
-        // 模拟返回被删除的用户信息
-        let user = User { id: id.to_string(), ..Default::default() };
-
-        Ok(user)
+        let active_model: sys_user::ActiveModel = user.into();
+        active_model.insert(&self.connection).await?;
+        Ok(())
     }
 
-    /// 修改用户状态
-    async fn update_user_status(&self, id: &str, status: i32) -> Result<User, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM修改用户状态
-        let user: sys_user::ActiveModel = sys_user::Entity::find_by_id(id)
+    /// 选择性插入用户记录
+    async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 与insert方法实现相同，在实际应用中可以根据需要进行区分
+        self.insert(user).await
+    }
+
+    /// 根据ID更新用户信息
+    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use sea_orm::ActiveModelTrait;
+
+        let active_model: sys_user::ActiveModel = user.into();
+        active_model.update(&self.connection).await?;
+        Ok(())
+    }
+
+    /// 根据ID选择性更新用户信息
+    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 与update_by_primary_key方法实现相同，在实际应用中可以根据需要进行区分
+        self.update_by_primary_key(user).await
+    }
+
+    /// 根据ID删除用户
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use sea_orm::ActiveModelTrait;
+        use sea_orm::prelude::*;
+
+        let user: sys_user::ActiveModel = Entity::find_by_id(id)
             .one(&self.connection)
             .await?
             .ok_or("User not found")?
             .into();
 
-        let mut user: sys_user::ActiveModel = user;
-        user.status = sea_orm::Set(status);
-        user.update_time = sea_orm::Set(chrono::Utc::now());
-
-        let updated_user = sys_user::Entity::update(user)
-            .filter(Column::Id.eq(id))
-            .exec(&self.connection)
-            .await?;
-
-        Ok(updated_user.into())
+        user.delete(&self.connection).await?;
+        Ok(())
     }
 }

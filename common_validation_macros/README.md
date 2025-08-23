@@ -5,9 +5,11 @@
 ## 功能特性
 
 - 为结构体自动生成 `Validatable` 实现
-- 支持多种验证属性（not_null、length、date_format等）
-- 自动处理嵌套结构体的验证
+- 支持多种验证属性（not_null、length、date_format、min/max等）
+- 支持嵌套结构体验证
 - 支持Option和Vec类型的验证
+- 支持数值类型验证（i32, f64等）
+- 支持自定义验证消息
 
 ## 设计理念
 
@@ -32,6 +34,7 @@
 - 通过派生宏自动生成验证代码，减少样板代码
 - 支持链式调用的验证规则定义
 - 灵活的验证规则组合
+- 可扩展的验证器接口
 
 ### 4. 专注Web API场景
 专门针对HTTP请求中的JSON数据验证设计：
@@ -54,6 +57,15 @@ struct User {
     
     #[validate(not_null, date_format = Year, desc = "生日")]
     birthday: String,
+    
+    #[validate(min = 0, max = 150, desc = "年龄")]
+    age: u8,
+    
+    #[validate(nested, desc = "地址信息")]
+    address: Option<Address>,
+    
+    #[validate(length_range(min = 1, max = 5), desc = "电话号码")]
+    phone_numbers: Vec<String>,
 }
 ```
 
@@ -69,9 +81,10 @@ struct User {
 - `max = N`: 最大值验证
 - `desc = "描述"`: 字段描述
 
-### 其他验证属性
+### 高级验证属性
 
 - `nested`: 嵌套结构体验证（用于标记需要递归验证的结构体字段）
+- `custom = "function_name"`: 自定义验证函数
 
 ## 使用示例
 
@@ -86,21 +99,21 @@ struct User {
     
     #[validate(not_null, date_format = Year, desc = "生日")]
     birthday: String,
+    
+    #[validate(min = 0, max = 150, desc = "年龄")]
+    age: u8,
+    
+    #[validate(length_range(min = 6, max = 20), desc = "密码")]
+    password: Option<String>,
 }
 
 let user = User {
     username: "test".to_string(),
     birthday: "1990-01-01".to_string(),
-}
+    age: 30,
+    password: Some("secret123".to_string()),
+};
 
-assert!(user.validate().is_ok());
-```
-
-## 验证调用
-
-生成的代码会为结构体实现 `Validatable` trait，可以通过调用 `validate()` 方法来执行验证：
-
-```rust
 match user.validate() {
     Ok(()) => println!("验证通过"),
     Err(e) => println!("验证失败: {}", e),

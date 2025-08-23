@@ -58,7 +58,7 @@
 use common_wrapper::SingleWrapper;
 
 let user = User { name: "张三".to_string() };
-let response = SingleWrapper::new();
+let mut response = SingleWrapper::new();
 response.set_success(user);
 ```
 
@@ -69,7 +69,7 @@ response.set_success(user);
 use common_wrapper::ListWrapper;
 
 let users = vec![user1, user2, user3];
-let response = ListWrapper::new();
+let mut response = ListWrapper::new();
 response.set_success(users);
 ```
 
@@ -80,7 +80,7 @@ response.set_success(users);
 use common_wrapper::PageWrapper;
 
 let page_data = PageWrapper::new();
-page_data.set_success(users, total, page, size);
+page_data.set_success(users, total, total_page, page, size);
 ```
 
 ### ResponseWrapper
@@ -148,5 +148,5 @@ let users = vec![user1, user2];
 let list_response = ListWrapper::success(users);
 
 // 分页响应
-let page_response = PageWrapper::success(users, 100, 1, 10);
+let page_response = PageWrapper::success(users, 100, 10, 1, 10);
 ```
