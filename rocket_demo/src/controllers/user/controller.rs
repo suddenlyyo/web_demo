@@ -48,9 +48,9 @@ pub async fn list_users(user_service: &rocket::State<UserServiceImpl>) -> ListWr
 /// 返回包装后的分页用户列表
 #[post("/user/query", data = "<query>")]
 pub async fn list_users_by_query(query: Json<UserQuery>, user_service: &rocket::State<UserServiceImpl>) -> PageWrapper<User> {
-    let page_num = query.current_page_num;
-    let page_size = query.page_size;
-    user_service.list_users_by_page(page_num, page_size).await
+    user_service
+        .list_users_by_page_with_conditions(query.into_inner())
+        .await
 }
 
 /// 新增用户

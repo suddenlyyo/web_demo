@@ -1,8 +1,9 @@
 //! 用户服务接口定义
 
 use common_wrapper::{ListWrapper, PageWrapper, SingleWrapper};
+use sqlx::query;
 
-use crate::models::User;
+use crate::models::{User, user::UserQuery};
 
 /// 用户服务接口
 #[rocket::async_trait]
@@ -35,7 +36,7 @@ pub trait UserService {
     /// # 返回值
     ///
     /// 返回包装后的分页用户列表
-    async fn list_users_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> PageWrapper<User>;
+    async fn list_users_by_page_with_conditions(&self, query: UserQuery) -> PageWrapper<User>;
 
     /// 新增用户
     ///

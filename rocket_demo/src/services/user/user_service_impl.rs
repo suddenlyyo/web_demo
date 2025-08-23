@@ -1,6 +1,10 @@
 //! 用户服务实现层
 
-use crate::{models::User, repositories::user::user_repository::UserRepository, services::user::user_service::UserService};
+use crate::{
+    models::{User, user::UserQuery},
+    repositories::user::user_repository::UserRepository,
+    services::user::user_service::UserService,
+};
 use common_wrapper::{ListWrapper, PageWrapper, ResponseTrait, SingleWrapper};
 
 // 根据启用的feature导入对应的实现
@@ -89,13 +93,10 @@ impl UserService for UserServiceImpl {
     }
 
     /// 分页查询用户列表
-    async fn list_users_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> PageWrapper<User> {
-        let page_num = page_num.unwrap_or(1);
-        let page_size = page_size.unwrap_or(20);
-
+    async fn list_users_by_page_with_conditions(&self, query: UserQuery) -> PageWrapper<User> {
         match self
             .repository
-            .list_users_by_page(Some(page_num), Some(page_size))
+            .list_users_by_page_with_conditions(query)
             .await
         {
             Ok((users, total_count)) => {

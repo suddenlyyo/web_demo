@@ -1,6 +1,6 @@
 //! 用户数据访问层接口定义
 
-use crate::models::User;
+use crate::models::{User, UserQuery};
 use rocket::async_trait;
 use std::fmt::Debug;
 
@@ -8,26 +8,32 @@ use std::fmt::Debug;
 #[async_trait]
 pub trait UserRepository: Debug + Send + Sync {
     /// 根据ID获取用户信息
-    async fn get_user_by_id(&self, id: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>>;
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 获取用户列表
-    async fn list_users(&self) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>>;
+    /// 根据用户名查找用户
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 分页查询用户列表
-    async fn list_users_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<User>, u64), Box<dyn std::error::Error + Send + Sync>>;
+    /// 查询用户列表
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 带条件的分页查询用户列表
-    async fn list_users_by_page_with_conditions(&self, page_num: Option<u64>, page_size: Option<u64>, where_clause: String) -> Result<(Vec<User>, u64, u64), Box<dyn std::error::Error + Send + Sync>>;
+    /// 获取用户列表数量
+    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 新增用户
-    async fn add_user(&self, user: User) -> Result<User, Box<dyn std::error::Error + Send + Sync>>;
+    /// 分页获取用户列表
+    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 修改用户
-    async fn update_user(&self, user: User) -> Result<User, Box<dyn std::error::Error + Send + Sync>>;
+    /// 插入用户记录
+    async fn insert(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 删除用户
-    async fn delete_user(&self, id: &str) -> Result<User, Box<dyn std::error::Error + Send + Sync>>;
+    /// 选择性插入用户记录
+    async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
-    /// 修改用户状态
-    async fn update_user_status(&self, id: &str, status: i32) -> Result<User, Box<dyn std::error::Error + Send + Sync>>;
+    /// 根据ID更新用户信息
+    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    /// 根据ID选择性更新用户信息
+    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    /// 根据ID删除用户
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
