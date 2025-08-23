@@ -1,57 +1,57 @@
-//! # 对象包装器
+//! # 单数据包装器
 //!
-//! 用于包装单个对象的响应结构
+//! 用于包装单个数据的响应结构
 
 use crate::wrapper::ResponseWrapper;
 use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 
-/// # 带单个数据对象的响应包装结构体
-/// 用于统一 API 响应格式，包含基础响应信息和可选的单个数据对象
+/// # 带单个数据的响应包装结构体
+/// 用于统一 API 响应格式，包含基础响应信息和可选的单个数据
 ///
 /// # 示例
 ///
 /// ```rust
-/// use common_wrapper::{ObjectWrapper,ResponseTrait};
+/// use common_wrapper::{SingleWrapper,ResponseTrait};
 ///
-/// let mut wrapper = ObjectWrapper::new();
+/// let mut wrapper = SingleWrapper::new();
 /// wrapper.set_success("Hello World");
 /// assert!(wrapper.is_success());
 /// assert_eq!(wrapper.get_data(), Some(&"Hello World"));
 /// ```
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct ObjectWrapper<T> {
+pub struct SingleWrapper<T> {
     /// 响应基础信息，包含响应码和消息
     #[serde(flatten)] // 扁平化，去掉json中的base把内部结构解构出来
     pub base: ResponseWrapper,
-    /// 可选的数据对象
+    /// 可选的数据
     pub data: Option<T>,
 }
 
-impl<T> ObjectWrapper<T> {
-    /// 创建一个默认成功的 ObjectWrapper，数据为空
+impl<T> SingleWrapper<T> {
+    /// 创建一个默认成功的 SingleWrapper，数据为空
     ///
     /// # 返回值
     ///
-    /// 新的ObjectWrapper实例
+    /// 新的SingleWrapper实例
     pub fn new() -> Self {
         Self { base: ResponseWrapper::success_default(), data: None }
     }
 
-    /// 创建一个默认失败的 ObjectWrapper，数据为空
+    /// 创建一个默认失败的 SingleWrapper，数据为空
     ///
     /// # 返回值
     ///
-    /// 新的ObjectWrapper实例（失败状态）
+    /// 新的SingleWrapper实例（失败状态）
     pub fn fail_default(&mut self) -> Self {
         Self { base: ResponseWrapper::fail_default(), data: None }
     }
 
-    /// 创建一个默认未知错误的 ObjectWrapper，数据为空
+    /// 创建一个默认未知错误的 SingleWrapper，数据为空
     ///
     /// # 返回值
     ///
-    /// 新的ObjectWrapper实例（未知错误状态）
+    /// 新的SingleWrapper实例（未知错误状态）
     pub fn unknown_error_default(&mut self) -> Self {
         Self {
             base: ResponseWrapper::unknown_error_default(),
@@ -78,7 +78,7 @@ impl<T> ObjectWrapper<T> {
         &self.base
     }
 
-    /// 获取数据对象的引用
+    /// 获取数据的引用
     ///
     /// # 返回值
     ///
@@ -89,7 +89,7 @@ impl<T> ObjectWrapper<T> {
 }
 
 /// 实现 ResponseTrait 以便统一处理响应包装
-impl<T> ResponseTrait for ObjectWrapper<T> {
+impl<T> ResponseTrait for SingleWrapper<T> {
     /// 获取响应码
     ///
     /// # 返回值

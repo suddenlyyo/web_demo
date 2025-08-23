@@ -47,6 +47,8 @@
 ### Rocket
 [rocket_demo](./rocket_demo) 目录包含使用 Rocket 框架实现的示例。
 
+Rocket Demo 支持多种数据库实现，通过 Rust 特性进行管理，默认使用 SQLx 实现。详情请参见 [Rocket Demo README](./rocket_demo/README.md)。
+
 ## 快速开始
 
 ### 环境要求
@@ -65,8 +67,14 @@ cargo build
 # 运行 Axum 示例
 cd axum_demo && cargo run
 
-# 运行 Rocket 示例
+# 运行 Rocket 示例（默认使用 SQLx）
 cd rocket_demo && cargo run
+
+# 运行 Rocket 示例（使用 Diesel）
+cd rocket_demo && cargo run --no-default-features --features diesel_impl
+
+# 运行 Rocket 示例（使用 SeaORM）
+cd rocket_demo && cargo run --no-default-features --features seaorm_impl
 
 # 运行 Actix Web 示例
 cd actix_web_demo && cargo run
@@ -98,7 +106,3 @@ cargo test -p common_wrapper
 2. **统一接口**: 使用通用的验证和响应封装模块
 3. **易于扩展**: 清晰的架构便于添加新的功能和框架支持
 4. **类型安全**: 充分利用 Rust 的类型系统确保代码安全
-
-## 许可证
-
-MIT

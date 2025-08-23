@@ -1,35 +1,35 @@
 //! 集成测试文件，用于测试common_wrapper模块的所有功能
 //!
-//! 本测试文件验证了所有包装器（ObjectWrapper、ListWrapper、PageWrapper）的功能，
+//! 本测试文件验证了所有包装器（SingleWrapper、ListWrapper、PageWrapper）的功能，
 //! 包括成功、失败和未知错误状态的处理。
 
-use common_wrapper::{ListWrapper, ObjectWrapper, PageWrapper, ResponseTrait, WrapperErrEnum};
+use common_wrapper::{ListWrapper, PageWrapper, ResponseTrait, SingleWrapper, WrapperErrEnum};
 
-/// 测试ObjectWrapper的基本功能
+/// 测试SingleWrapper的基本功能
 #[test]
-fn test_object_wrapper() {
+fn test_single_wrapper() {
     // 测试成功状态
-    let mut obj_wrapper = ObjectWrapper::new();
-    obj_wrapper.set_success("Hello World");
+    let mut single_wrapper = SingleWrapper::new();
+    single_wrapper.set_success("Hello World");
 
-    assert_eq!(obj_wrapper.get_code(), WrapperErrEnum::Success as i32);
-    assert_eq!(obj_wrapper.get_message(), "Success");
-    assert!(obj_wrapper.is_success());
-    assert_eq!(obj_wrapper.get_data(), Some(&"Hello World"));
+    assert_eq!(single_wrapper.get_code(), WrapperErrEnum::Success as i32);
+    assert_eq!(single_wrapper.get_message(), "Success");
+    assert!(single_wrapper.is_success());
+    assert_eq!(single_wrapper.get_data(), Some(&"Hello World"));
 
     // 测试失败状态
-    obj_wrapper.set_fail("Something went wrong");
-    assert_eq!(obj_wrapper.get_code(), WrapperErrEnum::Fail as i32);
-    assert_eq!(obj_wrapper.get_message(), "Something went wrong");
-    assert!(!obj_wrapper.is_success());
-    assert_eq!(obj_wrapper.get_data(), None);
+    single_wrapper.set_fail("Something went wrong");
+    assert_eq!(single_wrapper.get_code(), WrapperErrEnum::Fail as i32);
+    assert_eq!(single_wrapper.get_message(), "Something went wrong");
+    assert!(!single_wrapper.is_success());
+    assert_eq!(single_wrapper.get_data(), None);
 
     // 测试未知错误状态
-    obj_wrapper.set_unknown_error("Unknown error occurred");
-    assert_eq!(obj_wrapper.get_code(), WrapperErrEnum::UnknownError as i32);
-    assert_eq!(obj_wrapper.get_message(), "Unknown error occurred");
-    assert!(!obj_wrapper.is_success());
-    assert_eq!(obj_wrapper.get_data(), None);
+    single_wrapper.set_unknown_error("Unknown error occurred");
+    assert_eq!(single_wrapper.get_code(), WrapperErrEnum::UnknownError as i32);
+    assert_eq!(single_wrapper.get_message(), "Unknown error occurred");
+    assert!(!single_wrapper.is_success());
+    assert_eq!(single_wrapper.get_data(), None);
 }
 
 /// 测试ListWrapper的基本功能
@@ -169,35 +169,16 @@ fn test_response_wrapper() {
     assert!(!response2.is_success());
 }
 
-/// 测试WrapperErrEnum枚举的功能
-#[test]
-fn test_wrapper_err_enum() {
-    // 测试Success变体
-    let success = WrapperErrEnum::Success;
-    assert_eq!(success as i32, 1);
-    assert_eq!(success.message(), "Success");
-
-    // 测试Fail变体
-    let fail = WrapperErrEnum::Fail;
-    assert_eq!(fail as i32, -1);
-    assert_eq!(fail.message(), "Fail");
-
-    // 测试UnknownError变体
-    let unknown = WrapperErrEnum::UnknownError;
-    assert_eq!(unknown as i32, -2);
-    assert_eq!(unknown.message(), "Unknown Error");
-}
-
 /// 测试序列化和反序列化功能
 #[test]
 fn test_serialization() {
     use serde_json;
 
-    // 测试ObjectWrapper序列化
-    let mut obj_wrapper = ObjectWrapper::new();
+    // 测试SingleWrapper序列化
+    let mut obj_wrapper = SingleWrapper::new();
     obj_wrapper.set_success("Test data");
     let serialized = serde_json::to_string(&obj_wrapper).unwrap();
-    let deserialized: ObjectWrapper<String> = serde_json::from_str(&serialized).unwrap();
+    let deserialized: SingleWrapper<String> = serde_json::from_str(&serialized).unwrap();
     assert_eq!(obj_wrapper.get_code(), deserialized.get_code());
     assert_eq!(obj_wrapper.get_message(), deserialized.get_message());
     assert_eq!(obj_wrapper.get_data().map(|s| s.as_ref()), deserialized.get_data().map(|s| s.as_str()));

@@ -10,10 +10,10 @@ proc-macro = true
 # 引入为宏定义的类型
 common_validation = { path = "../common_validation" }
 # 时间计算、时区转换、格式化/解析
-chrono = "0.4"
+chrono = { workspace = true }
 # syn 是一个用于解析 Rust 代码的库。它将 Rust 代码解析成抽象语法树（AST），使得你可以方便地操作和分析代码结构
-syn = { version = "2.0.104", features = ["full"] }
+syn = { workspace = true }
 # quote 是一个用于生成 Rust 代码的库。它提供了一种简洁的方式来构建和输出 Rust 代码片段
-quote = "1.0.40"
+quote = { workspace = true }
 # proc-macro2 是一个用于处理 Rust 过程宏的库。它提供了对 TokenStream 的更高层次的抽象，使得编写过程宏更加方便
-proc-macro2 = "1.0.95"
+proc-macro2 = { workspace = true }

@@ -1,43 +1,31 @@
-//#[macro_use] extern crate rocket; //Rust 2015 宏导入语法
-use rocket::*; //Rust 2018+
+//! Rocket Web框架演示程序入口
+//!
+//! 本程序演示了如何使用Rocket框架构建Web应用，包括：
+//! - 用户管理（增删改查）
+//! - 部门管理（增删改查）
+//! - 角色管理（增删改查）
+//! - 菜单管理（增删改查）
 
-/// 根路径处理函数
-///
-/// # 返回值
-///
-/// 返回"Hello, world!"字符串
-#[get("/")]
-fn index() -> &'static str {
-    "Hello, world!"
-}
+use rocket::Config;
+use rocket::figment::Figment;
 
-/// 启动函数
-///
-/// # 返回值
-///
-/// 返回配置好的Rocket实例
-#[launch]
+mod controllers;
+mod models;
+mod repositories;
+mod services;
+
+/// 程序入口点
+#[rocket::launch]
 fn rocket() -> _ {
-    rocket::build().mount("/", routes![index])
-}
+    // 创建默认配置
+    let figment = Figment::from(Config::default());
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use rocket::http::Status;
-    use rocket::local::blocking::Client;
-
-    /// 测试根路径处理函数
-    #[test]
-    fn index_test() {
-        // 创建测试客户端
-        let client = Client::tracked(rocket()).expect("valid rocket instance");
-
-        // 发送 GET 请求到根路径
-        let response = client.get("/").dispatch();
-
-        // 验证响应
-        assert_eq!(response.status(), Status::Ok);
-        assert_eq!(response.into_string().unwrap(), "Hello, world!");
-    }
+    // 构建Rocket实例并挂载路由
+    rocket::custom(figment)
+        // 挂载控制器路由
+        .mount("/", controllers::index::controller::routes())
+        .mount("/user", controllers::user::controller::routes())
+        .mount("/dept", controllers::dept::controller::routes())
+        .mount("/role", controllers::role::controller::routes())
+        .mount("/menu", controllers::menu::controller::routes())
 }

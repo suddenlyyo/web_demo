@@ -5,6 +5,13 @@ edition = "2024"
 
 [dependencies]
 # 用于有效和通用地序列化和反序列化Rust数据结构的框架
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 # 基于serde框架实现，专门用于JSON格式的库
-serde_json = "1.0.140"
+serde_json = { workspace = true }
+# Rocket Web框架，用于实现响应类型
+rocket = { version = "0.5", optional = true, features = ["json"] }
+
+[features]
+default = []
+# 启用Rocket响应类型
+rocket_responder = ["rocket"]

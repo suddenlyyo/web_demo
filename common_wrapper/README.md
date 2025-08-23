@@ -5,7 +5,7 @@
 ## 功能特性
 
 - 统一的响应数据结构
-- 支持多种响应类型（对象、列表、分页等）
+- 支持多种响应类型（单数据、列表、分页等）
 - 标准化的错误处理
 - 易于序列化和反序列化的结构
 
@@ -30,7 +30,7 @@
 
 ### 3. 灵活性与专用性结合
 提供多种专用的响应包装器，同时保持足够的灵活性：
-- **ObjectWrapper**：适用于单个对象的响应
+- **SingleWrapper**：适用于单个数据的响应
 - **ListWrapper**：适用于列表数据的响应
 - **PageWrapper**：适用于分页数据的响应
 - **ResponseWrapper**：通用响应包装器，支持自定义
@@ -51,14 +51,14 @@
 
 ## 主要组件
 
-### ObjectWrapper
-用于包装单个对象的响应结构：
+### SingleWrapper
+用于包装单个数据的响应结构：
 
 ```rust
-use common_wrapper::ObjectWrapper;
+use common_wrapper::SingleWrapper;
 
 let user = User { name: "张三".to_string() };
-let response = ObjectWrapper::new();
+let response = SingleWrapper::new();
 response.set_success(user);
 ```
 
@@ -69,7 +69,8 @@ response.set_success(user);
 use common_wrapper::ListWrapper;
 
 let users = vec![user1, user2, user3];
-let response = ListWrapper::success(users);
+let response = ListWrapper::new();
+response.set_success(users);
 ```
 
 ### PageWrapper
@@ -78,7 +79,8 @@ let response = ListWrapper::success(users);
 ```rust
 use common_wrapper::PageWrapper;
 
-let page_data = PageWrapper::success(users, total, page, size);
+let page_data = PageWrapper::new();
+page_data.set_success(users, total, page, size);
 ```
 
 ### ResponseWrapper
@@ -106,7 +108,7 @@ let error_response = ResponseWrapper::fail_default();
 - `code`: 响应码，1表示成功，-1表示失败，-2表示未知错误
 - `message`: 响应消息，描述操作结果
 
-对于包含数据的响应（如ObjectWrapper、ListWrapper等），还会有额外的`data`字段：
+对于包含数据的响应（如SingleWrapper、ListWrapper等），还会有额外的`data`字段：
 
 ```json
 {
@@ -134,11 +136,11 @@ let error = WrapperErrEnum::UnknownError;
 ## 使用示例
 
 ```rust
-use common_wrapper::{ObjectWrapper, ListWrapper, PageWrapper};
+use common_wrapper::{SingleWrapper, ListWrapper, PageWrapper};
 
-// 对象响应
+// 单个数据响应
 let user = User::new("张三");
-let mut response = ObjectWrapper::new();
+let mut response = SingleWrapper::new();
 response.set_success(user);
 
 // 列表响应

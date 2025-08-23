@@ -1,10 +1,49 @@
 [workspace]
 resolver = "3"   
 members = [
-    "common_wrapper",
-    "axum_demo",
-    "rocket_demo",
     "actix_web_demo",
+    "axum_demo",
     "common_validation",
     "common_validation_macros",
+    "common_wrapper",
+    "rocket_demo",
 ]
+
+# 统一依赖版本管理
+[workspace.dependencies]
+# Rocket Web 框架 ,官网地址:https://rocket.rs/
+# 特点: 简单易用、类型安全、强大的路由系统
+# 优势: 内置异步支持、良好的文档、零开销抽象
+# 使用场景: 构建高性能Web应用和API服务
+rocket = { version = "0.5.1" }
+# Diesel ORM 框架(稳定性和强类型支持),官网地址:https://diesel.rs/
+# 特点: 编译时查询检查、强类型、防止运行时错误
+# 优势: 类型安全、查询构建器、迁移系统、支持多种数据库
+# 使用场景: 对数据一致性要求高、需要复杂查询的项目
+diesel = { version = "2.2.12" }
+# SeaORM ORM 框架(异步和灵活性),官网地址:https://www.sea-ql.org/SeaORM/
+# 特点: 异步优先、动态查询、支持多种数据库
+# 优势: 异步运行时支持、活跃的社区、易于学习
+# 使用场景: 需要异步数据库操作、快速原型开发
+sea-orm = { version = "1.1.14" }
+# SQLx框架,官网地址:https://github.com/launchbadge/sqlx
+# 特点: 异步、编译时查询检查、支持原始SQL
+# 优势: 零开销、类型安全、支持PostgreSQL、MySQL、SQLite
+# 使用场景: 需要执行原始SQL、要求高性能、类型安全的数据库操作
+sqlx = { version = "0.8.6" }
+# Chrono库用于处理日期和时间
+chrono = { version = "0.4" }
+# Serde库用于序列化和反序列化
+serde = { version = "1.0.219" }
+# 基于serde框架实现，专门用于JSON格式的库
+serde_json = "1.0.140"
+# 简化自定义错误类型定义
+thiserror = "2.0.12"
+# syn 是一个用于解析 Rust 代码的库。它将 Rust 代码解析成抽象语法树（AST），使得你可以方便地操作和分析代码结构
+syn = { version = "2.0.104" }
+# quote 是一个用于生成 Rust 代码的库。它提供了一种简洁的方式来构建和输出 Rust 代码片段
+quote = "1.0.40"
+# proc-macro2 是一个用于处理 Rust 过程宏的库。它提供了对 TokenStream 的更高层次的抽象，使得编写过程宏更加方便
+proc-macro2 = "1.0.95"
+# 测试框架
+tokio = { version = "1.45.0" }

@@ -1,6 +1,6 @@
-//! # 列表包装器
+//! # 列表数据包装器
 //!
-//! 用于包装数据列表的响应结构
+//! 用于包装列表数据的响应结构
 
 use crate::wrapper::ResponseWrapper;
 use crate::wrapper::response_trait::ResponseTrait;
@@ -12,20 +12,20 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```rust
-///  use common_wrapper::{ListWrapper,ResponseTrait};;
+/// use common_wrapper::{ListWrapper,ResponseTrait};
 ///
 /// let mut wrapper = ListWrapper::new();
-/// wrapper.set_success(vec!["item1", "item2"]);
+/// wrapper.set_success(vec!["Hello", "World"]);
 /// assert!(wrapper.is_success());
-/// assert_eq!(wrapper.get_data(), Some(&vec!["item1", "item2"]));
+/// assert_eq!(wrapper.get_data(), Some(&vec!["Hello", "World"]));
 /// ```
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ListWrapper<T> {
-    /// 基础响应包装，包含响应码和消息
-    #[serde(flatten)]
-    base: ResponseWrapper,
+    /// 响应基础信息，包含响应码和消息
+    #[serde(flatten)] // 扁平化，去掉json中的base把内部结构解构出来
+    pub base: ResponseWrapper,
     /// 可选的数据列表
-    data: Option<Vec<T>>,
+    pub data: Option<Vec<T>>,
 }
 
 impl<T> ListWrapper<T> {
@@ -101,7 +101,7 @@ impl<T> ResponseTrait for ListWrapper<T> {
 
     /// 获取响应消息
     ///
-    /// # 返回值
+    /// # 返回값
     ///
     /// 响应消息的引用
     fn get_message(&self) -> &str {

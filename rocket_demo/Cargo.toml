@@ -4,6 +4,48 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
-# 公共响应处理
-common_wrapper = { path = "../common_wrapper" }
-rocket = "0.5.1"
+# Rocket Web框架
+rocket = { version = "0.5.0", features = ["json"] }
+# SQLx数据库访问库
+sqlx = { version = "0.7.4", features = [
+    "runtime-tokio-rustls",
+    "mysql",
+    "chrono",
+    "uuid",
+], optional = true }
+# Diesel ORM
+diesel = { version = "2.1.0", features = [
+    "mysql",
+    "chrono",
+    "uuid",
+    "r2d2",
+], optional = true }
+# SeaORM ORM
+sea-orm = { version = "1.0.0", features = [
+    "sqlx-mysql",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-chrono",
+    "with-uuid",
+], optional = true }
+# 公共包装器
+common_wrapper = { path = "../common_wrapper", features = ["rocket_responder"] }
+# 公共验证器
+common_validation = { path = "../common_validation" }
+# 异步运行时
+tokio = { version = "1.36.0", features = ["full"] }
+# 时间处理库
+chrono = { version = "0.4.37", features = ["serde"] }
+# 序列化/反序列化
+serde = { version = "1.0", features = ["derive"] }
+# 错误处理
+thiserror = "1.0.58"
+
+[features]
+default = ["sqlx_impl"]
+sqlx_impl = ["sqlx"]
+diesel_impl = ["diesel"]
+seaorm_impl = ["sea-orm"]
+
+[package.metadata.docs.rs]
+features = ["sqlx_impl"]
