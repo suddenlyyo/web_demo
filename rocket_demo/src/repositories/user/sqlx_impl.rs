@@ -100,7 +100,7 @@ impl UserRepository for UserRepositorySqlxImpl {
         let offset = page_info.get_page_offset();
         let limit = page_info.get_page_size();
 
-        let user_query = format!("SELECT {} FROM sys_user WHERE deleted = 0 ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS);
+        let user_query = format!("SELECT {} FROM sys_user ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS);
         let users_query = sqlx::query(&user_query)
             .bind(limit as i64)
             .bind(offset as i64)
@@ -110,7 +110,7 @@ impl UserRepository for UserRepositorySqlxImpl {
         let users: Result<Vec<User>, _> = users_query.iter().map(DbMapper::map_to_user).collect();
 
         // 获取总记录数
-        let count_query = "SELECT COUNT(*) as count FROM sys_user WHERE deleted = 0";
+        let count_query = "SELECT COUNT(*) as count FROM sys_user";
         let count_row = sqlx::query(count_query).fetch_one(&self.pool).await?;
 
         let total: u64 = count_row.try_get("count")?;
@@ -215,7 +215,7 @@ impl UserRepository for UserRepositorySqlxImpl {
         let offset = page_info.get_page_offset();
         let limit = page_info.get_page_size();
 
-        let mut query_builder = format!("SELECT {} FROM sys_user WHERE deleted = 0 {}", USER_FIELDS, where_clause);
+        let mut query_builder = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
         query_builder.push_str(" ORDER BY create_time DESC LIMIT ? OFFSET ?");
 
         let query = sqlx::query(&query_builder)
@@ -227,7 +227,7 @@ impl UserRepository for UserRepositorySqlxImpl {
         let users: Result<Vec<User>, _> = users_query.iter().map(DbMapper::map_to_user).collect();
 
         // 构建 COUNT 查询
-        let count_query = format!("SELECT COUNT(*) as count FROM sys_user WHERE deleted = 0 {}", where_clause);
+        let count_query = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
         let count_query_builder = sqlx::query(&count_query);
 
         let count_row = count_query_builder.fetch_one(&self.pool).await?;
