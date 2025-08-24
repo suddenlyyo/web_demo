@@ -1,7 +1,7 @@
 //! 角色控制器层
 
+use common_wrapper::{ResponseWrapper, SingleWrapper};
 use rocket::{delete, get, post, put, routes, serde::json::Json};
-use common_wrapper::{SingleWrapper, ResponseWrapper};
 
 use crate::services::role::role_service::{RoleService, RoleServiceImpl};
 

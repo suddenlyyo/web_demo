@@ -62,17 +62,17 @@ impl RoleMenuRepository for RoleMenuRepositorySqlxImpl {
     /// 根据角色ID查询角色菜单列表
     async fn select_role_menu_by_role_id(&self, role_id: &str) -> Result<Vec<RoleMenu>, Box<dyn StdError + Send + Sync>> {
         let sql = "SELECT role_id, menu_id FROM sys_role_menu WHERE role_id = ?";
-        let rows = sqlx::query(sql)
-            .bind(role_id)
-            .fetch_all(&self.pool)
-            .await?;
+        let rows = sqlx::query(sql).bind(role_id).fetch_all(&self.pool).await?;
 
-        let role_menus: Result<Vec<RoleMenu>, _> = rows.iter().map(|row| {
-            Ok(RoleMenu {
-                role_id: row.try_get("role_id")?,
-                menu_id: row.try_get("menu_id")?,
+        let role_menus: Result<Vec<RoleMenu>, _> = rows
+            .iter()
+            .map(|row| {
+                Ok(RoleMenu {
+                    role_id: row.try_get("role_id")?,
+                    menu_id: row.try_get("menu_id")?,
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(role_menus?)
     }
@@ -103,10 +103,7 @@ impl RoleMenuRepository for RoleMenuRepositorySqlxImpl {
         }
 
         let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
-        let sql = format!(
-            "DELETE FROM sys_role_menu WHERE role_id = ? AND menu_id IN ({})",
-            placeholders.join(", ")
-        );
+        let sql = format!("DELETE FROM sys_role_menu WHERE role_id = ? AND menu_id IN ({})", placeholders.join(", "));
 
         let mut query = sqlx::query(&sql);
         query = query.bind(role_id);
@@ -121,10 +118,7 @@ impl RoleMenuRepository for RoleMenuRepositorySqlxImpl {
     /// 根据角色ID删除角色菜单
     async fn delete_by_role_id(&self, role_id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_role_menu WHERE role_id = ?";
-        sqlx::query(sql)
-            .bind(role_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(sql).bind(role_id).execute(&self.pool).await?;
 
         Ok(())
     }

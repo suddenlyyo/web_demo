@@ -1,7 +1,7 @@
 //! 部门服务实现
 
-use std::sync::Arc;
-use std::collections::HashMap; // 添加HashMap导入
+use std::collections::HashMap;
+use std::sync::Arc; // 添加HashMap导入
 
 use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper}; // 添加ResponseWrapper
 use uuid::Uuid;

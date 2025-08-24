@@ -1,3 +1,5 @@
+//! 菜单控制器
+
 /// 获取路由信息
 ///
 /// # 参数
@@ -29,7 +31,7 @@ pub async fn get_menu_tree(menu_param: MenuParam, menu_service: &rocket::State<M
     SingleWrapper::new()
 }
 
-/// 获取菜单列表
+/// 获取菜单列表（带查询参数）
 ///
 /// # 参数
 ///
@@ -40,7 +42,7 @@ pub async fn get_menu_tree(menu_param: MenuParam, menu_service: &rocket::State<M
 ///
 /// 返回包装后的菜单列表，类型: [serde_json::Value]
 #[get("/menu/list")]
-pub async fn list_menus(menu_param: MenuParam, menu_service: &rocket::State<MenuServiceImpl>) -> serde_json::Value {
+pub async fn list_menus_with_params(menu_param: MenuParam, menu_service: &rocket::State<MenuServiceImpl>) -> serde_json::Value {
     // TODO: 实现获取菜单列表的逻辑
     serde_json::Value::Null
 }
@@ -63,27 +65,12 @@ pub async fn edit_menu_status(menu_param: Json<MenuParam>, menu_service: &rocket
         ResponseWrapper::new(500, "参数不完整")
     }
 }
-//! 菜单控制器
 
+use common_wrapper::{ListWrapper, ResponseWrapper, SingleWrapper};
 use rocket::{delete, get, post, put, serde::json::Json};
-use common_wrapper::{SingleWrapper, ResponseWrapper};
-use crate::services::menu::menu_service::MenuServiceImpl;
 
-
-/// 获取菜单列表
-///
-/// # 参数
-///
-/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
-///
-/// # 返回值
-///
-/// 返回包装后的菜单列表，类型: [ListWrapper<Menu>]
-#[get("/menu/list")]
-pub async fn list_menus(menu_service: &rocket::State<MenuServiceImpl>) -> ListWrapper<Menu> {
-    menu_service.list_menus().await
-}
-
+use crate::models::menu::Menu;
+use crate::services::menu::menu_service::{MenuService, MenuServiceImpl};
 
 /// 新增菜单
 ///
@@ -132,5 +119,5 @@ pub async fn delete_menu(menu_id: String, menu_service: &rocket::State<MenuServi
 
 /// 获取菜单控制器的所有路由
 pub fn routes() -> Vec<rocket::Route> {
-    routes![get_routers, get_menu_tree, list_menus, add_menu, edit_menu, delete_menu, edit_menu_status]
+    routes![get_routers, get_menu_tree, list_menus, list_menus_with_params, add_menu, edit_menu, delete_menu, edit_menu_status]
 }

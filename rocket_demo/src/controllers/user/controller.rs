@@ -1,9 +1,9 @@
 //! 用户控制器
 
+use common_wrapper::{PageWrapper, ResponseWrapper, SingleWrapper};
 use rocket::{delete, get, post, put, routes, serde::json::Json};
-use common_wrapper::{SingleWrapper, ResponseWrapper};
 
-use crate::models::User;
+use crate::services::params::user_param::UserParam;
 use crate::services::user::user_service::{UserService, UserServiceImpl};
 
 /// 获取用户信息
@@ -41,7 +41,9 @@ pub async fn get_user_info(user_name: String, user_service: &rocket::State<UserS
 /// 返回分页用户列表，类型: [PageWrapper<serde_json::Value>]
 #[post("/user/list", data = "<user_param>")]
 pub async fn list_users(user_param: Json<UserParam>, user_service: &rocket::State<UserServiceImpl>) -> PageWrapper<serde_json::Value> {
-    user_service.get_user_list_by_page(user_param.into_inner()).await
+    user_service
+        .get_user_list_by_page(user_param.into_inner())
+        .await
 }
 
 /// 新增用户
@@ -154,8 +156,9 @@ pub async fn set_user_role(json_str: String, user_service: &rocket::State<UserSe
 ///
 /// 返回包装后的用户信息
 #[put("/user/<id>/status/<status>")]
-pub async fn update_user_status(id: String, status: i32, user_service: &rocket::State<UserServiceImpl>) -> SingleWrapper<User> {
-    user_service.update_user_status(&id, status).await
+pub async fn update_user_status(id: String, status: i32, user_service: &rocket::State<UserServiceImpl>) -> SingleWrapper<crate::models::User> {
+    // TODO: 实现更新用户状态的逻辑
+    SingleWrapper::new()
 }
 
 /// 注册用户相关路由
@@ -163,16 +166,5 @@ pub async fn update_user_status(id: String, status: i32, user_service: &rocket::
 /// # 返回值
 /// 返回路由列表，类型: [Vec<rocket::Route>]
 pub fn routes() -> Vec<rocket::Route> {
-    routes![
-        get_info,
-        get_user_info,
-        list_users,
-        add_user,
-        edit_user,
-        edit_user_status,
-        delete_user,
-        reset_user_pwd,
-        get_user_role_id_list,
-        set_user_role
-    ]
+    routes![get_info, get_user_info, list_users, add_user, edit_user, edit_user_status, delete_user, reset_user_pwd, get_user_role_id_list, set_user_role]
 }

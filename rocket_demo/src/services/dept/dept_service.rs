@@ -1,9 +1,9 @@
 //! 部门服务接口定义
 
-use common_wrapper::{ListWrapper, ResponseWrapper};
-use crate::models::Dept;
-use std::collections::HashMap;
 use super::PageParam;
+use crate::models::Dept;
+use common_wrapper::{ListWrapper, ResponseWrapper};
+use std::collections::HashMap;
 
 /// 部门服务trait
 #[rocket::async_trait]

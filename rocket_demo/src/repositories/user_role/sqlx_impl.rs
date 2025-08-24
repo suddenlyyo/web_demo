@@ -38,13 +38,9 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
 
     /// 插入用户角色记录
     async fn insert(&self, row: &UserRole) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        sqlx::query!(
-            "INSERT INTO sys_user_role (user_id, role_id) VALUES ($1, $2)",
-            row.user_id,
-            row.role_id
-        )
-        .execute(&self.pool)
-        .await?;
+        sqlx::query!("INSERT INTO sys_user_role (user_id, role_id) VALUES ($1, $2)", row.user_id, row.role_id)
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 
@@ -79,7 +75,7 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
 
         let mut query = "INSERT INTO sys_user_role (user_id, role_id) VALUES ".to_string();
         let mut params: Vec<&str> = Vec::new();
-        
+
         for (i, user_role) in list.iter().enumerate() {
             if i > 0 {
                 query.push_str(", ");
@@ -88,13 +84,13 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
             params.push(&user_role.user_id);
             params.push(&user_role.role_id);
         }
-        
+
         // 执行批量插入
         let mut query_builder = sqlx::QueryBuilder::new(query);
         for param in params {
             query_builder.push_bind(param);
         }
-        
+
         query_builder.build().execute(&self.pool).await?;
         Ok(())
     }

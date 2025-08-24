@@ -1,10 +1,4 @@
-//! 系统业务层模块
-
-pub mod dept;
-pub mod menu;
-pub mod params;
-pub mod role;
-pub mod user;
+//! 分页参数定义
 
 /// 公共分页参数
 #[derive(Debug, Clone)]

@@ -81,7 +81,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let mut fields = vec!["id".to_string()];
         let mut placeholders = vec!["?".to_string()];
         let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
-        
+
         bindings.push(Box::new(row.id.clone()) as Box<dyn std::any::Any>);
 
         if row.parent_id.is_some() {
@@ -168,14 +168,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
             bindings.push(Box::new(row.remark.clone().unwrap()) as Box<dyn std::any::Any>);
         }
 
-        let sql = format!(
-            "INSERT INTO sys_dept ({}) VALUES ({})",
-            fields.join(", "),
-            placeholders.join(", ")
-        );
+        let sql = format!("INSERT INTO sys_dept ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
 
-        let result = sql_query(&sql)
-            .execute(&mut self.connection)?;
+        let result = sql_query(&sql).execute(&mut self.connection)?;
 
         if result == 0 {
             return Err(Box::from("部门插入失败"));
@@ -188,10 +183,11 @@ impl DeptRepository for DeptRepositoryDieselImpl {
     async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
         match sql_query(&format!("SELECT {} FROM sys_dept WHERE id = ?", DEPT_FIELDS))
             .bind::<Text, _>(id)
-            .get_result::<Dept>(&mut self.connection) {
-                Ok(dept) => Ok(Some(dept)),
-                Err(_) => Ok(None),
-            }
+            .get_result::<Dept>(&mut self.connection)
+        {
+            Ok(dept) => Ok(Some(dept)),
+            Err(_) => Ok(None),
+        }
     }
 
     /// 根据主键选择性更新部门
@@ -274,10 +270,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
             return Ok(());
         }
 
-        let sql = format!(
-            "UPDATE sys_dept SET {} WHERE id = ?",
-            updates.join(", ")
-        );
+        let sql = format!("UPDATE sys_dept SET {} WHERE id = ?", updates.join(", "));
 
         let mut query = sql_query(&sql);
         query = query.bind::<Text, _>(&row.id);
@@ -338,16 +331,11 @@ impl DeptRepository for DeptRepositoryDieselImpl {
             bindings.push(Box::new(status) as Box<dyn std::any::Any>);
         }
 
-        let where_clause = if conditions.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", conditions.join(" AND "))
-        };
+        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
 
         let sql = format!("SELECT {} FROM sys_dept {} ORDER BY seq_no", DEPT_FIELDS, where_clause);
 
-        let result = sql_query(&sql)
-            .load::<Dept>(&mut self.connection)?;
+        let result = sql_query(&sql).load::<Dept>(&mut self.connection)?;
 
         Ok(result)
     }

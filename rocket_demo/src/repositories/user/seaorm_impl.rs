@@ -3,8 +3,9 @@
 use sea_orm::sea_query::{Condition, Order};
 use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
 
-use crate::models::{User, UserQuery};
+use crate::models::User;
 use crate::repositories::user::user_repository::UserRepository;
+use crate::services::params::user_param::UserParam;
 use common_wrapper::PageInfo;
 
 // 导入SeaORM实体
@@ -33,7 +34,7 @@ impl UserRepositorySeaormImpl {
     }
 
     /// 构建查询条件
-    fn build_condition(query: &UserQuery) -> Condition {
+    fn build_condition(query: &UserParam) -> Condition {
         let mut condition = Condition::all();
 
         // 添加ID查询条件
@@ -109,7 +110,7 @@ impl UserRepository for UserRepositorySeaormImpl {
 
     /// 查询用户列表
     async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let user_query: UserQuery = user.into();
+        let user_query: UserParam = user.into();
         let condition = Self::build_condition(&user_query);
 
         let users = Entity::find()
@@ -124,7 +125,7 @@ impl UserRepository for UserRepositorySeaormImpl {
     }
 
     /// 获取用户列表数量
-    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         let condition = Self::build_condition(query);
 
         let count = Entity::find()
@@ -136,7 +137,7 @@ impl UserRepository for UserRepositorySeaormImpl {
     }
 
     /// 分页获取用户列表
-    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
         let page_info = PageInfo::new(query.current_page_num, query.page_size);
         let page_num = page_info.get_current_page_num();
         let page_size = page_info.get_page_size();

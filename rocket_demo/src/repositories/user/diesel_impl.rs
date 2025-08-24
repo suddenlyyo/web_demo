@@ -3,8 +3,9 @@
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Text};
 
-use crate::models::{User, UserQuery};
+use crate::models::User;
 use crate::repositories::user::user_repository::UserRepository;
+use crate::services::params::user_param::UserParam;
 use common_wrapper::PageInfo;
 
 /// User table fields, used for SQL queries
@@ -34,7 +35,7 @@ impl UserRepositoryDieselImpl {
     }
 
     /// Build query conditions
-    fn build_where_clause(query: &UserQuery) -> (String, Vec<String>) {
+    fn build_where_clause(query: &UserParam) -> (String, Vec<String>) {
         let mut where_conditions = Vec::new();
         let mut params = Vec::new();
 
@@ -136,7 +137,7 @@ impl UserRepository for UserRepositoryDieselImpl {
 
     /// Query user list
     async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let user_query: UserQuery = user.into();
+        let user_query: UserParam = user.into();
         let (where_clause, _params) = Self::build_where_clause(&user_query);
 
         let sql = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
@@ -145,7 +146,7 @@ impl UserRepository for UserRepositoryDieselImpl {
     }
 
     /// Get user list count
-    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         let (where_clause, _params) = Self::build_where_clause(query);
 
         let sql = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
@@ -154,7 +155,7 @@ impl UserRepository for UserRepositoryDieselImpl {
     }
 
     /// Paginate user list
-    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
         let page_info = PageInfo::new(query.current_page_num, query.page_size);
         let offset = page_info.get_page_offset();
         let limit = page_info.get_page_size();

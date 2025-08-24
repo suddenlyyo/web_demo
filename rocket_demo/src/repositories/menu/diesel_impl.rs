@@ -1,8 +1,8 @@
 //! 菜单数据访问层 Diesel 实现
 
-use diesel::prelude::*;
 use crate::models::Menu;
 use crate::repositories::menu::menu_repository::MenuRepository;
+use diesel::prelude::*;
 
 /// 菜单表的所有字段，用于SQL查询
 const MENU_FIELDS: &str = "id, name, menu_type, url, perms, icon, seq_no, status, create_by, create_time, update_by, update_time, remark, parent_id, hidden, always_show, redirect, component, href, no_cache, affix, breadcrumb, active_menu";
@@ -87,7 +87,7 @@ impl MenuRepository for MenuRepositoryDieselImpl {
         let mut fields = vec!["id".to_string()];
         let mut placeholders = vec!["?".to_string()];
         let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
-        
+
         bindings.push(Box::new(row.id.clone()) as Box<dyn std::any::Any>);
 
         if row.name.is_some() {
@@ -222,14 +222,9 @@ impl MenuRepository for MenuRepositoryDieselImpl {
             bindings.push(Box::new(row.remark.clone().unwrap()) as Box<dyn std::any::Any>);
         }
 
-        let sql = format!(
-            "INSERT INTO sys_menu ({}) VALUES ({})",
-            fields.join(", "),
-            placeholders.join(", ")
-        );
+        let sql = format!("INSERT INTO sys_menu ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
 
-        let result = sql_query(&sql)
-            .execute(&mut self.connection)?;
+        let result = sql_query(&sql).execute(&mut self.connection)?;
 
         if result == 0 {
             return Err(Box::from("菜单插入失败"));
@@ -242,10 +237,11 @@ impl MenuRepository for MenuRepositoryDieselImpl {
     async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
         match sql_query(&format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS))
             .bind::<Text, _>(id)
-            .get_result::<Menu>(&mut self.connection) {
-                Ok(menu) => Ok(Some(menu)),
-                Err(_) => Ok(None),
-            }
+            .get_result::<Menu>(&mut self.connection)
+        {
+            Ok(menu) => Ok(Some(menu)),
+            Err(_) => Ok(None),
+        }
     }
 
     /// 根据主键选择性更新菜单
@@ -368,10 +364,7 @@ impl MenuRepository for MenuRepositoryDieselImpl {
             return Ok(());
         }
 
-        let sql = format!(
-            "UPDATE sys_menu SET {} WHERE id = ?",
-            updates.join(", ")
-        );
+        let sql = format!("UPDATE sys_menu SET {} WHERE id = ?", updates.join(", "));
 
         let mut query = sql_query(&sql);
         query = query.bind::<Text, _>(&row.id);
@@ -421,26 +414,31 @@ impl MenuRepository for MenuRepositoryDieselImpl {
 
     /// 根据用户ID查询菜单列表
     async fn select_sys_menu_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no", MENU_FIELDS))
-            .bind::<Text, _>(user_id)
-            .load::<Menu>(&mut self.connection)?;
+        let result = sql_query(&format!(
+            "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
+            MENU_FIELDS
+        ))
+        .bind::<Text, _>(user_id)
+        .load::<Menu>(&mut self.connection)?;
 
         Ok(result)
     }
 
     /// 查询所有菜单树
     async fn select_menu_tree_all(&self) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT {} FROM sys_menu WHERE status = 1 ORDER BY seq_no", MENU_FIELDS))
-            .load::<Menu>(&mut self.connection)?;
+        let result = sql_query(&format!("SELECT {} FROM sys_menu WHERE status = 1 ORDER BY seq_no", MENU_FIELDS)).load::<Menu>(&mut self.connection)?;
 
         Ok(result)
     }
 
     /// 根据用户ID查询菜单树
     async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no", MENU_FIELDS))
-            .bind::<Text, _>(user_id)
-            .load::<Menu>(&mut self.connection)?;
+        let result = sql_query(&format!(
+            "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
+            MENU_FIELDS
+        ))
+        .bind::<Text, _>(user_id)
+        .load::<Menu>(&mut self.connection)?;
 
         Ok(result)
     }
@@ -461,16 +459,11 @@ impl MenuRepository for MenuRepositoryDieselImpl {
             bindings.push(Box::new(status) as Box<dyn std::any::Any>);
         }
 
-        let where_clause = if conditions.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", conditions.join(" AND "))
-        };
+        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
 
         let sql = format!("SELECT {} FROM sys_menu {} ORDER BY seq_no", MENU_FIELDS, where_clause);
 
-        let result = sql_query(&sql)
-            .load::<Menu>(&mut self.connection)?;
+        let result = sql_query(&sql).load::<Menu>(&mut self.connection)?;
 
         Ok(result)
     }

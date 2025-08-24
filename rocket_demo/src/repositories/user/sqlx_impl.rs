@@ -3,8 +3,8 @@ use sqlx::Row;
 use sqlx::mysql::{MySqlPool, MySqlRow};
 use std::error::Error as StdError;
 
-use crate::models::{UserQuery, UserRole};
-use crate::repositories::user::user_repository::UserRepository;
+use crate::models::{User, UserRole};
+use crate::services::params::user_param::UserParam;
 use common_wrapper::PageInfo;
 
 /// 用户表的所有字段，用于SQL查询
@@ -65,7 +65,7 @@ impl UserRepositorySqlxImpl {
     }
 
     /// 构建查询条件
-    fn build_where_clause(query: &UserQuery) -> (String, Vec<String>) {
+    fn build_where_clause(query: &UserParam) -> (String, Vec<String>) {
         let mut where_conditions = Vec::new();
         let mut params = Vec::new();
 
@@ -172,7 +172,7 @@ impl UserRepository for UserRepositorySqlxImpl {
 
     /// 查询用户列表
     async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
-        let user_query: UserQuery = user.into();
+        let user_query: UserParam = user.into();
         let (where_clause, params) = Self::build_where_clause(&user_query);
 
         let sql = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
@@ -188,7 +188,7 @@ impl UserRepository for UserRepositorySqlxImpl {
     }
 
     /// 获取用户列表数量
-    async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let (where_clause, params) = Self::build_where_clause(query);
 
         let sql = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
@@ -204,7 +204,7 @@ impl UserRepository for UserRepositorySqlxImpl {
     }
 
     /// 分页获取用户列表
-    async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
+    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
         let page_info = PageInfo::new(query.current_page_num, query.page_size);
         let offset = page_info.get_page_offset();
         let limit = page_info.get_page_size();
@@ -307,17 +307,17 @@ impl UserRepository for UserRepositorySqlxImpl {
     /// 根据角色ID查询用户角色列表
     async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
         let sql = "SELECT user_id, role_id FROM sys_user_role WHERE role_id = ?";
-        let rows = sqlx::query(sql)
-            .bind(role_id)
-            .fetch_all(&self.pool)
-            .await?;
+        let rows = sqlx::query(sql).bind(role_id).fetch_all(&self.pool).await?;
 
-        let user_roles: Result<Vec<UserRole>, _> = rows.iter().map(|row| {
-            Ok(UserRole {
-                user_id: row.try_get("user_id")?,
-                role_id: row.try_get("role_id")?,
+        let user_roles: Result<Vec<UserRole>, _> = rows
+            .iter()
+            .map(|row| {
+                Ok(UserRole {
+                    user_id: row.try_get("user_id")?,
+                    role_id: row.try_get("role_id")?,
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(user_roles?)
     }
@@ -325,17 +325,17 @@ impl UserRepository for UserRepositorySqlxImpl {
     /// 根据用户ID查询用户角色列表
     async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
         let sql = "SELECT user_id, role_id FROM sys_user_role WHERE user_id = ?";
-        let rows = sqlx::query(sql)
-            .bind(user_id)
-            .fetch_all(&self.pool)
-            .await?;
+        let rows = sqlx::query(sql).bind(user_id).fetch_all(&self.pool).await?;
 
-        let user_roles: Result<Vec<UserRole>, _> = rows.iter().map(|row| {
-            Ok(UserRole {
-                user_id: row.try_get("user_id")?,
-                role_id: row.try_get("role_id")?,
+        let user_roles: Result<Vec<UserRole>, _> = rows
+            .iter()
+            .map(|row| {
+                Ok(UserRole {
+                    user_id: row.try_get("user_id")?,
+                    role_id: row.try_get("role_id")?,
+                })
             })
-        }).collect();
+            .collect();
 
         Ok(user_roles?)
     }
@@ -366,10 +366,7 @@ impl UserRepository for UserRepositorySqlxImpl {
         }
 
         let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
-        let sql = format!(
-            "DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN ({})",
-            placeholders.join(", ")
-        );
+        let sql = format!("DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN ({})", placeholders.join(", "));
 
         let mut query = sqlx::query(&sql);
         query = query.bind(user_id);
@@ -384,10 +381,7 @@ impl UserRepository for UserRepositorySqlxImpl {
     /// 根据用户ID删除用户角色
     async fn delete_user_role_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_user_role WHERE user_id = ?";
-        sqlx::query(sql)
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(sql).bind(user_id).execute(&self.pool).await?;
 
         Ok(())
     }

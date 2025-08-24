@@ -5,8 +5,8 @@ use sqlx::Row;
 use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
 
-use crate::repositories::menu::menu_repository::MenuRepository;
 use crate::models::Menu;
+use crate::repositories::menu::menu_repository::MenuRepository;
 
 mod constants_and_mappers {
     use super::*;
@@ -79,10 +79,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     /// 根据主键删除菜单
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_menu WHERE id = ?";
-        let result = sqlx::query(sql)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
 
         if result.rows_affected() == 0 {
             return Err(Box::from("菜单删除失败"));
@@ -272,11 +269,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             params.push(&row.remark);
         }
 
-        let sql = format!(
-            "INSERT INTO sys_menu ({}) VALUES ({})",
-            fields.join(", "),
-            placeholders.join(", ")
-        );
+        let sql = format!("INSERT INTO sys_menu ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
 
         let mut query = sqlx::query(&sql);
         for param in params {
@@ -303,7 +296,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             Some(row) => {
                 let menu = DbMapper::map_to_menu(&row)?;
                 Ok(Some(menu))
-            }
+            },
             None => Ok(None),
         }
     }
@@ -428,10 +421,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             return Ok(());
         }
 
-        let sql = format!(
-            "UPDATE sys_menu SET {} WHERE id = ?",
-            updates.join(", ")
-        );
+        let sql = format!("UPDATE sys_menu SET {} WHERE id = ?", updates.join(", "));
 
         let mut query = sqlx::query(&sql);
         for param in params {
@@ -487,17 +477,17 @@ impl MenuRepository for MenuRepositorySqlxImpl {
 
     /// 根据用户ID查询菜单列表
     async fn select_sys_menu_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
-        let sql = format!("SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no", MENU_FIELDS);
-        
+        let sql = format!(
+            "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
+            MENU_FIELDS
+        );
+
         let rows = sqlx::query(&sql)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Result<Vec<Menu>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_menu(row))
-            .collect();
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
 
         Ok(menus?)
     }
@@ -505,32 +495,27 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     /// 查询所有菜单树
     async fn select_menu_tree_all(&self) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu WHERE status = 1 ORDER BY seq_no", MENU_FIELDS);
-        
-        let rows = sqlx::query(&sql)
-            .fetch_all(&self.pool)
-            .await?;
 
-        let menus: Result<Vec<Menu>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_menu(row))
-            .collect();
+        let rows = sqlx::query(&sql).fetch_all(&self.pool).await?;
+
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
 
         Ok(menus?)
     }
 
     /// 根据用户ID查询菜单树
     async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
-        let sql = format!("SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no", MENU_FIELDS);
-        
+        let sql = format!(
+            "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
+            MENU_FIELDS
+        );
+
         let rows = sqlx::query(&sql)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Result<Vec<Menu>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_menu(row))
-            .collect();
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
 
         Ok(menus?)
     }
@@ -551,11 +536,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             params.push(&status);
         }
 
-        let where_clause = if conditions.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", conditions.join(" AND "))
-        };
+        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
 
         let sql = format!("SELECT {} FROM sys_menu {} ORDER BY seq_no", MENU_FIELDS, where_clause);
 
@@ -565,10 +546,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
         }
 
         let rows = query.fetch_all(&self.pool).await?;
-        let menus: Result<Vec<Menu>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_menu(row))
-            .collect();
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
 
         Ok(menus?)
     }
@@ -576,16 +554,13 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     /// 根据父菜单ID查询子菜单列表
     async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu WHERE parent_id = ? ORDER BY seq_no", MENU_FIELDS);
-        
+
         let rows = sqlx::query(&sql)
             .bind(parent_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Result<Vec<Menu>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_menu(row))
-            .collect();
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
 
         Ok(menus?)
     }
@@ -593,16 +568,13 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     /// 根据角色ID查询菜单ID列表
     async fn select_menu_ids_by_role_id(&self, role_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id WHERE rm.role_id = ?", MENU_FIELDS);
-        
+
         let rows = sqlx::query(&sql)
             .bind(role_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Result<Vec<Menu>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_menu(row))
-            .collect();
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
 
         Ok(menus?)
     }

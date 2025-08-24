@@ -1,8 +1,8 @@
 //! 用户角色数据访问层Diesel实现
 
 // 仅导入实际需要的Diesel类型
-use diesel::{PgConnection, QueryDsl, RunQueryDsl, ExpressionMethods};
 use diesel::prelude::*;
+use diesel::{ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl};
 
 /// 用户角色数据访问Diesel实现
 #[derive(Debug)]

@@ -34,9 +34,7 @@ impl DeptRepositorySeaormImpl {
 impl DeptRepository for DeptRepositorySeaormImpl {
     /// 根据主键删除部门
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = Entity::delete_by_id(id)
-            .exec(&self.connection)
-            .await?;
+        let result = Entity::delete_by_id(id).exec(&self.connection).await?;
 
         if result.rows_affected == 0 {
             return Err(Box::from("部门删除失败"));
@@ -63,9 +61,7 @@ impl DeptRepository for DeptRepositorySeaormImpl {
 
     /// 根据主键查询部门
     async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        let dept = Entity::find_by_id(id)
-            .one(&self.connection)
-            .await?;
+        let dept = Entity::find_by_id(id).one(&self.connection).await?;
 
         match dept {
             Some(dept) => Ok(Some(dept.into())),

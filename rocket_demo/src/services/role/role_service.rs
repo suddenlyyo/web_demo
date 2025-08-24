@@ -1,8 +1,8 @@
 //! 角色服务接口定义
 
-use common_wrapper::{ListWrapper, SingleWrapper, ResponseWrapper};
-use crate::models::Role;
 use super::PageParam;
+use crate::models::Role;
+use common_wrapper::{ListWrapper, ResponseWrapper, SingleWrapper};
 
 /// 角色服务接口
 #[rocket::async_trait]

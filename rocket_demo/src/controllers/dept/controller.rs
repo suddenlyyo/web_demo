@@ -2,7 +2,7 @@
 
 use rocket::{delete, get, post, put, serde::json::Json};
 
-use common_wrapper::{SingleWrapper, ResponseWrapper};
+use common_wrapper::{ResponseWrapper, SingleWrapper};
 
 use crate::models::Dept;
 use crate::services::dept::dept_service::{DeptService, DeptServiceImpl};

@@ -168,7 +168,11 @@ impl MenuService for MenuServiceImpl {
     }
 
     async fn select_sys_menu_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Menu> {
-        match self.repository.select_sys_menu_infos(user_id, user_name).await {
+        match self
+            .repository
+            .select_sys_menu_infos(user_id, user_name)
+            .await
+        {
             Ok(menu_list) => {
                 let mut wrapper = ListWrapper::new();
                 wrapper.set_success(menu_list);

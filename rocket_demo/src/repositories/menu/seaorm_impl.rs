@@ -1,8 +1,8 @@
 //! 菜单数据访问层 SeaORM 实现
 
+use common_wrapper::PageInfo;
 use sea_orm::sea_query::Order;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
-use common_wrapper::PageInfo;
 
 // 导入SeaORM实体
 use crate::entities::sys_menu;
@@ -31,9 +31,7 @@ impl MenuRepositorySeaormImpl {
 impl MenuRepository for MenuRepositorySeaormImpl {
     /// 根据主键删除菜单
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = Entity::delete_by_id(id)
-            .exec(&self.connection)
-            .await?;
+        let result = Entity::delete_by_id(id).exec(&self.connection).await?;
 
         if result.rows_affected == 0 {
             return Err(Box::from("菜单删除失败"));
@@ -60,9 +58,7 @@ impl MenuRepository for MenuRepositorySeaormImpl {
 
     /// 根据主键查询菜单
     async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let menu = Entity::find_by_id(id)
-            .one(&self.connection)
-            .await?;
+        let menu = Entity::find_by_id(id).one(&self.connection).await?;
 
         match menu {
             Some(menu) => Ok(Some(menu.into())),
@@ -155,9 +151,7 @@ impl MenuRepository for MenuRepositorySeaormImpl {
     /// 根据角色ID查询菜单ID列表
     async fn select_menu_ids_by_role_id(&self, role_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
         // 这里简化实现，实际应该关联查询角色菜单表
-        let menus = Entity::find()
-            .all(&self.connection)
-            .await?;
+        let menus = Entity::find().all(&self.connection).await?;
 
         Ok(menus.into_iter().map(|m| m.into()).collect())
     }

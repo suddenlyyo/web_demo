@@ -8,14 +8,14 @@ use crate::repositories::dept::dept_repository::DeptRepository;
 
 mod constants {
     use super::*;
-    
+
     /// 部门表的所有字段，用于SQL查询
     pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
 }
 
 mod mappers {
     use super::*;
-    
+
     /// 数据库映射器
     struct DbMapper;
 
@@ -71,10 +71,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     /// 根据主键删除部门
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_dept WHERE id = ?";
-        let result = sqlx::query(sql)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
 
         if result.rows_affected() == 0 {
             return Err(Box::from("部门删除失败"));
@@ -208,11 +205,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             params.push(&row.remark);
         }
 
-        let sql = format!(
-            "INSERT INTO sys_dept ({}) VALUES ({})",
-            fields.join(", "),
-            placeholders.join(", ")
-        );
+        let sql = format!("INSERT INTO sys_dept ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
 
         let mut query = sqlx::query(&sql);
         for param in params {
@@ -239,7 +232,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             Some(row) => {
                 let dept = DbMapper::map_to_dept(&row)?;
                 Ok(Some(dept))
-            }
+            },
             None => Ok(None),
         }
     }
@@ -324,10 +317,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             return Ok(());
         }
 
-        let sql = format!(
-            "UPDATE sys_dept SET {} WHERE id = ?",
-            updates.join(", ")
-        );
+        let sql = format!("UPDATE sys_dept SET {} WHERE id = ?", updates.join(", "));
 
         let mut query = sqlx::query(&sql);
         for param in params {
@@ -394,11 +384,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             params.push(&status);
         }
 
-        let where_clause = if conditions.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", conditions.join(" AND "))
-        };
+        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
 
         let sql = format!("SELECT {} FROM sys_dept {} ORDER BY seq_no", DEPT_FIELDS, where_clause);
 
@@ -408,10 +394,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
         }
 
         let rows = query.fetch_all(&self.pool).await?;
-        let depts: Result<Vec<Dept>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_dept(row))
-            .collect();
+        let depts: Result<Vec<Dept>, _> = rows.iter().map(|row| DbMapper::map_to_dept(row)).collect();
 
         Ok(depts?)
     }
@@ -419,16 +402,13 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     /// 根据父部门ID查询子部门列表
     async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_dept WHERE parent_id = ? ORDER BY seq_no", DEPT_FIELDS);
-        
+
         let rows = sqlx::query(&sql)
             .bind(parent_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let depts: Result<Vec<Dept>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_dept(row))
-            .collect();
+        let depts: Result<Vec<Dept>, _> = rows.iter().map(|row| DbMapper::map_to_dept(row)).collect();
 
         Ok(depts?)
     }

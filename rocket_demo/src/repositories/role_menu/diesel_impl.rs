@@ -94,10 +94,7 @@ impl RoleMenuRepository for RoleMenuRepositoryDieselImpl {
         }
 
         let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
-        let sql = format!(
-            "DELETE FROM sys_role_menu WHERE role_id = ? AND menu_id IN ({})",
-            placeholders.join(", ")
-        );
+        let sql = format!("DELETE FROM sys_role_menu WHERE role_id = ? AND menu_id IN ({})", placeholders.join(", "));
 
         let mut query = sql_query(&sql);
         query = query.bind::<diesel::sql_types::Text, _>(role_id);

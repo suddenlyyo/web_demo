@@ -58,10 +58,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     /// 根据主键删除角色
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_role WHERE id = ?";
-        let result = sqlx::query(sql)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
 
         if result.rows_affected() == 0 {
             return Err(Box::from("角色删除失败"));
@@ -160,11 +157,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
             params.push(&row.remark);
         }
 
-        let sql = format!(
-            "INSERT INTO sys_role ({}) VALUES ({})",
-            fields.join(", "),
-            placeholders.join(", ")
-        );
+        let sql = format!("INSERT INTO sys_role ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
 
         let mut query = sqlx::query(&sql);
         for param in params {
@@ -191,7 +184,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
             Some(row) => {
                 let role = DbMapper::map_to_role(&row)?;
                 Ok(Some(role))
-            }
+            },
             None => Ok(None),
         }
     }
@@ -251,10 +244,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
             return Ok(());
         }
 
-        let sql = format!(
-            "UPDATE sys_role SET {} WHERE id = ?",
-            updates.join(", ")
-        );
+        let sql = format!("UPDATE sys_role SET {} WHERE id = ?", updates.join(", "));
 
         let mut query = sqlx::query(&sql);
         for param in params {
@@ -298,16 +288,13 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     /// 根据用户ID查询角色列表
     async fn select_role_by_user_id(&self, user_id: &str) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_role r LEFT JOIN sys_user_role ur ON r.id = ur.role_id WHERE ur.user_id = ? ORDER BY r.seq_no", ROLE_FIELDS);
-        
+
         let rows = sqlx::query(&sql)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let roles: Result<Vec<Role>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_role(row))
-            .collect();
+        let roles: Result<Vec<Role>, _> = rows.iter().map(|row| DbMapper::map_to_role(row)).collect();
 
         Ok(roles?)
     }
@@ -328,11 +315,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
             params.push(&status);
         }
 
-        let where_clause = if conditions.is_empty() {
-            String::new()
-        } else {
-            format!("WHERE {}", conditions.join(" AND "))
-        };
+        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
 
         let sql = format!("SELECT {} FROM sys_role {} ORDER BY seq_no", ROLE_FIELDS, where_clause);
 
@@ -342,10 +325,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
         }
 
         let rows = query.fetch_all(&self.pool).await?;
-        let roles: Result<Vec<Role>, _> = rows
-            .iter()
-            .map(|row| DbMapper::map_to_role(row))
-            .collect();
+        let roles: Result<Vec<Role>, _> = rows.iter().map(|row| DbMapper::map_to_role(row)).collect();
 
         Ok(roles?)
     }

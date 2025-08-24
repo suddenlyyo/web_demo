@@ -32,5 +32,4 @@ pub trait DeptRepository: Debug + Send + Sync {
 
     /// 根据父部门ID查询子部门列表
     async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>>;
-
 }
