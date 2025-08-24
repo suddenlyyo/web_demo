@@ -1,10 +1,16 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use crate::models::menu::Menu;
-use crate::repositories::menu::menu_repository::MenuRepository;
-use crate::repositories::menu::sqlx_impl::MenuRepositorySqlxImpl;
-use crate::services::menu::menu_service::MenuService;
-use common_wrapper::{ListWrapper, PageWrapper, ResponseTrait, SingleWrapper};
+use common_wrapper::{ListWrapper, ResponseWrapper};
+use uuid::Uuid;
+
+use crate::{
+    models::{Menu, MenuParam},
+    repositories::menu::menu_repository::MenuRepository,
+    services::menu::menu_service::{MenuService, RouterVO, TreeVO},
+};
+
+use super::MENU_REPO;
 
 /// 菜单服务实现
 pub struct MenuServiceImpl {
@@ -39,28 +45,18 @@ impl MenuServiceImpl {
 
 #[rocket::async_trait]
 impl MenuService for MenuServiceImpl {
-    /// 根据ID获取菜单信息
-    async fn get_menu_by_id(&self, id: &str) -> SingleWrapper<Menu> {
-        match self.repository.get_menu_by_id(id).await {
-            Ok(menu) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(menu);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("菜单不存在");
-                wrapper
-            },
+    async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Vec<RouterVO> {
+        match self.repository.select_menu_tree_by_user_id(user_id).await {
+            Ok(menu_list) => self.build_menu_tree(menu_list),
+            Err(_) => Vec::new(),
         }
     }
 
-    /// 获取菜单列表
-    async fn list_menus(&self) -> ListWrapper<Menu> {
-        match self.repository.list_menus().await {
-            Ok(menus) => {
+    async fn select_menu_list(&self, menu_param: MenuParam) -> ListWrapper<Menu> {
+        match self.repository.select_menu_list(menu_param).await {
+            Ok(menu_list) => {
                 let mut wrapper = ListWrapper::new();
-                wrapper.set_success(menus);
+                wrapper.set_success(menu_list);
                 wrapper
             },
             Err(_) => {
@@ -71,87 +67,116 @@ impl MenuService for MenuServiceImpl {
         }
     }
 
-    /// 分页查询菜单列表
-    async fn list_menus_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> PageWrapper<Menu> {
-        match self
-            .repository
-            .list_menus_by_page(page_num, page_size)
-            .await
-        {
-            Ok((menus, total, page_count)) => {
-                let mut wrapper = PageWrapper::new();
-                let current_page = page_num.unwrap_or(1);
-                let page_size_value = page_size.unwrap_or(10);
-                wrapper.set_success(menus, total, page_count, current_page, page_size_value);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = PageWrapper::new();
-                wrapper.set_fail("获取菜单列表失败");
-                wrapper
-            },
-        }
-    }
+    async fn add_menu(&self, menu_param: MenuParam) -> ResponseWrapper {
+        let menu = Menu {
+            id: Uuid::new_v4().to_string(),
+            menu_name: menu_param.menu_name.clone(),
+            parent_id: menu_param.parent_id.clone(),
+            order_num: menu_param.order_num,
+            path: menu_param.path.clone(),
+            component: menu_param.component.clone(),
+            is_frame: menu_param.is_frame,
+            menu_type: menu_param.menu_type.clone(),
+            visible: menu_param.visible,
+            status: menu_param.status,
+            perms: menu_param.perms.clone(),
+            icon: menu_param.icon.clone(),
+            created_at: chrono::Utc::now().naive_utc(),
+            updated_at: chrono::Utc::now().naive_utc(),
+        };
 
-    /// 新增菜单
-    async fn add_menu(&self, menu: Menu) -> SingleWrapper<Menu> {
         match self.repository.add_menu(menu).await {
-            Ok(menu) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(menu);
+            Ok(_) => {
+                let mut wrapper = ResponseWrapper::new();
+                wrapper.set_success("新增菜单成功");
                 wrapper
             },
             Err(_) => {
-                let mut wrapper = SingleWrapper::new();
+                let mut wrapper = ResponseWrapper::new();
                 wrapper.set_fail("新增菜单失败");
                 wrapper
             },
         }
     }
 
-    /// 修改菜单
-    async fn update_menu(&self, menu: Menu) -> SingleWrapper<Menu> {
-        match self.repository.update_menu(menu).await {
-            Ok(menu) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(menu);
+    async fn edit_menu(&self, menu_param: MenuParam) -> ResponseWrapper {
+        match self.repository.edit_menu(menu_param).await {
+            Ok(_) => {
+                let mut wrapper = ResponseWrapper::new();
+                wrapper.set_success("编辑菜单成功");
                 wrapper
             },
             Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("修改菜单失败");
+                let mut wrapper = ResponseWrapper::new();
+                wrapper.set_fail("编辑菜单失败");
                 wrapper
             },
         }
     }
 
-    /// 删除菜单
-    async fn delete_menu(&self, id: &str) -> SingleWrapper<Menu> {
-        match self.repository.delete_menu(id).await {
-            Ok(menu) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(menu);
+    async fn edit_menu_status(&self, id: &str, status: i32) -> ResponseWrapper {
+        match self.repository.edit_menu_status(id, status).await {
+            Ok(_) => {
+                let mut wrapper = ResponseWrapper::new();
+                wrapper.set_success("修改菜单状态成功");
                 wrapper
             },
             Err(_) => {
-                let mut wrapper = SingleWrapper::new();
+                let mut wrapper = ResponseWrapper::new();
+                wrapper.set_fail("修改菜单状态失败");
+                wrapper
+            },
+        }
+    }
+
+    async fn delete_menu(&self, menu_id: &str) -> ResponseWrapper {
+        match self.repository.delete_menu(menu_id).await {
+            Ok(_) => {
+                let mut wrapper = ResponseWrapper::new();
+                wrapper.set_success("删除菜单成功");
+                wrapper
+            },
+            Err(_) => {
+                let mut wrapper = ResponseWrapper::new();
                 wrapper.set_fail("删除菜单失败");
                 wrapper
             },
         }
     }
 
-    /// 修改菜单状态
-    async fn update_menu_status(&self, id: &str, status: i32) -> SingleWrapper<Menu> {
-        match self.repository.update_menu_status(id, status).await {
-            Ok(menu) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(menu);
+    async fn get_menu_tree(&self, menu_param: MenuParam) -> ListWrapper<TreeVO> {
+        match self.repository.select_menu_list(menu_param).await {
+            Ok(menu_list) => {
+                let mut wrapper = ListWrapper::new();
+                let tree_list = self.build_tree(menu_list, "0");
+                wrapper.set_success(tree_list);
                 wrapper
             },
             Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("更新菜单状态失败");
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_fail("获取菜单树失败");
+                wrapper
+            },
+        }
+    }
+
+    async fn get_menu(&self) -> HashMap<String, Menu> {
+        match self.repository.get_menu().await {
+            Ok(menu_map) => menu_map,
+            Err(_) => HashMap::new(),
+        }
+    }
+
+    async fn select_sys_menu_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Menu> {
+        match self.repository.select_sys_menu_infos(user_id, user_name).await {
+            Ok(menu_list) => {
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_success(menu_list);
+                wrapper
+            },
+            Err(_) => {
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_fail("获取系统菜单信息失败");
                 wrapper
             },
         }

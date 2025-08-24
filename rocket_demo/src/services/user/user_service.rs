@@ -1,85 +1,132 @@
 //! 用户服务接口定义
 
-use common_wrapper::{ListWrapper, PageWrapper, SingleWrapper};
-use sqlx::query;
-
-use crate::models::{User, user::UserQuery};
+use common_wrapper::ResponseWrapper;
+use crate::models::{User, UserQuery};
+use super::PageParam;
 
 /// 用户服务接口
 #[rocket::async_trait]
 pub trait UserService {
-    /// 根据ID获取用户信息
+    /// 根据用户名查询用户信息
     ///
     /// # 参数
-    ///
-    /// - `id`: 用户ID
-    ///
-    /// # 返回值
-    ///
-    /// 返回包装后的用户信息
-    async fn get_user_by_id(&self, id: &str) -> SingleWrapper<User>;
-
-    /// 获取用户列表
+    /// * `user_name` - 用户名，类型: [&str]
     ///
     /// # 返回值
-    ///
-    /// 返回包装后的用户列表
-    async fn list_users(&self) -> ListWrapper<User>;
+    /// 返回用户信息，类型: [Option<User>]
+    async fn select_user_by_user_name(&self, user_name: &str) -> Option<User>;
 
     /// 分页查询用户列表
     ///
     /// # 参数
-    ///
-    /// - `page_num`: 页码
-    /// - `page_size`: 每页条数
+    /// * `user_param` - 用户参数，类型: [UserParam]
     ///
     /// # 返回值
-    ///
-    /// 返回包装后的分页用户列表
-    async fn list_users_by_page_with_conditions(&self, query: UserQuery) -> PageWrapper<User>;
+    /// 返回分页用户列表，类型: [PageWrapper<User>]
+    async fn get_user_list_by_page(&self, user_param: UserParam) -> PageWrapper<User>;
 
     /// 新增用户
     ///
     /// # 参数
-    ///
-    /// - `user`: 用户信息
+    /// * `user_param` - 用户参数，类型: [UserParam]
     ///
     /// # 返回值
-    ///
-    /// 返回包装后的新增用户信息
-    async fn add_user(&self, user: User) -> SingleWrapper<User>;
+    /// 返回响应结果，类型: [ResponseWrapper]
+    async fn add_user(&self, user_param: UserParam) -> ResponseWrapper;
 
-    /// 修改用户
+    /// 编辑用户
     ///
     /// # 参数
-    ///
-    /// - `user`: 用户信息
+    /// * `user_param` - 用户参数，类型: [UserParam]
     ///
     /// # 返回值
+    /// 返回响应结果，类型: [ResponseWrapper]
+    async fn edit_user(&self, user_param: UserParam) -> ResponseWrapper;
+
+    /// 编辑用户状态
     ///
-    /// 返回包装后的修改用户信息
-    async fn update_user(&self, user: User) -> SingleWrapper<User>;
+    /// # 参数
+    /// * `id` - 用户ID，类型: [&str]
+    /// * `status` - 用户状态，类型: [i32]
+    ///
+    /// # 返回值
+    /// 返回响应结果，类型: [ResponseWrapper]
+    async fn edit_user_status(&self, id: &str, status: i32) -> ResponseWrapper;
 
     /// 删除用户
     ///
     /// # 参数
-    ///
-    /// - `id`: 用户ID
+    /// * `user_id` - 用户ID，类型: [&str]
     ///
     /// # 返回值
-    ///
-    /// 返回包装后的删除结果
-    async fn delete_user(&self, id: &str) -> SingleWrapper<User>;
+    /// 返回响应结果，类型: [ResponseWrapper]
+    async fn delete_user(&self, user_id: &str) -> ResponseWrapper;
 
-    /// 修改用户状态
+    /// 重置密码
     ///
     /// # 参数
-    ///
-    /// - `id`: 用户ID
-    /// - `status`: 用户状态
+    /// * `user_param` - 用户参数，类型: [UserParam]
     ///
     /// # 返回值
+    /// 返回响应结果，类型: [ResponseWrapper]
+    async fn reset_user_pwd(&self, user_param: UserParam) -> ResponseWrapper;
+
+    /// 分配角色
     ///
-    /// 返回包装后的修改结果
-    async fn update_user_status(&self, id: &str, status: i32) -> SingleWrapper<User>;
+    /// # 参数
+    /// * `user_id` - 用户ID，类型: [&str]
+    /// * `role_ids` - 角色ID列表，类型: [&[String]]
+    ///
+    /// # 返回值
+    /// 返回响应结果，类型: [ResponseWrapper]
+    async fn set_user_role(&self, user_id: &str, role_ids: &[String]) -> ResponseWrapper;
+
+    /// 查询用户的角色id列表
+    ///
+    /// # 参数
+    /// * `user_id` - 用户ID，类型: [&str]
+    ///
+    /// # 返回值
+    /// 返回角色ID集合，类型: [SingleWrapper<std::collections::HashSet<String>>]
+    async fn select_role_ids_by_user_id(&self, user_id: &str) -> SingleWrapper<std::collections::HashSet<String>>;
+}
+
+/// 用户参数
+#[derive(Debug, Clone)]
+pub struct UserParam {
+    /// 用户ID
+    pub id: Option<String>,
+    /// 用户名
+    pub user_name: Option<String>,
+    /// 密码
+    pub password: Option<String>,
+    /// 邮箱
+    pub email: Option<String>,
+    /// 手机号码
+    pub phone_number: Option<String>,
+    /// 性别
+    pub sex: Option<String>,
+    /// 头像
+    pub avatar: Option<String>,
+    /// 状态
+    pub status: Option<i32>,
+    /// 登录IP
+    pub login_ip: Option<String>,
+    /// 登录时间
+    pub login_time: Option<chrono::DateTime<chrono::Utc>>,
+    /// 创建者
+    pub create_by: Option<String>,
+    /// 创建时间
+    pub create_time: Option<chrono::DateTime<chrono::Utc>>,
+    /// 更新者
+    pub update_by: Option<String>,
+    /// 更新时间
+    pub update_time: Option<chrono::DateTime<chrono::Utc>>,
+    /// 备注
+    pub remark: Option<String>,
+    /// 部门ID
+    pub dept_id: Option<String>,
+    /// 分页参数
+    #[serde(flatten)]
+    pub page_param: PageParam,
 }

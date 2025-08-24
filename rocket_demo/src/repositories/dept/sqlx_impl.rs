@@ -5,38 +5,45 @@ use std::error::Error as StdError;
 
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
-use common_wrapper::PageInfo;
 
-/// 部门表的所有字段，用于SQL查询
-const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
+mod constants {
+    use super::*;
+    
+    /// 部门表的所有字段，用于SQL查询
+    pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
+}
 
-/// 数据库映射器
-struct DbMapper;
+mod mappers {
+    use super::*;
+    
+    /// 数据库映射器
+    struct DbMapper;
 
-impl DbMapper {
-    /// 将数据库行映射为部门对象
-    fn map_to_dept(row: &sqlx::mysql::MySqlRow) -> Result<Dept, sqlx::Error> {
-        Ok(Dept {
-            id: row.try_get("id")?,
-            parent_id: row.try_get("parent_id")?,
-            name: row.try_get("name")?,
-            email: row.try_get("email")?,
-            telephone: row.try_get("telephone")?,
-            address: row.try_get("address")?,
-            logo: row.try_get("logo")?,
-            dept_level: row.try_get("dept_level")?,
-            seq_no: row.try_get("seq_no")?,
-            status: row.try_get("status")?,
-            create_by: row.try_get("create_by")?,
-            create_time: row
-                .try_get::<Option<NaiveDateTime>, _>("create_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-            update_by: row.try_get("update_by")?,
-            update_time: row
-                .try_get::<Option<NaiveDateTime>, _>("update_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-            remark: row.try_get("remark")?,
-        })
+    impl DbMapper {
+        /// 将数据库行映射为部门对象
+        fn map_to_dept(row: &sqlx::mysql::MySqlRow) -> Result<Dept, sqlx::Error> {
+            Ok(Dept {
+                id: row.try_get("id")?,
+                parent_id: row.try_get("parent_id")?,
+                name: row.try_get("name")?,
+                email: row.try_get("email")?,
+                telephone: row.try_get("telephone")?,
+                address: row.try_get("address")?,
+                logo: row.try_get("logo")?,
+                dept_level: row.try_get("dept_level")?,
+                seq_no: row.try_get("seq_no")?,
+                status: row.try_get("status")?,
+                create_by: row.try_get("create_by")?,
+                create_time: row
+                    .try_get::<Option<NaiveDateTime>, _>("create_time")?
+                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                update_by: row.try_get("update_by")?,
+                update_time: row
+                    .try_get::<Option<NaiveDateTime>, _>("update_time")?
+                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                remark: row.try_get("remark")?,
+            })
+        }
     }
 }
 
@@ -61,192 +68,368 @@ impl DeptRepositorySqlxImpl {
 
 #[rocket::async_trait]
 impl DeptRepository for DeptRepositorySqlxImpl {
-    /// 根据ID获取部门信息
-    async fn get_dept_by_id(&self, id: &str) -> Result<Dept, Box<dyn StdError + Send + Sync>> {
-        // 从数据库查询部门信息
-        let dept_query = sqlx::query(&format!("SELECT {} FROM sys_dept WHERE id = ?", DEPT_FIELDS))
+    /// 根据主键删除部门
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_dept WHERE id = ?";
+        let result = sqlx::query(sql)
             .bind(id)
-            .fetch_one(&self.pool)
+            .execute(&self.pool)
             .await?;
 
-        // 使用部门专用映射函数
-        let dept = DbMapper::map_to_dept(&dept_query)?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("部门删除失败"));
+        }
 
-        Ok(dept)
+        Ok(())
     }
 
-    /// 获取部门列表
-    async fn list_depts(&self) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
-        // 从数据库查询部门列表
-        let depts_query = sqlx::query(&format!("SELECT {} FROM sys_dept ORDER BY seq_no", DEPT_FIELDS))
-            .fetch_all(&self.pool)
+    /// 插入部门记录
+    async fn insert(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "INSERT INTO sys_dept (id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        let result = sqlx::query(sql)
+            .bind(&row.id)
+            .bind(&row.parent_id)
+            .bind(&row.name)
+            .bind(&row.email)
+            .bind(&row.telephone)
+            .bind(&row.address)
+            .bind(&row.logo)
+            .bind(&row.dept_level)
+            .bind(row.seq_no)
+            .bind(row.status)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .execute(&self.pool)
             .await?;
 
-        // 使用部门专用映射函数映射所有部门
-        let depts: Result<Vec<Dept>, sqlx::Error> = depts_query
-            .into_iter()
-            .map(|row| DbMapper::map_to_dept(&row))
+        if result.rows_affected() == 0 {
+            return Err(Box::from("部门插入失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 选择性插入部门记录
+    async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut fields = vec![];
+        let mut placeholders = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        fields.push("id");
+        placeholders.push("?");
+        params.push(&row.id);
+
+        if row.parent_id.is_some() {
+            fields.push("parent_id");
+            placeholders.push("?");
+            params.push(&row.parent_id);
+        }
+
+        if row.name.is_some() {
+            fields.push("name");
+            placeholders.push("?");
+            params.push(&row.name);
+        }
+
+        if row.email.is_some() {
+            fields.push("email");
+            placeholders.push("?");
+            params.push(&row.email);
+        }
+
+        if row.telephone.is_some() {
+            fields.push("telephone");
+            placeholders.push("?");
+            params.push(&row.telephone);
+        }
+
+        if row.address.is_some() {
+            fields.push("address");
+            placeholders.push("?");
+            params.push(&row.address);
+        }
+
+        if row.logo.is_some() {
+            fields.push("logo");
+            placeholders.push("?");
+            params.push(&row.logo);
+        }
+
+        if row.dept_level.is_some() {
+            fields.push("dept_level");
+            placeholders.push("?");
+            params.push(&row.dept_level);
+        }
+
+        if row.seq_no.is_some() {
+            fields.push("seq_no");
+            placeholders.push("?");
+            params.push(&row.seq_no);
+        }
+
+        if row.status.is_some() {
+            fields.push("status");
+            placeholders.push("?");
+            params.push(&row.status);
+        }
+
+        if row.create_by.is_some() {
+            fields.push("create_by");
+            placeholders.push("?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            fields.push("create_time");
+            placeholders.push("?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            fields.push("update_by");
+            placeholders.push("?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            fields.push("update_time");
+            placeholders.push("?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            fields.push("remark");
+            placeholders.push("?");
+            params.push(&row.remark);
+        }
+
+        let sql = format!(
+            "INSERT INTO sys_dept ({}) VALUES ({})",
+            fields.join(", "),
+            placeholders.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("部门插入失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据主键查询部门
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_dept WHERE id = ?", DEPT_FIELDS);
+        let result = sqlx::query(&sql)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        match result {
+            Some(row) => {
+                let dept = DbMapper::map_to_dept(&row)?;
+                Ok(Some(dept))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 根据主键选择性更新部门
+    async fn update_by_primary_key_selective(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut updates = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        if row.parent_id.is_some() {
+            updates.push("parent_id = ?");
+            params.push(&row.parent_id);
+        }
+
+        if row.name.is_some() {
+            updates.push("name = ?");
+            params.push(&row.name);
+        }
+
+        if row.email.is_some() {
+            updates.push("email = ?");
+            params.push(&row.email);
+        }
+
+        if row.telephone.is_some() {
+            updates.push("telephone = ?");
+            params.push(&row.telephone);
+        }
+
+        if row.address.is_some() {
+            updates.push("address = ?");
+            params.push(&row.address);
+        }
+
+        if row.logo.is_some() {
+            updates.push("logo = ?");
+            params.push(&row.logo);
+        }
+
+        if row.dept_level.is_some() {
+            updates.push("dept_level = ?");
+            params.push(&row.dept_level);
+        }
+
+        if row.seq_no.is_some() {
+            updates.push("seq_no = ?");
+            params.push(&row.seq_no);
+        }
+
+        if row.status.is_some() {
+            updates.push("status = ?");
+            params.push(&row.status);
+        }
+
+        if row.create_by.is_some() {
+            updates.push("create_by = ?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            updates.push("create_time = ?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            updates.push("update_by = ?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            updates.push("update_time = ?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            updates.push("remark = ?");
+            params.push(&row.remark);
+        }
+
+        if updates.is_empty() {
+            return Ok(());
+        }
+
+        let sql = format!(
+            "UPDATE sys_dept SET {} WHERE id = ?",
+            updates.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+        query = query.bind(&row.id);
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("部门更新失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据主键更新部门
+    async fn update_by_primary_key(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "UPDATE sys_dept SET parent_id = ?, name = ?, email = ?, telephone = ?, address = ?, logo = ?, dept_level = ?, seq_no = ?, status = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
+
+        let result = sqlx::query(sql)
+            .bind(&row.parent_id)
+            .bind(&row.name)
+            .bind(&row.email)
+            .bind(&row.telephone)
+            .bind(&row.address)
+            .bind(&row.logo)
+            .bind(&row.dept_level)
+            .bind(row.seq_no)
+            .bind(row.status)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .bind(&row.id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("部门更新失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 查询部门列表
+    async fn select_dept_list(&self, row: &Dept) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut conditions = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        if let Some(parent_id) = &row.parent_id {
+            conditions.push("parent_id = ?");
+            params.push(parent_id);
+        }
+
+        if let Some(name) = &row.name {
+            conditions.push("name = ?");
+            params.push(name);
+        }
+
+        if let Some(status) = row.status {
+            conditions.push("status = ?");
+            params.push(&status);
+        }
+
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conditions.join(" AND "))
+        };
+
+        let sql = format!("SELECT {} FROM sys_dept {} ORDER BY seq_no", DEPT_FIELDS, where_clause);
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let rows = query.fetch_all(&self.pool).await?;
+        let depts: Result<Vec<Dept>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_dept(row))
             .collect();
 
         Ok(depts?)
     }
 
-    /// 分页查询部门列表
-    async fn list_depts_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<Dept>, u64, u64), Box<dyn StdError + Send + Sync>> {
-        let page_info = PageInfo::new(page_num, page_size);
-        let _current_page = page_info.get_current_page_num();
-        let page_size_value = page_info.get_page_size();
-        let offset = page_info.get_page_offset();
-
-        // 查询总数
-        let count_query = sqlx::query("SELECT COUNT(*) as count FROM sys_dept")
-            .fetch_one(&self.pool)
-            .await?;
-
-        let total_count = u64::try_from(count_query.get::<i64, &str>("count"))?;
-        let total_pages = (total_count + page_size_value - 1) / page_size_value;
-
-        // 查询数据
-        let depts_query = sqlx::query(&format!("SELECT {} FROM sys_dept ORDER BY seq_no LIMIT ? OFFSET ?", DEPT_FIELDS))
-            .bind(page_size_value as i64)
-            .bind(offset as i64)
-            .fetch_all(&self.pool)
-            .await?;
-
-        let depts: Result<Vec<Dept>, _> = depts_query
-            .iter()
-            .map(|row| DbMapper::map_to_dept(row))
-            .collect();
-        let depts = depts?;
-
-        Ok((depts, total_count, total_pages))
-    }
-
-    /// 根据父部门ID获取子部门列表
-    async fn list_children_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
-        // 从数据库查询子部门列表
-        let children_query = sqlx::query(&format!("SELECT {} FROM sys_dept WHERE parent_id = ? ORDER BY seq_no", DEPT_FIELDS))
+    /// 根据父部门ID查询子部门列表
+    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_dept WHERE parent_id = ? ORDER BY seq_no", DEPT_FIELDS);
+        
+        let rows = sqlx::query(&sql)
             .bind(parent_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let children: Result<Vec<Dept>, _> = children_query
-            .into_iter()
-            .map(|row| DbMapper::map_to_dept(&row))
+        let depts: Result<Vec<Dept>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_dept(row))
             .collect();
-        let children = children?;
 
-        Ok(children)
-    }
-
-    /// 获取部门树结构
-    async fn list_dept_tree(&self) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
-        // 从数据库查询所有部门
-        let all_depts_query = sqlx::query(&format!("SELECT {} FROM sys_dept ORDER BY parent_id, seq_no", DEPT_FIELDS))
-            .fetch_all(&self.pool)
-            .await?;
-
-        let all_depts: Result<Vec<Dept>, _> = all_depts_query
-            .into_iter()
-            .map(|row| DbMapper::map_to_dept(&row))
-            .collect();
-        let all_depts = all_depts?;
-
-        Ok(all_depts)
-    }
-
-    /// 添加部门
-    async fn add_dept(&self, dept: Dept) -> Result<Dept, Box<dyn StdError + Send + Sync>> {
-        let sql = "INSERT INTO sys_dept (id, parent_id, name, email, telephone, address, seq_no, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        let _result = sqlx::query(sql)
-            .bind(&dept.id)
-            .bind(&dept.parent_id)
-            .bind(&dept.name)
-            .bind(&dept.email)
-            .bind(&dept.telephone)
-            .bind(&dept.address)
-            .bind(dept.seq_no)
-            .bind(dept.status)
-            .bind(&dept.create_by)
-            .bind(dept.create_time.map(|t| t.naive_utc()))
-            .bind(&dept.update_by)
-            .bind(dept.update_time.map(|t| t.naive_utc()))
-            .bind(&dept.remark)
-            .execute(&self.pool)
-            .await?;
-
-        // 验证影响行数
-        if _result.rows_affected() == 0 {
-            return Err(Box::from("部门插入失败"));
-        }
-
-        // 返回插入的部门
-        Ok(dept)
-    }
-
-    /// 修改部门
-    async fn update_dept(&self, dept: Dept) -> Result<Dept, Box<dyn StdError + Send + Sync>> {
-        let sql = "UPDATE sys_dept SET parent_id = ?, name = ?, email = ?, telephone = ?, address = ?, seq_no = ?, status = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
-
-        let _result = sqlx::query(sql)
-            .bind(&dept.parent_id)
-            .bind(&dept.name)
-            .bind(&dept.email)
-            .bind(&dept.telephone)
-            .bind(&dept.address)
-            .bind(dept.seq_no)
-            .bind(dept.status)
-            .bind(&dept.update_by)
-            .bind(dept.update_time.map(|t| t.naive_utc()))
-            .bind(&dept.remark)
-            .bind(&dept.id)
-            .execute(&self.pool)
-            .await?;
-
-        // 验证影响行数
-        if _result.rows_affected() == 0 {
-            return Err(Box::from("部门更新失败"));
-        }
-
-        // 返回更新的部门
-        Ok(dept)
-    }
-
-    /// 删除部门
-    async fn delete_dept(&self, id: &str) -> Result<Dept, Box<dyn StdError + Send + Sync>> {
-        // 获取要删除的部门
-        let dept_to_delete = self.get_dept_by_id(id).await?;
-
-        // 构建SQL查询
-        let sql = "DELETE FROM sys_dept WHERE id = ?";
-
-        // 执行删除操作
-        let _result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
-
-        // 验证影响行数
-        if _result.rows_affected() == 0 {
-            return Err(Box::from("部门删除失败"));
-        }
-
-        // 返回删除的部门
-        Ok(dept_to_delete)
-    }
-
-    /// 更新部门状态
-    async fn update_dept_status(&self, id: &str, status: i32) -> Result<Dept, Box<dyn StdError + Send + Sync>> {
-        // 先获取部门信息
-        let mut dept = self.get_dept_by_id(id).await?;
-
-        // 执行更新状态操作
-        let _result = sqlx::query("UPDATE sys_dept SET status = ?, update_time = NOW() WHERE id = ?")
-            .bind(status)
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-
-        // 更新内存中的部门状态
-        dept.status = Some(status);
-        Ok(dept)
+        Ok(depts?)
     }
 }

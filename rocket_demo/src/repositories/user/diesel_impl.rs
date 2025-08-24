@@ -1,92 +1,92 @@
-//! 用户数据访问层 Diesel 实现
+//! User data access layer Diesel implementation
 
-use diesel::sql_types::{BigInt, Integer, Text, Timestamp};
-use diesel::{QueryableByName, RunQueryDsl, sql_query};
+use diesel::prelude::*;
+use diesel::sql_types::{BigInt, Integer, Text};
 
 use crate::models::{User, UserQuery};
 use crate::repositories::user::user_repository::UserRepository;
 use common_wrapper::PageInfo;
 
-/// 用户表的所有字段，用于SQL查询
+/// User table fields, used for SQL queries
 const USER_FIELDS: &str = "id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark";
 
-/// 用于获取COUNT查询结果的结构体
+/// Struct for getting COUNT query result
 #[derive(QueryableByName, Debug)]
 struct CountResult {
     #[diesel(sql_type = BigInt)]
     count: u64,
 }
 
-/// 用户数据访问 Diesel 实现
+/// User data access Diesel implementation
 #[derive(Debug)]
 pub struct UserRepositoryDieselImpl {
     connection: diesel::sqlite::SqliteConnection,
 }
 
 impl UserRepositoryDieselImpl {
-    /// 创建用户仓库 Diesel 实例
+    /// Create user repository Diesel instance
     pub fn new() -> Self {
-        // 初始化数据库连接
+        // Initialize database connection
         let database_url = std::env::var("DATABASE_URL").unwrap_or("data.db".to_string());
         let connection = diesel::sqlite::SqliteConnection::establish(&database_url).expect("Error connecting to SQLite database");
 
         Self { connection }
     }
 
-    /// 构建查询条件
+    /// Build query conditions
     fn build_where_clause(query: &UserQuery) -> (String, Vec<String>) {
         let mut where_conditions = Vec::new();
         let mut params = Vec::new();
 
-        // 添加ID查询条件
+        // Add ID query condition
         if let Some(id) = &query.id {
             where_conditions.push("id = ?");
             params.push(id.clone());
         }
 
-        // 添加名称查询条件
+        // Add name query condition
         if let Some(name) = &query.name {
             where_conditions.push("name LIKE ?");
             params.push(format!("%{}%", name));
         }
 
-        // 添加部门ID查询条件
+        // Add department ID query condition
         if let Some(dept_id) = &query.dept_id {
             where_conditions.push("dept_id = ?");
             params.push(dept_id.clone());
         }
 
-        // 添加邮箱查询条件
+        // Add email query condition
         if let Some(email) = &query.email {
             where_conditions.push("email LIKE ?");
             params.push(format!("%{}%", email));
         }
 
-        // 添加手机号码查询条件
+        // Add phone number query condition
         if let Some(phone_number) = &query.phone_number {
             where_conditions.push("phone_number LIKE ?");
             params.push(format!("%{}%", phone_number));
         }
 
-        // 添加性别查询条件
+        // Add sex query condition
         if let Some(sex) = &query.sex {
             where_conditions.push("sex = ?");
             params.push(sex.clone());
         }
 
-        // 添加状态查询条件
+        // Add status query condition
         if let Some(status) = query.status {
             where_conditions.push("status = ?");
             params.push(status.to_string());
         }
 
-        // 添加备注查询条件
+        // Add remark query condition
         if let Some(remark) = &query.remark {
             where_conditions.push("remark LIKE ?");
             params.push(format!("%{}%", remark));
         }
 
-        // 添加日期范围查询条件
+        // Add date range query condition
         if let (Some(start_date), Some(end_date)) = (&query.start_date, &query.end_date) {
             where_conditions.push("create_time BETWEEN ? AND ?");
             params.push(start_date.naive_utc().to_string());
@@ -107,9 +107,9 @@ impl UserRepositoryDieselImpl {
 
 #[rocket::async_trait]
 impl UserRepository for UserRepositoryDieselImpl {
-    /// 根据ID获取用户信息
+    /// Get user information by ID
     async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel查询用户信息
+        // Use Diesel to query user information
         let result = sql_query(format!("SELECT {} FROM sys_user WHERE id = ?", USER_FIELDS))
             .bind::<Text, _>(id)
             .get_result::<User>(&mut self.connection);
@@ -121,7 +121,7 @@ impl UserRepository for UserRepositoryDieselImpl {
         }
     }
 
-    /// 根据用户名查找用户
+    /// Find user by name
     async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
         let result = sql_query(format!("SELECT {} FROM sys_user WHERE name = ?", USER_FIELDS))
             .bind::<Text, _>(name)
@@ -134,7 +134,7 @@ impl UserRepository for UserRepositoryDieselImpl {
         }
     }
 
-    /// 查询用户列表
+    /// Query user list
     async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
         let user_query: UserQuery = user.into();
         let (where_clause, _params) = Self::build_where_clause(&user_query);
@@ -144,7 +144,7 @@ impl UserRepository for UserRepositoryDieselImpl {
         Ok(users_query)
     }
 
-    /// 获取用户列表数量
+    /// Get user list count
     async fn get_user_list_count(&self, query: &UserQuery) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         let (where_clause, _params) = Self::build_where_clause(query);
 
@@ -153,7 +153,7 @@ impl UserRepository for UserRepositoryDieselImpl {
         Ok(count_result.count)
     }
 
-    /// 分页获取用户列表
+    /// Paginate user list
     async fn get_user_list_by_page(&self, query: &UserQuery) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
         let page_info = PageInfo::new(query.current_page_num, query.page_size);
         let offset = page_info.get_page_offset();
@@ -170,9 +170,9 @@ impl UserRepository for UserRepositoryDieselImpl {
         Ok(users_query)
     }
 
-    /// 插入用户记录
+    /// Insert user record
     async fn insert(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 构建插入语句
+        // Build insert statement
         let result = sql_query("INSERT INTO sys_user (id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
             .bind::<Text, _>(&user.id)
             .bind::<Text, _>(&user.dept_id.clone().unwrap_or_default())
@@ -198,13 +198,13 @@ impl UserRepository for UserRepositoryDieselImpl {
         }
     }
 
-    /// 选择性插入用户记录
+    /// Selective insert user record
     async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 与insert方法实现相同，在实际应用中可以根据需要进行区分
+        // Same implementation as insert method, can be differentiated based on needs in actual application
         self.insert(user).await
     }
 
-    /// 根据ID更新用户信息
+    /// Update user information by ID
     async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = sql_query("UPDATE sys_user SET dept_id = ?, name = ?, email = ?, phone_number = ?, sex = ?, password = ?, avatar = ?, status = ?, login_ip = ?, login_time = ?, create_by = ?, create_time = ?, update_by = ?, update_time = datetime('now'), remark = ? WHERE id = ?")
             .bind::<Text, _>(&user.dept_id.clone().unwrap_or_default())
@@ -230,13 +230,13 @@ impl UserRepository for UserRepositoryDieselImpl {
         }
     }
 
-    /// 根据ID选择性更新用户信息
+    /// Selective update user information by ID
     async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 与update_by_primary_key方法实现相同，在实际应用中可以根据需要进行区分
+        // Same implementation as update_by_primary_key method, can be differentiated based on needs in actual application
         self.update_by_primary_key(user).await
     }
 
-    /// 根据ID删除用户
+    /// Delete user by ID
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = sql_query("DELETE FROM sys_user WHERE id = ?")
             .bind::<Text, _>(id)

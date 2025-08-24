@@ -1,20 +1,26 @@
 //! 角色服务实现
 
-use std::sync::Arc;
+use common_wrapper::{ResponseTrait, SingleWrapper};
+use std::collections::HashSet;
 
-use crate::models::role::Role;
-use crate::repositories::role::role_repository::RoleRepository;
-use crate::repositories::role::sqlx_impl::RoleRepositorySqlxImpl;
-use crate::services::role::role_service::RoleService;
-use common_wrapper::{ListWrapper, PageWrapper, ResponseTrait, SingleWrapper};
+use crate::{
+    models::{Role, RoleMenu, RoleParam},
+    repositories::{
+        role::role_repository::RoleRepository,
+        role_menu::role_menu_repository::RoleMenuRepository,
+    },
+};
+
+use super::{RoleService, ROLE_MENU_REPO, ROLE_REPO};
 
 /// 角色服务实现
 pub struct RoleServiceImpl {
-    repository: Arc<dyn RoleRepository>,
+    repository: Box<dyn RoleRepository>,
+    role_menu_repository: Box<dyn RoleMenuRepository>,
 }
 
 impl RoleServiceImpl {
-    /// 创建角色服务实例
+    /// 创建新的角色服务实例
     ///
     /// # 参数
     ///
@@ -25,9 +31,7 @@ impl RoleServiceImpl {
     /// 返回新的角色服务实例
     pub async fn new(database_url: &str) -> Self {
         #[cfg(feature = "sqlx_impl")]
-        let repository = RoleRepositorySqlxImpl::from_database_url(database_url)
-            .await
-            .unwrap();
+        let repository = RoleRepositorySqlxImpl::from_database_url(database_url).await;
 
         #[cfg(feature = "diesel_impl")]
         let repository = RoleRepositoryDieselImpl::new(); // Diesel不需要数据库URL
@@ -35,127 +39,85 @@ impl RoleServiceImpl {
         #[cfg(feature = "seaorm_impl")]
         let repository = RoleRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
 
-        Self { repository: Arc::new(repository) }
+        #[cfg(feature = "sqlx_impl")]
+        let role_menu_repository = RoleMenuRepositorySqlxImpl::new(/* TODO: 添加数据库连接参数 */);
+
+        #[cfg(feature = "diesel_impl")]
+        let role_menu_repository = RoleMenuRepositoryDieselImpl::new(); // Diesel实现
+
+        #[cfg(feature = "seaorm_impl")]
+        let role_menu_repository = RoleMenuRepositorySeaormImpl::new(/* TODO: 添加数据库连接参数 */); // SeaORM实现
+
+        Self { 
+            repository: Box::new(repository),
+            role_menu_repository: Box::new(role_menu_repository),
+        }
     }
 }
 
 #[rocket::async_trait]
 impl RoleService for RoleServiceImpl {
-    /// 根据ID获取角色信息
-    async fn get_role_by_id(&self, id: &str) -> SingleWrapper<Role> {
-        match self.repository.get_role_by_id(id).await {
-            Ok(role) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(role);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("角色不存在");
-                wrapper
-            },
+    /// 角色设置权限
+    async fn role_set_menu(&self, role_id: &str, menu_ids: &[String]) -> ResponseWrapper {
+        let mut response = ResponseWrapper::success_default();
+        
+        // 先删除角色的所有菜单
+        if let Err(e) = self.role_menu_repository.delete_by_role_id(role_id).await {
+            response.set_fail(&format!("删除角色菜单失败: {}", e));
+            return response;
         }
+        
+        // 然后添加新的菜单
+        let role_menus: Vec<RoleMenu> = menu_ids
+            .iter()
+            .map(|menu_id| RoleMenu {
+                role_id: role_id.to_string(),
+                menu_id: menu_id.clone(),
+            })
+            .collect();
+            
+        if let Err(e) = self.role_menu_repository.batch_insert(&role_menus).await {
+            response.set_fail(&format!("设置角色菜单失败: {}", e));
+            return response;
+        }
+        
+        response
     }
 
-    /// 获取角色列表
-    async fn list_roles(&self) -> ListWrapper<Role> {
-        match self.repository.list_roles().await {
+    /// 查询角色的菜单id列表
+    async fn select_menu_ids_by_role_id(&self, role_id: &str) -> SingleWrapper<HashSet<String>> {
+        let mut wrapper = SingleWrapper::new();
+        
+        match self.role_menu_repository.select_role_menu_by_role_id(role_id).await {
+            Ok(role_menus) => {
+                let menu_ids: HashSet<String> = role_menus.into_iter().map(|rm| rm.menu_id).collect();
+                wrapper.set_success(menu_ids);
+            }
+            Err(e) => {
+                wrapper.set_fail(&format!("查询角色菜单失败: {}", e));
+            }
+        }
+        
+        wrapper
+    }
+
+    /// 查询角色信息
+    async fn select_role_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Role> {
+        let mut wrapper = ListWrapper::new();
+        
+        // 构建查询条件
+        let mut role = Role::default();
+        // TODO: 根据user_id和user_name构建查询条件
+        
+        match self.repository.select_role_list(&role).await {
             Ok(roles) => {
-                let mut wrapper = ListWrapper::new();
                 wrapper.set_success(roles);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = ListWrapper::new();
-                wrapper.set_fail("获取角色列表失败");
-                wrapper
-            },
+            }
+            Err(e) => {
+                wrapper.set_fail(&format!("查询角色信息失败: {}", e));
+            }
         }
-    }
-
-    /// 分页查询角色列表
-    async fn list_roles_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> PageWrapper<Role> {
-        match self
-            .repository
-            .list_roles_by_page(page_num, page_size)
-            .await
-        {
-            Ok((roles, total, page_count)) => {
-                let mut wrapper = PageWrapper::new();
-                let current_page = page_num.unwrap_or(1);
-                let page_size_value = page_size.unwrap_or(10);
-                wrapper.set_success(roles, total, page_count, current_page, page_size_value);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = PageWrapper::new();
-                wrapper.set_fail("获取角色列表失败");
-                wrapper
-            },
-        }
-    }
-
-    /// 新增角色
-    async fn add_role(&self, role: Role) -> SingleWrapper<Role> {
-        match self.repository.add_role(role).await {
-            Ok(role) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(role);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("新增角色失败");
-                wrapper
-            },
-        }
-    }
-
-    /// 修改角色
-    async fn update_role(&self, role: Role) -> SingleWrapper<Role> {
-        match self.repository.update_role(role).await {
-            Ok(role) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(role);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("修改角色失败");
-                wrapper
-            },
-        }
-    }
-
-    /// 删除角色
-    async fn delete_role(&self, id: &str) -> SingleWrapper<Role> {
-        match self.repository.delete_role(id).await {
-            Ok(role) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(role);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("删除角色失败");
-                wrapper
-            },
-        }
-    }
-
-    /// 修改角色状态
-    async fn update_role_status(&self, id: &str, status: i32) -> SingleWrapper<Role> {
-        match self.repository.update_role_status(id, status).await {
-            Ok(role) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(role);
-                wrapper
-            },
-            Err(_) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("修改角色状态失败");
-                wrapper
-            },
-        }
+        
+        wrapper
     }
 }

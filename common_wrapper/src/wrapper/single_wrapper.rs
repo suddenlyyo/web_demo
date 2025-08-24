@@ -25,7 +25,7 @@ pub struct SingleWrapper<T> {
 }
 
 impl<T> SingleWrapper<T> {
-    /// 创建一个默认成功的 SingleWrapper，数据为空
+    /// 创建一个新的 SingleWrapper，数据为空
     ///
     /// # 返回值
     ///
@@ -81,6 +81,12 @@ impl<T> SingleWrapper<T> {
     /// 如果存在数据则返回Some(&T)，否则返回None
     pub fn get_data(&self) -> Option<&T> {
         self.data.as_ref()
+    }
+}
+
+impl<T> Default for SingleWrapper<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,16 +1,13 @@
 //! 角色数据访问层SQLx实现
 
-use chrono::{NaiveDateTime, Utc};
 use sqlx::Row;
-use sqlx::mysql::{MySqlPool, MySqlRow};
-use std::error::Error as StdError;
+use sqlx::mysql::MySqlPool;
 
 use crate::models::Role;
 use crate::repositories::role::role_repository::RoleRepository;
-use common_wrapper::PageInfo;
 
 /// 角色表的所有字段，用于SQL查询
-pub const ROLE_FIELDS: &str = "id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark";
+const ROLE_FIELDS: &str = "id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark";
 
 /// 数据库映射器
 struct DbMapper;
@@ -54,185 +51,302 @@ impl RoleRepositorySqlxImpl {
         let pool = MySqlPool::connect(database_url).await?;
         Ok(Self::new(pool))
     }
-
-    /// 获取单个角色记录
-    async fn get_role_record(&self, id: &str) -> Result<Option<Role>, sqlx::Error> {
-        sqlx::query(&format!("SELECT {} FROM sys_role WHERE id = ?", ROLE_FIELDS))
-            .bind(id)
-            .map(|row: MySqlRow| DbMapper::map_to_role(&row))
-            .fetch_optional(&self.pool)
-            .await?
-            .transpose()
-    }
-
-    /// 获取角色列表记录
-    async fn get_roles_records(&self) -> Result<Vec<Role>, sqlx::Error> {
-        sqlx::query(&format!("SELECT {} FROM sys_role ORDER BY seq_no", ROLE_FIELDS))
-            .map(|row: MySqlRow| DbMapper::map_to_role(&row))
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()
-    }
-
-    /// 分页获取角色记录
-    async fn get_paged_roles_records(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<Role>, u64, u64), sqlx::Error> {
-        let page_info = PageInfo::new(page_num, page_size);
-        let _current_page = page_info.get_current_page_num();
-        let page_size_value = page_info.get_page_size();
-        let offset = page_info.get_page_offset();
-
-        // 查询总数
-        let count_query = sqlx::query(&format!("SELECT COUNT(*) as count FROM sys_role"))
-            .fetch_one(&self.pool)
-            .await?;
-
-        let total_count = u64::try_from(count_query.get::<i64, _>("count")).map_err(|e| sqlx::Error::Decode(Box::new(e)))?;
-        let total_pages = (total_count as f64 / page_size_value as f64).ceil() as u64;
-
-        // 分页查询
-        let roles_query = format!("SELECT {} FROM sys_role ORDER BY seq_no LIMIT ? OFFSET ?", ROLE_FIELDS);
-        let roles = sqlx::query(&roles_query)
-            .bind(page_size_value as i64)
-            .bind(offset as i64)
-            .map(|row: MySqlRow| DbMapper::map_to_role(&row))
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok((roles, total_count, total_pages))
-    }
 }
 
 #[rocket::async_trait]
 impl RoleRepository for RoleRepositorySqlxImpl {
-    /// 根据ID获取角色信息
-    async fn get_role_by_id(&self, id: &str) -> Result<Role, Box<dyn StdError + Send + Sync>> {
-        match self.get_role_record(id).await? {
-            Some(role) => Ok(role),
-            None => Err(Box::from("角色不存在")),
-        }
-    }
-
-    /// 获取角色列表
-    async fn list_roles(&self) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
-        self.get_roles_records().await.map_err(|e| e.into())
-    }
-
-    /// 分页查询角色列表
-    async fn list_roles_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<Role>, u64, u64), Box<dyn StdError + Send + Sync>> {
-        self.get_paged_roles_records(page_num, page_size)
-            .await
-            .map_err(|e| e.into())
-    }
-
-    /// 新增角色
-    async fn add_role(&self, role: Role) -> Result<Role, Box<dyn StdError + Send + Sync>> {
-        // 构建SQL查询
-        let sql = "INSERT INTO sys_role (id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        // 执行插入操作
-        let result = sqlx::query(sql)
-            .bind(&role.id)
-            .bind(&role.name)
-            .bind(&role.role_key)
-            .bind(role.seq_no)
-            .bind(role.status)
-            .bind(&role.create_by)
-            .bind(role.create_time.map(|t| t.naive_utc()))
-            .bind(&role.update_by)
-            .bind(role.update_time.map(|t| t.naive_utc()))
-            .bind(&role.remark)
-            .execute(&self.pool)
-            .await?;
-
-        // 验证影响行数
-        if result.rows_affected() == 0 {
-            return Err(Box::from("角色插入失败"));
-        }
-
-        // 返回插入的角色
-        Ok(role)
-    }
-
-    /// 修改角色
-    async fn update_role(&self, role: Role) -> Result<Role, Box<dyn StdError + Send + Sync>> {
-        // 构建SQL查询
-        let sql = "UPDATE sys_role SET name = ?, role_key = ?, seq_no = ?, status = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
-
-        // 执行更新操作
-        let result = sqlx::query(sql)
-            .bind(&role.name)
-            .bind(&role.role_key)
-            .bind(role.seq_no)
-            .bind(role.status)
-            .bind(&role.update_by)
-            .bind(role.update_time.map(|t| t.naive_utc()))
-            .bind(&role.remark)
-            .bind(&role.id)
-            .execute(&self.pool)
-            .await?;
-
-        // 验证影响行数
-        if result.rows_affected() == 0 {
-            return Err(Box::from("角色更新失败"));
-        }
-
-        // 返回更新的角色
-        Ok(role)
-    }
-
-    /// 删除角色
-    async fn delete_role(&self, id: &str) -> Result<Role, Box<dyn StdError + Send + Sync>> {
-        // 构建SQL查询
+    /// 根据主键删除角色
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_role WHERE id = ?";
-
-        // 获取要删除的角色
-        let role_to_delete = self.get_role_record(id).await?.ok_or("角色不存在")?;
-
-        // 执行删除操作
-        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
-
-        // 验证影响行数
-        if result.rows_affected() == 0 {
-            return Err(Box::from("角色删除失败"));
-        }
-
-        // 返回删除的角色
-        Ok(role_to_delete)
-    }
-
-    /// 修改角色状态
-    async fn update_role_status(&self, id: &str, status: i32) -> Result<Role, Box<dyn StdError + Send + Sync>> {
-        // 构建SQL查询
-        let sql = "UPDATE sys_role SET status = ?, update_by = ?, update_time = ? WHERE id = ?";
-
-        // 获取要更新的角色
-        let mut role_to_update = self.get_role_record(id).await?.ok_or("角色不存在")?;
-
-        // 获取当前时间
-        let now = Utc::now().naive_utc();
-
-        // 执行更新操作
         let result = sqlx::query(sql)
-            .bind(status)
-            .bind(&role_to_update.update_by)
-            .bind(&now)
             .bind(id)
             .execute(&self.pool)
             .await?;
 
-        // 验证影响行数
         if result.rows_affected() == 0 {
-            return Err(Box::from("角色状态更新失败"));
+            return Err(Box::from("角色删除失败"));
         }
 
-        // 更新内存中的角色状态
-        role_to_update.status = Some(status);
-        role_to_update.update_time = Some(chrono::DateTime::<Utc>::from_naive_utc_and_offset(now, Utc));
+        Ok(())
+    }
 
-        // 返回更新的角色
-        Ok(role_to_update)
+    /// 插入角色记录
+    async fn insert(&self, row: &Role) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "INSERT INTO sys_role (id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        let result = sqlx::query(sql)
+            .bind(&row.id)
+            .bind(&row.name)
+            .bind(&row.role_key)
+            .bind(row.seq_no)
+            .bind(row.status)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("角色插入失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 选择性插入角色记录
+    async fn insert_selective(&self, row: &Role) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut fields = vec![];
+        let mut placeholders = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        fields.push("id");
+        placeholders.push("?");
+        params.push(&row.id);
+
+        if row.name.is_some() {
+            fields.push("name");
+            placeholders.push("?");
+            params.push(&row.name);
+        }
+
+        if row.role_key.is_some() {
+            fields.push("role_key");
+            placeholders.push("?");
+            params.push(&row.role_key);
+        }
+
+        if row.seq_no.is_some() {
+            fields.push("seq_no");
+            placeholders.push("?");
+            params.push(&row.seq_no);
+        }
+
+        if row.status.is_some() {
+            fields.push("status");
+            placeholders.push("?");
+            params.push(&row.status);
+        }
+
+        if row.create_by.is_some() {
+            fields.push("create_by");
+            placeholders.push("?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            fields.push("create_time");
+            placeholders.push("?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            fields.push("update_by");
+            placeholders.push("?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            fields.push("update_time");
+            placeholders.push("?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            fields.push("remark");
+            placeholders.push("?");
+            params.push(&row.remark);
+        }
+
+        let sql = format!(
+            "INSERT INTO sys_role ({}) VALUES ({})",
+            fields.join(", "),
+            placeholders.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("角色插入失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据主键查询角色
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Role>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_role WHERE id = ?", ROLE_FIELDS);
+        let result = sqlx::query(&sql)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        match result {
+            Some(row) => {
+                let role = DbMapper::map_to_role(&row)?;
+                Ok(Some(role))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 根据主键选择性更新角色
+    async fn update_by_primary_key_selective(&self, row: &Role) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut updates = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        if row.name.is_some() {
+            updates.push("name = ?");
+            params.push(&row.name);
+        }
+
+        if row.role_key.is_some() {
+            updates.push("role_key = ?");
+            params.push(&row.role_key);
+        }
+
+        if row.seq_no.is_some() {
+            updates.push("seq_no = ?");
+            params.push(&row.seq_no);
+        }
+
+        if row.status.is_some() {
+            updates.push("status = ?");
+            params.push(&row.status);
+        }
+
+        if row.create_by.is_some() {
+            updates.push("create_by = ?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            updates.push("create_time = ?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            updates.push("update_by = ?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            updates.push("update_time = ?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            updates.push("remark = ?");
+            params.push(&row.remark);
+        }
+
+        if updates.is_empty() {
+            return Ok(());
+        }
+
+        let sql = format!(
+            "UPDATE sys_role SET {} WHERE id = ?",
+            updates.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+        query = query.bind(&row.id);
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("角色更新失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据主键更新角色
+    async fn update_by_primary_key(&self, row: &Role) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "UPDATE sys_role SET name = ?, role_key = ?, seq_no = ?, status = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
+
+        let result = sqlx::query(sql)
+            .bind(&row.name)
+            .bind(&row.role_key)
+            .bind(row.seq_no)
+            .bind(row.status)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .bind(&row.id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("角色更新失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据用户ID查询角色列表
+    async fn select_role_by_user_id(&self, user_id: &str) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_role r LEFT JOIN sys_user_role ur ON r.id = ur.role_id WHERE ur.user_id = ? ORDER BY r.seq_no", ROLE_FIELDS);
+        
+        let rows = sqlx::query(&sql)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let roles: Result<Vec<Role>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_role(row))
+            .collect();
+
+        Ok(roles?)
+    }
+
+    /// 查询角色列表
+    async fn select_role_list(&self, row: &Role) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut conditions = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        if let Some(name) = &row.name {
+            conditions.push("name LIKE ?");
+            params.push(&format!("%{}%", name));
+        }
+
+        if let Some(status) = row.status {
+            conditions.push("status = ?");
+            params.push(&status);
+        }
+
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conditions.join(" AND "))
+        };
+
+        let sql = format!("SELECT {} FROM sys_role {} ORDER BY seq_no", ROLE_FIELDS, where_clause);
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let rows = query.fetch_all(&self.pool).await?;
+        let roles: Result<Vec<Role>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_role(row))
+            .collect();
+
+        Ok(roles?)
     }
 }

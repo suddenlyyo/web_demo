@@ -1,7 +1,7 @@
 //! 角色数据访问层 SeaORM 实现
 
 use sea_orm::sea_query::Order;
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{EntityTrait, PaginatorTrait, QueryOrder};
 
 use crate::models::Role;
 use crate::repositories::role::role_repository::RoleRepository;

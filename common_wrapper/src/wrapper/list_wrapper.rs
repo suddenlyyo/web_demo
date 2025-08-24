@@ -26,7 +26,7 @@ pub struct ListWrapper<T> {
 }
 
 impl<T> ListWrapper<T> {
-    /// 创建一个默认成功的 ListWrapper，数据为空
+    /// 创建一个新的 ListWrapper，数据为空
     ///
     /// # 返回值
     ///
@@ -88,6 +88,12 @@ impl<T> ListWrapper<T> {
     /// 数据列表的引用
     pub fn get_data(&self) -> &Vec<T> {
         &self.data
+    }
+}
+
+impl<T> Default for ListWrapper<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

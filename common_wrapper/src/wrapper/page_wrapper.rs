@@ -4,7 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::enums::WrapperErrEnum;
 use crate::wrapper::response_trait::ResponseTrait;
 use crate::wrapper::response_wrapper::ResponseWrapper;
 
@@ -139,35 +138,31 @@ impl<T> PageWrapper<T> {
         self.page_size
     }
 
-    /// 根据总记录数和每页大小计算总页数
-    ///
-    /// 使用公式: total_page = (total + page_size - 1) / page_size
-    /// 这种计算方式避免了使用浮点运算或条件判断，更高效且准确
+    /// 计算总页数
     ///
     /// # 参数
-    ///
-    /// * `total` - 总记录数
-    /// * `page_size` - 每页大小
+    /// * `total` - 总记录数，类型: [u64]
+    /// * `page_size` - 每页大小，类型: [u64]
     ///
     /// # 返回值
-    ///
-    /// 总页数
+    /// 返回总页数，类型: [u64]
     ///
     /// # 示例
-    ///
-    /// ```rust
-    /// use common_wrapper::PageWrapper;
-    ///
-    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(0, 10), 0);  // 0条记录 = 0页
-    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(1, 10), 1);  // 1条记录 = 1页
-    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(10, 10), 1); // 10条记录 = 1页
-    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(11, 10), 2); // 11条记录 = 2页
+    /// ```
+    /// let total_pages = PageWrapper::<()>::calculate_total_pages(100, 10);
+    /// assert_eq!(total_pages, 10);
     /// ```
     pub fn calculate_total_pages(total: u64, page_size: u64) -> u64 {
         if page_size == 0 {
             return 0;
         }
-        (total + page_size - 1) / page_size
+        total.div_ceil(page_size)
+    }
+}
+
+impl<T> Default for PageWrapper<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -52,6 +52,99 @@ export DATABASE_URL=mysql://user:password@localhost/database
 cargo run
 ```
 
+## API 响应格式
+
+本项目使用 `common_wrapper` crate 提供的统一响应格式，所有 API 响应都遵循以下格式：
+
+### SingleWrapper<T>
+
+用于包装单个对象的响应：
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": {}
+}
+```
+
+### ListWrapper<T>
+
+用于包装列表对象的响应：
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": []
+}
+```
+
+### PageWrapper<T>
+
+用于包装分页对象的响应：
+
+```json
+{
+  "code": 200,
+  "message": "Success",
+  "data": [],
+  "total": 100,
+  "total_page": 10,
+  "current_page": 1,
+  "page_size": 10
+}
+```
+
+## API 接口
+
+### 用户管理
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | `/user/<id>` | 根据ID获取用户信息 |
+| GET | `/user/list` | 获取用户列表 |
+| POST | `/user/query` | 分页查询用户列表 |
+| POST | `/user` | 新增用户 |
+| PUT | `/user/<id>` | 修改用户 |
+| DELETE | `/user/<id>` | 删除用户 |
+
+### 部门管理
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | `/dept/<id>` | 根据ID获取部门信息 |
+| GET | `/dept/list` | 获取部门列表 |
+| GET | `/dept/page?<page_num>&<page_size>` | 分页查询部门列表 |
+| GET | `/dept/children/<parent_id>` | 根据父部门ID获取子部门列表 |
+| GET | `/dept/tree` | 获取部门树结构 |
+| POST | `/dept` | 新增部门 |
+| PUT | `/dept/<id>` | 修改部门 |
+| DELETE | `/dept/<id>` | 删除部门 |
+
+### 角色管理
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | `/role/<id>` | 根据ID获取角色信息 |
+| GET | `/role/list` | 获取角色列表 |
+| GET | `/role/page?<page_num>&<page_size>` | 分页查询角色列表 |
+| POST | `/role` | 新增角色 |
+| PUT | `/role/<id>` | 修改角色 |
+| DELETE | `/role/<id>` | 删除角色 |
+| PUT | `/role/<id>/status/<status>` | 修改角色状态 |
+
+### 菜单管理
+
+| 方法 | 路径 | 描述 |
+|------|------|------|
+| GET | `/menu/<id>` | 根据ID获取菜单信息 |
+| GET | `/menu/list` | 获取菜单列表 |
+| GET | `/menu/page?<page_num>&<page_size>` | 分页查询菜单列表 |
+| POST | `/menu` | 新增菜单 |
+| PUT | `/menu/<id>` | 修改菜单 |
+| DELETE | `/menu/<id>` | 删除菜单 |
+
 ## 数据库表结构
 
 项目使用以下数据库表，表结构定义在 [sql/demo.sql](../sql/demo.sql) 文件中：
@@ -103,53 +196,3 @@ cargo run
 | update_by | varchar(30) | 更新者 |
 | update_time | datetime | 更新时间 |
 | remark | varchar(200) | 备注 |
-
-### 角色表 (sys_role)
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| id | char(32) | 角色ID |
-| name | varchar(30) | 角色名称 |
-| role_key | varchar(100) | 角色权限字符串 |
-| seq_no | int | 显示顺序 |
-| status | int | 角色状态(0停用 1正常) |
-| create_by | varchar(30) | 创建者 |
-| create_time | datetime | 创建时间 |
-| update_by | varchar(30) | 更新者 |
-| update_time | datetime | 更新时间 |
-| remark | varchar(200) | 备注 |
-
-### 用户表 (sys_user)
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| id | char(32) | 用户ID |
-| dept_id | char(32) | 部门ID |
-| name | varchar(30) | 用户账号 |
-| email | varchar(50) | 用户邮箱 |
-| phone_number | varchar(11) | 手机号码 |
-| sex | char(1) | 用户性别(0未知 1男 2女) |
-| password | varchar(100) | 密码 |
-| avatar | varchar(100) | 头像 |
-| status | int | 账号状态(0停用 1正常) |
-| login_ip | varchar(128) | 最后登录IP |
-| login_time | datetime | 最后登录时间 |
-| create_by | varchar(30) | 创建者 |
-| create_time | datetime | 创建时间 |
-| update_by | varchar(30) | 更新者 |
-| update_time | datetime | 更新时间 |
-| remark | varchar(200) | 备注 |
-
-### 角色菜单关联表 (sys_role_menu)
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| role_id | char(32) | 角色ID |
-| menu_id | char(32) | 菜单ID |
-
-### 用户角色关联表 (sys_user_role)
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| user_id | char(32) | 用户ID |
-| role_id | char(32) | 角色ID |

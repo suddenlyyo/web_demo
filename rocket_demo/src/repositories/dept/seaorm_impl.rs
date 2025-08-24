@@ -1,7 +1,7 @@
 //! 部门数据访问层 SeaORM 实现
 
 use sea_orm::sea_query::Order;
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
 
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
@@ -32,114 +32,95 @@ impl DeptRepositorySeaormImpl {
 
 #[rocket::async_trait]
 impl DeptRepository for DeptRepositorySeaormImpl {
-    /// 根据ID获取部门信息
-    async fn get_dept_by_id(&self, id: &str) -> Result<Dept, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM查询部门信息
-        let dept = Entity::find_by_id(id).one(&self.connection).await?;
+    /// 根据主键删除部门
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::delete_by_id(id)
+            .exec(&self.connection)
+            .await?;
+
+        if result.rows_affected == 0 {
+            return Err(Box::from("部门删除失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 插入部门记录
+    async fn insert(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let model: sys_dept::ActiveModel = row.into();
+        let result = model.insert(&self.connection).await?;
+
+        Ok(())
+    }
+
+    /// 选择性插入部门记录
+    async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let model: sys_dept::ActiveModel = row.into();
+        let result = model.insert(&self.connection).await?;
+
+        Ok(())
+    }
+
+    /// 根据主键查询部门
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+        let dept = Entity::find_by_id(id)
+            .one(&self.connection)
+            .await?;
 
         match dept {
-            Some(dept) => Ok(dept.into()),
-            None => Err("Dept not found".into()),
+            Some(dept) => Ok(Some(dept.into())),
+            None => Ok(None),
         }
     }
 
-    /// 获取部门列表
-    async fn list_depts(&self) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用SeaORM查询部门列表
-        let depts = Entity::find()
-            .order_by(Column::Sort, Order::Asc)
+    /// 根据主键选择性更新部门
+    async fn update_by_primary_key_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let model: sys_dept::ActiveModel = row.into();
+        let result = model.update(&self.connection).await?;
+
+        Ok(())
+    }
+
+    /// 根据主键更新部门
+    async fn update_by_primary_key(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let model: sys_dept::ActiveModel = row.into();
+        let result = model.update(&self.connection).await?;
+
+        Ok(())
+    }
+
+    /// 查询部门列表
+    async fn select_dept_list(&self, row: &Dept) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut query = Entity::find();
+
+        if let Some(parent_id) = &row.parent_id {
+            query = query.filter(Column::ParentId.eq(parent_id));
+        }
+
+        if let Some(name) = &row.name {
+            query = query.filter(Column::Name.eq(name));
+        }
+
+        if let Some(status) = row.status {
+            query = query.filter(Column::Status.eq(status));
+        }
+
+        let depts = query
+            .order_by(Column::SeqNo, Order::Asc)
             .all(&self.connection)
-            .await?
-            .into_iter()
-            .map(|d| d.into())
-            .collect();
+            .await?;
 
-        Ok(depts)
+        Ok(depts.into_iter().map(|d| d.into()).collect())
     }
 
-    /// 分页查询部门列表
-    async fn list_depts_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<Dept>, u64, u64), Box<dyn std::error::Error + Send + Sync>> {
-        // 处理分页参数
-        let current_page = page_num.unwrap_or(PageInfo::DEFAULT_CURRENT_PAGE);
-        let page_size = page_size
-            .unwrap_or(PageInfo::DEFAULT_PAGE_SIZE)
-            .min(PageInfo::MAX_PAGE_SIZE);
+    /// 根据父部门ID查询子部门列表
+    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+        let depts = Entity::find()
+            .filter(Column::ParentId.eq(parent_id))
+            .order_by(Column::SeqNo, Order::Asc)
+            .all(&self.connection)
+            .await?;
 
-        // 构建分页查询
-        let paginator = Entity::find()
-            .order_by(Column::Sort, Order::Asc)
-            .paginate(&self.connection, page_size);
-
-        // 获取分页数据
-        let depts: Vec<Dept> = paginator
-            .fetch_page(current_page - 1)
-            .await?
-            .into_iter()
-            .map(|d| d.into())
-            .collect();
-
-        // 获取总数和总页数
-        let total_count = paginator.num_items().await?;
-        let total_pages = paginator.num_pages().await?;
-
-        Ok((depts, total_count, total_pages))
-    }
-
-    /// 新增部门
-    async fn add_dept(&self, dept: Dept) -> Result<Dept, Box<dyn std::error::Error + Send + Sync>> {
-        // 转换为实体
-        let dept_model: sys_dept::ActiveModel = dept.into();
-
-        // 使用SeaORM新增部门
-        let inserted = dept_model.insert(&self.connection).await?;
-
-        Ok(inserted.into())
-    }
-
-    /// 修改部门
-    async fn update_dept(&self, dept: Dept) -> Result<Dept, Box<dyn std::error::Error + Send + Sync>> {
-        // 转换为实体
-        let dept_model: sys_dept::ActiveModel = dept.into();
-
-        // 使用SeaORM修改部门
-        let updated = dept_model.update(&self.connection).await?;
-
-        Ok(updated.into())
-    }
-
-    /// 删除部门
-    async fn delete_dept(&self, id: &str) -> Result<Dept, Box<dyn std::error::Error + Send + Sync>> {
-        // 先查询部门信息
-        let dept = Entity::find_by_id(id).one(&self.connection).await?;
-
-        match dept {
-            Some(dept) => {
-                // 使用SeaORM删除部门
-                let dept_model: sys_dept::ActiveModel = dept.into();
-                dept_model.delete(&self.connection).await?;
-                Ok(dept.into())
-            },
-            None => Err("Dept not found".into()),
-        }
-    }
-
-    /// 修改部门状态
-    async fn update_dept_status(&self, id: &str, status: i32) -> Result<Dept, Box<dyn std::error::Error + Send + Sync>> {
-        // 先查询部门信息
-        let dept = Entity::find_by_id(id).one(&self.connection).await?;
-
-        match dept {
-            Some(mut dept) => {
-                // 更新状态
-                dept.status = status;
-
-                // 转换为实体并更新
-                let dept_model: sys_dept::ActiveModel = dept.into();
-                let updated = dept_model.update(&self.connection).await?;
-
-                Ok(updated.into())
-            },
-            None => Err("Dept not found".into()),
-        }
+        Ok(depts.into_iter().map(|d| d.into()).collect())
     }
 }

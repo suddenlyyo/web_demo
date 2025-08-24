@@ -1,121 +1,136 @@
-//! 菜单控制器
-
-use rocket::{delete, get, post, put, routes, serde::json::Json};
-
-use common_wrapper::{ListWrapper, PageWrapper, SingleWrapper};
-
-use crate::models::menu::Menu;
-use crate::services::menu::menu_service::MenuService;
-use crate::services::menu::menu_service_impl::MenuServiceImpl;
-
-/// 根据ID获取菜单信息
+/// 获取路由信息
 ///
 /// # 参数
 ///
-/// * `id` - 菜单ID
-/// * `menu_service` - 菜单服务
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
 ///
 /// # 返回值
 ///
-/// 返回包装后的菜单信息
-#[get("/menu/<id>")]
-pub async fn get_menu(id: String, menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Menu> {
-    menu_service.get_menu_by_id(&id).await
+/// 返回包装后的路由信息列表，类型: [SingleWrapper<Vec<serde_json::Value>>]
+#[get("/menu/getRouters")]
+pub async fn get_routers(menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Vec<serde_json::Value>> {
+    // TODO: 实现获取路由信息的逻辑
+    SingleWrapper::new()
+}
+
+/// 获取菜单树
+///
+/// # 参数
+///
+/// * `menu_param` - 菜单查询参数，类型: [MenuParam]
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
+///
+/// # 返回值
+///
+/// 返回包装后的菜单树列表，类型: [SingleWrapper<Vec<serde_json::Value>>]
+#[get("/menu/getMenuTree")]
+pub async fn get_menu_tree(menu_param: MenuParam, menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Vec<serde_json::Value>> {
+    // TODO: 实现获取菜单树的逻辑
+    SingleWrapper::new()
 }
 
 /// 获取菜单列表
 ///
 /// # 参数
 ///
-/// * `menu_service` - 菜单服务
+/// * `menu_param` - 菜单查询参数，类型: [MenuParam]
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
 ///
 /// # 返回值
 ///
-/// 返回包装后的菜单列表
+/// 返回包装后的菜单列表，类型: [serde_json::Value]
 #[get("/menu/list")]
-pub async fn list_menus(menu_service: &rocket::State<MenuServiceImpl>) -> ListWrapper<Menu> {
-    menu_service.list_menus().await
-}
-
-/// 分页查询菜单列表
-///
-/// # 参数
-///
-/// * `page_num` - 页码（可选，默认为1）
-/// * `page_size` - 每页大小（可选，默认为10）
-/// * `menu_service` - 菜单服务
-///
-/// # 返回值
-///
-/// 返回包装后的分页菜单列表
-#[get("/menu/page?<page_num>&<page_size>")]
-pub async fn list_menus_by_page(page_num: Option<u64>, page_size: Option<u64>, menu_service: &rocket::State<MenuServiceImpl>) -> PageWrapper<Menu> {
-    menu_service.list_menus_by_page(page_num, page_size).await
-}
-
-/// 新增菜单
-///
-/// # 参数
-///
-/// * `menu` - 菜单信息
-/// * `menu_service` - 菜单服务
-///
-/// # 返回值
-///
-/// 返回包装后的菜单信息
-#[post("/menu", data = "<menu>")]
-pub async fn add_menu(menu: Json<Menu>, menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Menu> {
-    menu_service.add_menu(menu.into_inner()).await
-}
-
-/// 修改菜单
-///
-/// # 参数
-///
-/// * `id` - 菜单ID
-/// * `menu` - 菜单信息
-/// * `menu_service` - 菜单服务
-///
-/// # 返回值
-///
-/// 返回包装后的菜单信息
-#[put("/menu/<_id>", data = "<menu>")]
-pub async fn update_menu(_id: String, menu: Json<Menu>, menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Menu> {
-    menu_service.update_menu(menu.into_inner()).await
-}
-
-/// 删除菜单
-///
-/// # 参数
-///
-/// * `id` - 菜单ID
-/// * `menu_service` - 菜单服务
-///
-/// # 返回值
-///
-/// 返回包装后的菜单信息
-#[delete("/menu/<id>")]
-pub async fn delete_menu(id: String, menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Menu> {
-    menu_service.delete_menu(&id).await
+pub async fn list_menus(menu_param: MenuParam, menu_service: &rocket::State<MenuServiceImpl>) -> serde_json::Value {
+    // TODO: 实现获取菜单列表的逻辑
+    serde_json::Value::Null
 }
 
 /// 修改菜单状态
 ///
 /// # 参数
 ///
-/// * `id` - 菜单ID
-/// * `status` - 菜单状态
-/// * `menu_service` - 菜单服务
+/// * `menu_param` - 菜单信息，类型: [Json<MenuParam>]
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
 ///
 /// # 返回值
 ///
-/// 返回包装后的菜单信息
-#[put("/menu/<id>/status/<status>")]
-pub async fn update_menu_status(id: String, status: i32, menu_service: &rocket::State<MenuServiceImpl>) -> SingleWrapper<Menu> {
-    menu_service.update_menu_status(&id, status).await
+/// 返回包装后的菜单信息，类型: [ResponseWrapper]
+#[put("/menu/editMenuStatus", data = "<menu_param>")]
+pub async fn edit_menu_status(menu_param: Json<MenuParam>, menu_service: &rocket::State<MenuServiceImpl>) -> ResponseWrapper {
+    if let (Some(id), Some(status)) = (menu_param.id.as_ref(), menu_param.status) {
+        menu_service.edit_menu_status(id, status).await
+    } else {
+        ResponseWrapper::new(500, "参数不完整")
+    }
+}
+//! 菜单控制器
+
+use rocket::{delete, get, post, put, serde::json::Json};
+use common_wrapper::{SingleWrapper, ResponseWrapper};
+use crate::services::menu::menu_service::MenuServiceImpl;
+
+
+/// 获取菜单列表
+///
+/// # 参数
+///
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
+///
+/// # 返回值
+///
+/// 返回包装后的菜单列表，类型: [ListWrapper<Menu>]
+#[get("/menu/list")]
+pub async fn list_menus(menu_service: &rocket::State<MenuServiceImpl>) -> ListWrapper<Menu> {
+    menu_service.list_menus().await
 }
 
-/// 注册菜单相关路由
+
+/// 新增菜单
+///
+/// # 参数
+///
+/// * `menu_param` - 菜单信息，类型: [Json<MenuParam>]
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
+///
+/// # 返回值
+///
+/// 返回包装后的菜单信息，类型: [ResponseWrapper]
+#[post("/menu/addMenu", data = "<menu_param>")]
+pub async fn add_menu(menu_param: Json<MenuParam>, menu_service: &rocket::State<MenuServiceImpl>) -> ResponseWrapper {
+    menu_service.add_menu(menu_param.into_inner()).await
+}
+
+/// 编辑菜单
+///
+/// # 参数
+///
+/// * `menu_param` - 菜单信息，类型: [Json<MenuParam>]
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
+///
+/// # 返回值
+///
+/// 返回包装后的菜单信息，类型: [ResponseWrapper]
+#[put("/menu/editMenu", data = "<menu_param>")]
+pub async fn edit_menu(menu_param: Json<MenuParam>, menu_service: &rocket::State<MenuServiceImpl>) -> ResponseWrapper {
+    menu_service.edit_menu(menu_param.into_inner()).await
+}
+
+/// 删除菜单
+///
+/// # 参数
+///
+/// * `menu_id` - 菜单ID，类型: [String]
+/// * `menu_service` - 菜单服务，类型: [&rocket::State<MenuServiceImpl>]
+///
+/// # 返回值
+///
+/// 返回包装后的菜单信息，类型: [ResponseWrapper]
+#[delete("/menu/deleteMenu/<menu_id>")]
+pub async fn delete_menu(menu_id: String, menu_service: &rocket::State<MenuServiceImpl>) -> ResponseWrapper {
+    menu_service.delete_menu(&menu_id).await
+}
+
+/// 获取菜单控制器的所有路由
 pub fn routes() -> Vec<rocket::Route> {
-    routes![get_menu, list_menus, list_menus_by_page, add_menu, update_menu, delete_menu, update_menu_status]
+    routes![get_routers, get_menu_tree, list_menus, add_menu, edit_menu, delete_menu, edit_menu_status]
 }

@@ -1,3 +1,12 @@
+use chrono::{NaiveDateTime, Utc};
+use sqlx::Row;
+use sqlx::mysql::{MySqlPool, MySqlRow};
+use std::error::Error as StdError;
+
+use crate::models::{UserQuery, UserRole};
+use crate::repositories::user::user_repository::UserRepository;
+use common_wrapper::PageInfo;
+
 /// 用户表的所有字段，用于SQL查询
 const USER_FIELDS: &str = "id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark";
 
@@ -6,7 +15,7 @@ struct DbMapper;
 
 impl DbMapper {
     /// 将数据库行映射为用户对象
-    fn map_to_user(row: &sqlx::mysql::MySqlRow) -> Result<User, sqlx::Error> {
+    fn map_to_user(row: &MySqlRow) -> Result<User, sqlx::Error> {
         Ok(User {
             id: row.try_get("id")?,
             dept_id: row.try_get("dept_id")?,
@@ -19,30 +28,20 @@ impl DbMapper {
             status: row.try_get("status")?,
             login_ip: row.try_get("login_ip")?,
             login_time: row
-                .try_get::<Option<chrono::NaiveDateTime>, _>("login_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                .try_get::<Option<NaiveDateTime>, _>("login_time")?
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
             create_by: row.try_get("create_by")?,
             create_time: row
-                .try_get::<Option<chrono::NaiveDateTime>, _>("create_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                .try_get::<Option<NaiveDateTime>, _>("create_time")?
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
             update_by: row.try_get("update_by")?,
             update_time: row
-                .try_get::<Option<chrono::NaiveDateTime>, _>("update_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                .try_get::<Option<NaiveDateTime>, _>("update_time")?
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
             remark: row.try_get("remark")?,
         })
     }
 }
-
-/// 用户数据访问层 SQLx 实现
-use chrono::Utc;
-use std::error::Error as StdError;
-
-use sqlx::{MySqlPool, Row};
-
-use crate::models::{User, UserQuery};
-use crate::repositories::user::user_repository::UserRepository;
-use common_wrapper::PageInfo;
 
 /// 用户仓库SQLx实现
 #[derive(Debug)]
@@ -301,5 +300,95 @@ impl UserRepository for UserRepositorySqlxImpl {
             .await?;
 
         if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to delete user".into()) }
+    }
+
+    // ========== 用户角色相关方法 ==========
+
+    /// 根据角色ID查询用户角色列表
+    async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
+        let sql = "SELECT user_id, role_id FROM sys_user_role WHERE role_id = ?";
+        let rows = sqlx::query(sql)
+            .bind(role_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let user_roles: Result<Vec<UserRole>, _> = rows.iter().map(|row| {
+            Ok(UserRole {
+                user_id: row.try_get("user_id")?,
+                role_id: row.try_get("role_id")?,
+            })
+        }).collect();
+
+        Ok(user_roles?)
+    }
+
+    /// 根据用户ID查询用户角色列表
+    async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
+        let sql = "SELECT user_id, role_id FROM sys_user_role WHERE user_id = ?";
+        let rows = sqlx::query(sql)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let user_roles: Result<Vec<UserRole>, _> = rows.iter().map(|row| {
+            Ok(UserRole {
+                user_id: row.try_get("user_id")?,
+                role_id: row.try_get("role_id")?,
+            })
+        }).collect();
+
+        Ok(user_roles?)
+    }
+
+    /// 批量插入用户角色
+    async fn batch_insert_user_role(&self, list: &[UserRole]) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        if list.is_empty() {
+            return Ok(());
+        }
+
+        // 构建VALUES部分
+        let values_placeholders: Vec<String> = (0..list.len()).map(|_| "(?, ?)".to_string()).collect();
+        let sql = format!("INSERT INTO sys_user_role (user_id, role_id) VALUES {}", values_placeholders.join(", "));
+
+        let mut query = sqlx::query(&sql);
+        for user_role in list {
+            query = query.bind(&user_role.user_id).bind(&user_role.role_id);
+        }
+
+        query.execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 根据用户ID和角色ID列表批量删除用户角色
+    async fn batch_delete_user_role_by_user_and_role_ids(&self, user_id: &str, list: &[String]) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        if list.is_empty() {
+            return Ok(());
+        }
+
+        let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
+        let sql = format!(
+            "DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN ({})",
+            placeholders.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        query = query.bind(user_id);
+        for role_id in list {
+            query = query.bind(role_id);
+        }
+
+        query.execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 根据用户ID删除用户角色
+    async fn delete_user_role_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_user_role WHERE user_id = ?";
+        sqlx::query(sql)
+            .bind(user_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
     }
 }

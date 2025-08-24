@@ -28,4 +28,5 @@ fn rocket() -> _ {
         .mount("/dept", controllers::dept::controller::routes())
         .mount("/role", controllers::role::controller::routes())
         .mount("/menu", controllers::menu::controller::routes())
+
 }

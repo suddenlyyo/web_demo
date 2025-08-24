@@ -1,7 +1,7 @@
 //! 用户数据访问层 SeaORM 实现
 
 use sea_orm::sea_query::{Condition, Order};
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
 
 use crate::models::{User, UserQuery};
 use crate::repositories::user::user_repository::UserRepository;

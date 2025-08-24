@@ -5,50 +5,55 @@ use sqlx::Row;
 use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
 
-use crate::models::Menu;
 use crate::repositories::menu::menu_repository::MenuRepository;
-use common_wrapper::PageInfo;
+use crate::models::Menu;
 
-/// 菜单表的所有字段，用于SQL查询
-const MENU_FIELDS: &str = "id, name, menu_type, url, perms, icon, seq_no, status, create_by, create_time, update_by, update_time, remark, parent_id, hidden, always_show, redirect, component, href, no_cache, affix, breadcrumb, active_menu";
+mod constants_and_mappers {
+    use super::*;
 
-/// 数据库映射器
-struct DbMapper;
+    /// 菜单表的所有字段，用于SQL查询
+    pub const MENU_FIELDS: &str = "id, name, menu_type, url, perms, icon, seq_no, status, create_by, create_time, update_by, update_time, remark, parent_id, hidden, always_show, redirect, component, href, no_cache, affix, breadcrumb, active_menu";
 
-impl DbMapper {
-    /// 将数据库行映射为菜单对象
-    fn map_to_menu(row: &sqlx::mysql::MySqlRow) -> Result<Menu, sqlx::Error> {
-        Ok(Menu {
-            id: row.try_get("id")?,
-            name: row.try_get("name")?,
-            parent_id: row.try_get("parent_id")?,
-            seq_no: row.try_get("seq_no")?,
-            menu_type: row.try_get("menu_type")?,
-            url: row.try_get("url")?,
-            perms: row.try_get("perms")?,
-            status: row.try_get("status")?,
-            hidden: row.try_get("hidden")?,
-            always_show: row.try_get("always_show")?,
-            redirect: row.try_get("redirect")?,
-            component: row.try_get("component")?,
-            href: row.try_get("href")?,
-            icon: row.try_get("icon")?,
-            no_cache: row.try_get("no_cache")?,
-            affix: row.try_get("affix")?,
-            breadcrumb: row.try_get("breadcrumb")?,
-            active_menu: row.try_get("active_menu")?,
-            create_by: row.try_get("create_by")?,
-            create_time: row
-                .try_get::<Option<chrono::NaiveDateTime>, _>("create_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-            update_by: row.try_get("update_by")?,
-            update_time: row
-                .try_get::<Option<chrono::NaiveDateTime>, _>("update_time")?
-                .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-            remark: row.try_get("remark")?,
-        })
+    /// 数据库映射器
+    pub struct DbMapper;
+
+    impl DbMapper {
+        /// 将数据库行映射为菜单对象
+        pub fn map_to_menu(row: &sqlx::mysql::MySqlRow) -> Result<Menu, sqlx::Error> {
+            Ok(Menu {
+                id: row.try_get("id")?,
+                name: row.try_get("name")?,
+                parent_id: row.try_get("parent_id")?,
+                seq_no: row.try_get("seq_no")?,
+                menu_type: row.try_get("menu_type")?,
+                url: row.try_get("url")?,
+                perms: row.try_get("perms")?,
+                status: row.try_get("status")?,
+                hidden: row.try_get("hidden")?,
+                always_show: row.try_get("always_show")?,
+                redirect: row.try_get("redirect")?,
+                component: row.try_get("component")?,
+                href: row.try_get("href")?,
+                icon: row.try_get("icon")?,
+                no_cache: row.try_get("no_cache")?,
+                affix: row.try_get("affix")?,
+                breadcrumb: row.try_get("breadcrumb")?,
+                active_menu: row.try_get("active_menu")?,
+                create_by: row.try_get("create_by")?,
+                create_time: row
+                    .try_get::<Option<chrono::NaiveDateTime>, _>("create_time")?
+                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                update_by: row.try_get("update_by")?,
+                update_time: row
+                    .try_get::<Option<chrono::NaiveDateTime>, _>("update_time")?
+                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                remark: row.try_get("remark")?,
+            })
+        }
     }
 }
+
+use constants_and_mappers::{DbMapper, MENU_FIELDS};
 
 /// SQLx实现的菜单数据访问
 #[derive(Debug)]
@@ -71,72 +76,534 @@ impl MenuRepositorySqlxImpl {
 
 #[rocket::async_trait]
 impl MenuRepository for MenuRepositorySqlxImpl {
-    /// 根据ID获取菜单信息
-    async fn get_menu_by_id(&self, id: &str) -> Result<Menu, Box<dyn StdError + Send + Sync>> {
-        let menu = sqlx::query(&format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS))
+    /// 根据主键删除菜单
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_menu WHERE id = ?";
+        let result = sqlx::query(sql)
             .bind(id)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)
-            .map(|row| DbMapper::map_to_menu(&row))??;
+            .execute(&self.pool)
+            .await?;
 
-        Ok(menu)
+        if result.rows_affected() == 0 {
+            return Err(Box::from("菜单删除失败"));
+        }
+
+        Ok(())
     }
 
-    /// 获取菜单列表
-    async fn list_menus(&self) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
-        let menus_query = sqlx::query(&format!("SELECT {} FROM sys_menu ORDER BY seq_no", MENU_FIELDS))
+    /// 插入菜单记录
+    async fn insert(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "INSERT INTO sys_menu (id, name, parent_id, seq_no, menu_type, url, perms, status, hidden, always_show, redirect, component, href, icon, no_cache, affix, breadcrumb, active_menu, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        let result = sqlx::query(sql)
+            .bind(&row.id)
+            .bind(&row.name)
+            .bind(&row.parent_id)
+            .bind(row.seq_no)
+            .bind(&row.menu_type)
+            .bind(&row.url)
+            .bind(&row.perms)
+            .bind(row.status)
+            .bind(row.hidden)
+            .bind(row.always_show)
+            .bind(&row.redirect)
+            .bind(&row.component)
+            .bind(&row.href)
+            .bind(&row.icon)
+            .bind(row.no_cache)
+            .bind(row.affix)
+            .bind(row.breadcrumb)
+            .bind(&row.active_menu)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("菜单插入失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 选择性插入菜单记录
+    async fn insert_selective(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut fields = vec![];
+        let mut placeholders = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        fields.push("id");
+        placeholders.push("?");
+        params.push(&row.id);
+
+        if row.name.is_some() {
+            fields.push("name");
+            placeholders.push("?");
+            params.push(&row.name);
+        }
+
+        if row.parent_id.is_some() {
+            fields.push("parent_id");
+            placeholders.push("?");
+            params.push(&row.parent_id);
+        }
+
+        if row.seq_no.is_some() {
+            fields.push("seq_no");
+            placeholders.push("?");
+            params.push(&row.seq_no);
+        }
+
+        if row.menu_type.is_some() {
+            fields.push("menu_type");
+            placeholders.push("?");
+            params.push(&row.menu_type);
+        }
+
+        if row.url.is_some() {
+            fields.push("url");
+            placeholders.push("?");
+            params.push(&row.url);
+        }
+
+        if row.perms.is_some() {
+            fields.push("perms");
+            placeholders.push("?");
+            params.push(&row.perms);
+        }
+
+        if row.status.is_some() {
+            fields.push("status");
+            placeholders.push("?");
+            params.push(&row.status);
+        }
+
+        if row.hidden.is_some() {
+            fields.push("hidden");
+            placeholders.push("?");
+            params.push(&row.hidden);
+        }
+
+        if row.always_show.is_some() {
+            fields.push("always_show");
+            placeholders.push("?");
+            params.push(&row.always_show);
+        }
+
+        if row.redirect.is_some() {
+            fields.push("redirect");
+            placeholders.push("?");
+            params.push(&row.redirect);
+        }
+
+        if row.component.is_some() {
+            fields.push("component");
+            placeholders.push("?");
+            params.push(&row.component);
+        }
+
+        if row.href.is_some() {
+            fields.push("href");
+            placeholders.push("?");
+            params.push(&row.href);
+        }
+
+        if row.icon.is_some() {
+            fields.push("icon");
+            placeholders.push("?");
+            params.push(&row.icon);
+        }
+
+        if row.no_cache.is_some() {
+            fields.push("no_cache");
+            placeholders.push("?");
+            params.push(&row.no_cache);
+        }
+
+        if row.affix.is_some() {
+            fields.push("affix");
+            placeholders.push("?");
+            params.push(&row.affix);
+        }
+
+        if row.breadcrumb.is_some() {
+            fields.push("breadcrumb");
+            placeholders.push("?");
+            params.push(&row.breadcrumb);
+        }
+
+        if row.active_menu.is_some() {
+            fields.push("active_menu");
+            placeholders.push("?");
+            params.push(&row.active_menu);
+        }
+
+        if row.create_by.is_some() {
+            fields.push("create_by");
+            placeholders.push("?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            fields.push("create_time");
+            placeholders.push("?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            fields.push("update_by");
+            placeholders.push("?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            fields.push("update_time");
+            placeholders.push("?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            fields.push("remark");
+            placeholders.push("?");
+            params.push(&row.remark);
+        }
+
+        let sql = format!(
+            "INSERT INTO sys_menu ({}) VALUES ({})",
+            fields.join(", "),
+            placeholders.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("菜单插入失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据主键查询菜单
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS);
+        let result = sqlx::query(&sql)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        match result {
+            Some(row) => {
+                let menu = DbMapper::map_to_menu(&row)?;
+                Ok(Some(menu))
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// 根据主键选择性更新菜单
+    async fn update_by_primary_key_selective(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut updates = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        if row.name.is_some() {
+            updates.push("name = ?");
+            params.push(&row.name);
+        }
+
+        if row.parent_id.is_some() {
+            updates.push("parent_id = ?");
+            params.push(&row.parent_id);
+        }
+
+        if row.seq_no.is_some() {
+            updates.push("seq_no = ?");
+            params.push(&row.seq_no);
+        }
+
+        if row.menu_type.is_some() {
+            updates.push("menu_type = ?");
+            params.push(&row.menu_type);
+        }
+
+        if row.url.is_some() {
+            updates.push("url = ?");
+            params.push(&row.url);
+        }
+
+        if row.perms.is_some() {
+            updates.push("perms = ?");
+            params.push(&row.perms);
+        }
+
+        if row.status.is_some() {
+            updates.push("status = ?");
+            params.push(&row.status);
+        }
+
+        if row.hidden.is_some() {
+            updates.push("hidden = ?");
+            params.push(&row.hidden);
+        }
+
+        if row.always_show.is_some() {
+            updates.push("always_show = ?");
+            params.push(&row.always_show);
+        }
+
+        if row.redirect.is_some() {
+            updates.push("redirect = ?");
+            params.push(&row.redirect);
+        }
+
+        if row.component.is_some() {
+            updates.push("component = ?");
+            params.push(&row.component);
+        }
+
+        if row.href.is_some() {
+            updates.push("href = ?");
+            params.push(&row.href);
+        }
+
+        if row.icon.is_some() {
+            updates.push("icon = ?");
+            params.push(&row.icon);
+        }
+
+        if row.no_cache.is_some() {
+            updates.push("no_cache = ?");
+            params.push(&row.no_cache);
+        }
+
+        if row.affix.is_some() {
+            updates.push("affix = ?");
+            params.push(&row.affix);
+        }
+
+        if row.breadcrumb.is_some() {
+            updates.push("breadcrumb = ?");
+            params.push(&row.breadcrumb);
+        }
+
+        if row.active_menu.is_some() {
+            updates.push("active_menu = ?");
+            params.push(&row.active_menu);
+        }
+
+        if row.create_by.is_some() {
+            updates.push("create_by = ?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            updates.push("create_time = ?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            updates.push("update_by = ?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            updates.push("update_time = ?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            updates.push("remark = ?");
+            params.push(&row.remark);
+        }
+
+        if updates.is_empty() {
+            return Ok(());
+        }
+
+        let sql = format!(
+            "UPDATE sys_menu SET {} WHERE id = ?",
+            updates.join(", ")
+        );
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+        query = query.bind(&row.id);
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("菜单更新失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据主键更新菜单
+    async fn update_by_primary_key(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "UPDATE sys_menu SET name = ?, parent_id = ?, seq_no = ?, menu_type = ?, url = ?, perms = ?, status = ?, hidden = ?, always_show = ?, redirect = ?, component = ?, href = ?, icon = ?, no_cache = ?, affix = ?, breadcrumb = ?, active_menu = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
+
+        let result = sqlx::query(sql)
+            .bind(&row.name)
+            .bind(&row.parent_id)
+            .bind(row.seq_no)
+            .bind(&row.menu_type)
+            .bind(&row.url)
+            .bind(&row.perms)
+            .bind(row.status)
+            .bind(row.hidden)
+            .bind(row.always_show)
+            .bind(&row.redirect)
+            .bind(&row.component)
+            .bind(&row.href)
+            .bind(&row.icon)
+            .bind(row.no_cache)
+            .bind(row.affix)
+            .bind(row.breadcrumb)
+            .bind(&row.active_menu)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .bind(&row.id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("菜单更新失败"));
+        }
+
+        Ok(())
+    }
+
+    /// 根据用户ID查询菜单列表
+    async fn select_sys_menu_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no", MENU_FIELDS);
+        
+        let rows = sqlx::query(&sql)
+            .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Result<Vec<Menu>, _> = menus_query.iter().map(DbMapper::map_to_menu).collect();
+        let menus: Result<Vec<Menu>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_menu(row))
+            .collect();
 
         Ok(menus?)
     }
 
-    /// 分页查询菜单列表
-    async fn list_menus_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<Menu>, u64, u64), Box<dyn StdError + Send + Sync>> {
-        let page_info = PageInfo::new(page_num, page_size);
-        let offset = page_info.get_page_offset();
-        let page_size_value = page_info.get_page_size();
-
-        // 查询总数
-        let count_query = sqlx::query("SELECT COUNT(*) as count FROM sys_menu")
-            .fetch_one(&self.pool)
-            .await?;
-
-        let total_count = u64::try_from(count_query.get::<i64, &str>("count"))?;
-        let total_pages = (total_count + page_size_value - 1) / page_size_value;
-
-        // 查询数据
-        let menus_query = sqlx::query(&format!("SELECT {} FROM sys_menu ORDER BY seq_no LIMIT ? OFFSET ?", MENU_FIELDS))
-            .bind(page_size_value as i64)
-            .bind(offset as i64)
+    /// 查询所有菜单树
+    async fn select_menu_tree_all(&self) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_menu WHERE status = 1 ORDER BY seq_no", MENU_FIELDS);
+        
+        let rows = sqlx::query(&sql)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Vec<Menu> = menus_query
+        let menus: Result<Vec<Menu>, _> = rows
             .iter()
             .map(|row| DbMapper::map_to_menu(row))
-            .collect::<Result<_, _>>()?;
+            .collect();
 
-        Ok((menus, total_count, total_pages))
+        Ok(menus?)
     }
 
-    /// 新增菜单
-    async fn add_menu(&self, _menu: Menu) -> Result<Menu, Box<dyn StdError + Send + Sync>> {
-        todo!()
+    /// 根据用户ID查询菜单树
+    async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no", MENU_FIELDS);
+        
+        let rows = sqlx::query(&sql)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let menus: Result<Vec<Menu>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_menu(row))
+            .collect();
+
+        Ok(menus?)
     }
 
-    async fn update_menu(&self, _menu: Menu) -> Result<Menu, Box<dyn StdError + Send + Sync>> {
-        todo!()
+    /// 查询菜单列表
+    async fn select_sys_menu_list(&self, menu_param: &Menu) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut conditions = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+
+        if let Some(name) = &menu_param.name {
+            conditions.push("name LIKE ?");
+            params.push(&format!("%{}%", name));
+        }
+
+        if let Some(status) = menu_param.status {
+            conditions.push("status = ?");
+            params.push(&status);
+        }
+
+        let where_clause = if conditions.is_empty() {
+            String::new()
+        } else {
+            format!("WHERE {}", conditions.join(" AND "))
+        };
+
+        let sql = format!("SELECT {} FROM sys_menu {} ORDER BY seq_no", MENU_FIELDS, where_clause);
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let rows = query.fetch_all(&self.pool).await?;
+        let menus: Result<Vec<Menu>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_menu(row))
+            .collect();
+
+        Ok(menus?)
     }
 
-    async fn delete_menu(&self, _id: &str) -> Result<Menu, Box<dyn StdError + Send + Sync>> {
-        todo!()
+    /// 根据父菜单ID查询子菜单列表
+    async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_menu WHERE parent_id = ? ORDER BY seq_no", MENU_FIELDS);
+        
+        let rows = sqlx::query(&sql)
+            .bind(parent_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let menus: Result<Vec<Menu>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_menu(row))
+            .collect();
+
+        Ok(menus?)
     }
 
-    async fn update_menu_status(&self, _id: &str, _status: i32) -> Result<Menu, Box<dyn StdError + Send + Sync>> {
-        todo!()
+    /// 根据角色ID查询菜单ID列表
+    async fn select_menu_ids_by_role_id(&self, role_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id WHERE rm.role_id = ?", MENU_FIELDS);
+        
+        let rows = sqlx::query(&sql)
+            .bind(role_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        let menus: Result<Vec<Menu>, _> = rows
+            .iter()
+            .map(|row| DbMapper::map_to_menu(row))
+            .collect();
+
+        Ok(menus?)
     }
 }

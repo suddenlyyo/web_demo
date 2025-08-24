@@ -1,4 +1,4 @@
-//! 控制器模块，包含所有控制器
+//! 系统控制器模块
 
 pub mod dept;
 pub mod index;
