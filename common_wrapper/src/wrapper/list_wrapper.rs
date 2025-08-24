@@ -1,31 +1,30 @@
-//! # 列表数据包装器
+//! # 列表包装器
 //!
-//! 用于包装列表数据的响应结构
+//! 用于包装列表查询结果的结构体
 
-use crate::wrapper::ResponseWrapper;
-use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 
-/// # 带列表数据的响应包装结构体
-/// 用于统一 API 响应格式，包含基础响应信息和可选的数据列表
-///
-/// # 示例
-///
-/// ```rust
-/// use common_wrapper::{ListWrapper,ResponseTrait};
-///
-/// let mut wrapper = ListWrapper::new();
-/// wrapper.set_success(vec!["Hello", "World"]);
-/// assert!(wrapper.is_success());
-/// assert_eq!(wrapper.get_data(), Some(&vec!["Hello", "World"]));
-/// ```
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+use crate::wrapper::response_trait::ResponseTrait;
+
+/// 列表包装结构体
+/// 
+/// 用于统一 API 列表响应格式，包含状态码、消息和数据列表
+/// 
+/// 参见: [ResponseTrait]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct ListWrapper<T> {
-    /// 响应基础信息，包含响应码和消息
-    #[serde(flatten)] // 扁平化，去掉json中的base把内部结构解构出来
-    pub base: ResponseWrapper,
-    /// 可选的数据列表
-    pub data: Option<Vec<T>>,
+    /// 状态码
+    /// 
+    /// 类型: [i32]
+    code: i32,
+    /// 响应消息
+    /// 
+    /// 类型: [String]
+    message: String,
+    /// 数据列表
+    /// 
+    /// 类型: [Vec]<T>
+    data: Vec<T>,
 }
 
 impl<T> ListWrapper<T> {
@@ -35,7 +34,7 @@ impl<T> ListWrapper<T> {
     ///
     /// 新的ListWrapper实例
     pub fn new() -> Self {
-        Self { base: ResponseWrapper::success_default(), data: None }
+        Self { code: 0, message: "success".to_string(), data: Vec::new() }
     }
 
     /// 创建一个默认失败的 ListWrapper，数据为空
@@ -44,7 +43,7 @@ impl<T> ListWrapper<T> {
     ///
     /// 新的ListWrapper实例（失败状态）
     pub fn fail_default(&mut self) -> Self {
-        Self { base: ResponseWrapper::fail_default(), data: None }
+        Self { code: -1, message: "fail".to_string(), data: Vec::new() }
     }
 
     /// 创建一个默认未知错误的 ListWrapper，数据为空
@@ -54,8 +53,9 @@ impl<T> ListWrapper<T> {
     /// 新的ListWrapper实例（未知错误状态）
     pub fn unknown_error_default(&mut self) -> Self {
         Self {
-            base: ResponseWrapper::unknown_error_default(),
-            data: None,
+            code: -2,
+            message: "unknown error".to_string(),
+            data: Vec::new(),
         }
     }
 
@@ -65,8 +65,9 @@ impl<T> ListWrapper<T> {
     ///
     /// * `data` - 要包装的数据列表
     pub fn set_success(&mut self, data: Vec<T>) {
-        self.base = ResponseWrapper::success_default();
-        self.data = Some(data);
+        self.code = 0;
+        self.message = "success".to_string();
+        self.data = data;
     }
 
     /// 获取基础响应包装的引用

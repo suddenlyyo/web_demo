@@ -1,39 +1,59 @@
-//! # 分页数据包装器
+//! # 分页包装器
 //!
-//! 用于包装分页数据的响应结构
-
-use crate::wrapper::{ResponseTrait, ResponseWrapper};
+//! 用于包装分页查询结果的结构体
 
 use serde::{Deserialize, Serialize};
 
-/// # 带分页数据的响应包装结构体
-/// 用于统一 API 响应格式，包含基础响应信息和可选的分页数据
+use crate::wrapper::response_trait::ResponseTrait;
+
+/// 分页包装结构体
 ///
-/// # 示例
-///
-/// ```rust
-/// use common_wrapper::{PageWrapper,ResponseTrait};
-///
-/// let mut wrapper = PageWrapper::new();
-/// wrapper.set_success(vec!["Hello", "World"], 100, 1, 10);
-/// assert!(wrapper.is_success());
-/// assert_eq!(wrapper.get_total(), Some(&100));
-/// ```
+/// 用于统一 API 分页响应格式，包含分页信息和数据列表
+/// 
+/// 参见: [ResponseTrait], [PageData]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct PageWrapper<T> {
-    /// 响应基础信息，包含响应码和消息
-    #[serde(flatten)] // 扁平化，去掉json中的base把内部结构解构出来
-    pub base: ResponseWrapper,
-    /// 可选的数据列表
-    pub data: Option<Vec<T>>,
+    /// 状态码
+    ///
+    /// 类型: [i32]
+    pub code: i32,
+    /// 响应消息
+    ///
+    /// 类型: [String]
+    pub message: String,
+    /// 分页数据
+    ///
+    /// 类型: [PageData]<T>
+    pub data: PageData<T>,
+}
+
+/// 分页数据结构体
+///
+/// 包含实际数据列表和分页信息
+/// 
+/// 参见: [PageWrapper]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct PageData<T> {
+    /// 数据列表
+    ///
+    /// 类型: [Vec]<T>
+    pub records: Vec<T>,
     /// 总记录数
-    pub total: Option<u64>,
-    /// 总页数
-    pub total_page: Option<u64>,
+    ///
+    /// 类型: [u64]
+    pub total: u64,
     /// 当前页码
-    pub current_page: Option<u64>,
-    /// 每页条数
-    pub page_size: Option<u64>,
+    ///
+    /// 类型: [u64]
+    pub page_num: u64,
+    /// 每页大小
+    ///
+    /// 类型: [u64]
+    pub page_size: u64,
+    /// 总页数
+    ///
+    /// 类型: [u64]
+    pub total_pages: u64,
 }
 
 impl<T> PageWrapper<T> {
@@ -165,30 +185,6 @@ impl<T> PageWrapper<T> {
         (total + page_size - 1) / page_size
     }
 
-    /// 获取总条数
-    pub fn get_total_count(&self) -> u64 {
-        self.total.unwrap_or(0)
-    }
-
-    /// 获取总页数
-    pub fn get_total_page_count(&self) -> u64 {
-        self.total_page.unwrap_or(0)
-    }
-
-    /// 获取当前页码
-    pub fn get_current_page_num(&self) -> u64 {
-        self.current_page.unwrap_or(0)
-    }
-
-    /// 获取每页大小
-    pub fn get_page_size(&self) -> u64 {
-        self.page_size.unwrap_or(0)
-    }
-
-    /// 获取数据
-    pub fn get_data(&self) -> Option<&Vec<T>> {
-        self.data.as_ref()
-    }
 }
 
 /// 实现 ResponseTrait 以便统一处理响应包装
@@ -199,7 +195,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
     ///
     /// 响应码
     fn get_code(&self) -> i32 {
-        self.base.get_code()
+        self.code
     }
 
     /// 获取响应消息
@@ -208,7 +204,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
     ///
     /// 响应消息的引用
     fn get_message(&self) -> &str {
-        self.base.get_message()
+        &self.message
     }
 
     /// 判断是否为成功响应
@@ -217,7 +213,7 @@ impl<T> ResponseTrait for PageWrapper<T> {
     ///
     /// 如果响应成功返回true，否则返回false
     fn is_success(&self) -> bool {
-        self.base.is_success()
+        self.code == 200
     }
 
     /// 设置为失败响应，并自定义消息，数据和分页信息重置
@@ -226,12 +222,9 @@ impl<T> ResponseTrait for PageWrapper<T> {
     ///
     /// * `msg` - 自定义的失败消息
     fn set_fail(&mut self, msg: impl Into<String>) {
-        self.base.set_fail(msg);
-        self.data = None;
-        self.total = None;
-        self.total_page = None;
-        self.current_page = None;
-        self.page_size = None;
+        self.code = 500;
+        self.message = msg.into();
+        self.data = PageData::empty();
     }
 
     /// 设置为未知错误响应，并自定义消息，数据和分页信息重置
@@ -240,12 +233,9 @@ impl<T> ResponseTrait for PageWrapper<T> {
     ///
     /// * `msg` - 自定义的未知错误消息
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
-        self.base.set_unknown_error(msg);
-        self.data = None;
-        self.total = None;
-        self.total_page = None;
-        self.current_page = None;
-        self.page_size = None;
+        self.code = 500;
+        self.message = msg.into();
+        self.data = PageData::empty();
     }
 }
 
@@ -408,13 +398,13 @@ mod tests {
 
     #[test]
     fn test_page_wrapper_set_success() {
-        let mut page_wrapper = PageWrapper::new();
+        let mut page_wrapper = PageWrapper::new(0, "".to_string(), PageData::empty());
         page_wrapper.set_success(vec!["item1", "item2"], 25, 1, 10);
 
-        assert_eq!(page_wrapper.get_total_count(), 25);
-        assert_eq!(page_wrapper.get_total_page_count(), 3); // 自动计算的总页数 (25 + 10 - 1) / 10 = 3
-        assert_eq!(page_wrapper.get_current_page_num(), 1);
-        assert_eq!(page_wrapper.get_page_size(), 10);
-        assert_eq!(page_wrapper.get_data(), Some(&vec!["item1", "item2"]));
+        assert_eq!(page_wrapper.get_data().get_total(), 25);
+        assert_eq!(page_wrapper.get_data().get_total_pages(), 3); // 自动计算的总页数 (25 + 10 - 1) / 10 = 3
+        assert_eq!(page_wrapper.get_data().get_page_num(), 1);
+        assert_eq!(page_wrapper.get_data().get_page_size(), 10);
+        assert_eq!(page_wrapper.get_data().get_records(), &vec!["item1", "item2"]);
     }
 }

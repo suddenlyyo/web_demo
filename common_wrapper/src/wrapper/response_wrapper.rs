@@ -23,11 +23,17 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(fail_response.get_code(), WrapperErrEnum::Fail as i32);
 /// assert_eq!(fail_response.get_message(), "Something went wrong");
 /// ```
+/// 
+/// 参见: [ResponseTrait], [WrapperErrEnum]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct ResponseWrapper {
     /// 响应码，通常用于标识请求结果（如成功、失败等）
+    /// 
+    /// 类型: [i32]
     code: i32,
     /// 响应消息，描述请求结果的详细信息
+    /// 
+    /// 类型: [String]
     message: String,
 }
 
@@ -36,8 +42,8 @@ impl ResponseWrapper {
     ///
     /// # 参数
     ///
-    /// * `code` - 响应码
-    /// * `message` - 响应消息
+    /// * `code` - 响应码，类型: [i32]
+    /// * `message` - 响应消息，类型: [S] 其中 S 实现了 Into<String>
     ///
     /// # 返回值
     ///

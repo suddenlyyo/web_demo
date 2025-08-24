@@ -1,31 +1,30 @@
-//! # 单数据包装器
+//! # 单个对象包装器
 //!
-//! 用于包装单个数据的响应结构
+//! 用于包装单个对象查询结果的结构体
 
-use crate::wrapper::ResponseWrapper;
-use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 
-/// # 带单个数据的响应包装结构体
-/// 用于统一 API 响应格式，包含基础响应信息和可选的单个数据
-///
-/// # 示例
-///
-/// ```rust
-/// use common_wrapper::{SingleWrapper,ResponseTrait};
-///
-/// let mut wrapper = SingleWrapper::new();
-/// wrapper.set_success("Hello World");
-/// assert!(wrapper.is_success());
-/// assert_eq!(wrapper.get_data(), Some(&"Hello World"));
-/// ```
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+use crate::wrapper::response_trait::ResponseTrait;
+
+/// 单个对象包装结构体
+/// 
+/// 用于统一 API 单个对象响应格式，包含状态码、消息和单个数据对象
+/// 
+/// 参见: [ResponseTrait]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SingleWrapper<T> {
-    /// 响应基础信息，包含响应码和消息
-    #[serde(flatten)] // 扁平化，去掉json中的base把内部结构解构出来
-    pub base: ResponseWrapper,
-    /// 可选的数据
-    pub data: Option<T>,
+    /// 状态码
+    /// 
+    /// 类型: [i32]
+    code: i32,
+    /// 响应消息
+    /// 
+    /// 类型: [String]
+    message: String,
+    /// 数据对象
+    /// 
+    /// 类型: [T] (泛型)
+    data: T,
 }
 
 impl<T> SingleWrapper<T> {
