@@ -3,12 +3,13 @@
 use crate::models::UserRole;
 use crate::repositories::user_role::user_role_repository::UserRoleRepository;
 use rocket::async_trait;
-use sqlx::PgPool;
+use sqlx::Row;
+use sqlx::mysql::MySqlPool;
 
 /// 用户角色数据访问SQLx实现
 #[derive(Debug)]
 pub struct UserRoleRepositorySqlxImpl {
-    pool: PgPool,
+    pool: MySqlPool,
 }
 
 impl UserRoleRepositorySqlxImpl {
@@ -16,13 +17,27 @@ impl UserRoleRepositorySqlxImpl {
     ///
     /// # 参数
     ///
-    /// * `pool` - PostgreSQL连接池，类型: [PgPool]
+    /// * `pool` - MySQL连接池，类型: [MySqlPool]
     ///
     /// # 返回值
     ///
     /// 新的用户角色仓库SQLx实现实例
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: MySqlPool) -> Self {
         Self { pool }
+    }
+
+    /// 从数据库URL创建用户角色仓库SQLx实现
+    ///
+    /// # 参数
+    ///
+    /// * `database_url` - 数据库连接URL，类型: [&str]
+    ///
+    /// # 返回值
+    ///
+    /// 新的用户角色仓库SQLx实现实例结果，类型: [Result<Self, sqlx::Error>]
+    pub async fn from_database_url(database_url: &str) -> Result<Self, sqlx::Error> {
+        let pool = MySqlPool::connect(database_url).await?;
+        Ok(Self::new(pool))
     }
 }
 
@@ -30,7 +45,7 @@ impl UserRoleRepositorySqlxImpl {
 impl UserRoleRepository for UserRoleRepositorySqlxImpl {
     /// 根据用户ID和角色ID删除用户角色
     async fn delete_by_primary_key(&self, user_id: &str, role_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        sqlx::query!("DELETE FROM sys_user_role WHERE user_id = $1 AND role_id = $2", user_id, role_id)
+        sqlx::query!("DELETE FROM sys_user_role WHERE user_id = ? AND role_id = ?", user_id, role_id)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -38,7 +53,7 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
 
     /// 插入用户角色记录
     async fn insert(&self, row: &UserRole) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        sqlx::query!("INSERT INTO sys_user_role (user_id, role_id) VALUES ($1, $2)", row.user_id, row.role_id)
+        sqlx::query!("INSERT INTO sys_user_role (user_id, role_id) VALUES (?, ?)", row.user_id, row.role_id)
             .execute(&self.pool)
             .await?;
         Ok(())
@@ -52,7 +67,7 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
 
     /// 根据角色ID查询用户角色列表
     async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
-        let rows = sqlx::query_as!(UserRole, "SELECT user_id, role_id FROM sys_user_role WHERE role_id = $1", role_id)
+        let rows = sqlx::query_as!(UserRole, "SELECT user_id, role_id FROM sys_user_role WHERE role_id = ?", role_id)
             .fetch_all(&self.pool)
             .await?;
         Ok(rows)
@@ -60,7 +75,7 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
 
     /// 根据用户ID查询用户角色列表
     async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
-        let rows = sqlx::query_as!(UserRole, "SELECT user_id, role_id FROM sys_user_role WHERE user_id = $1", user_id)
+        let rows = sqlx::query_as!(UserRole, "SELECT user_id, role_id FROM sys_user_role WHERE user_id = ?", user_id)
             .fetch_all(&self.pool)
             .await?;
         Ok(rows)
@@ -80,7 +95,7 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
             if i > 0 {
                 query.push_str(", ");
             }
-            query.push_str(&format!("(${}, ${})", params.len() + 1, params.len() + 2));
+            query.push_str(&format!("(?, ?)"));
             params.push(&user_role.user_id);
             params.push(&user_role.role_id);
         }
@@ -101,12 +116,12 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
             return Ok(());
         }
 
-        let mut query = "DELETE FROM sys_user_role WHERE user_id = $1 AND role_id IN (".to_string();
+        let mut query = "DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN (".to_string();
         for (i, _) in list.iter().enumerate() {
             if i > 0 {
                 query.push(',');
             }
-            query.push_str(&format!("${}", i + 2));
+            query.push('?');
         }
         query.push(')');
 
@@ -122,7 +137,7 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
 
     /// 根据用户ID删除用户角色
     async fn delete_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        sqlx::query!("DELETE FROM sys_user_role WHERE user_id = $1", user_id)
+        sqlx::query!("DELETE FROM sys_user_role WHERE user_id = ?", user_id)
             .execute(&self.pool)
             .await?;
         Ok(())

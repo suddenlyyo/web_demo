@@ -1,6 +1,6 @@
 //! 角色服务实现
 
-use common_wrapper::{ResponseTrait, SingleWrapper};
+use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper, SingleWrapper};
 use std::collections::HashSet;
 
 use crate::{
@@ -9,6 +9,15 @@ use crate::{
 };
 
 use super::{ROLE_MENU_REPO, ROLE_REPO, RoleService};
+
+#[cfg(any(feature = "sqlx_impl", feature = "seaorm_impl"))]
+use crate::repositories::{role::sqlx_impl::RoleRepositorySqlxImpl, role_menu::sqlx_impl::RoleMenuRepositorySqlxImpl};
+
+#[cfg(feature = "diesel_impl")]
+use crate::repositories::{role::diesel_impl::RoleRepositoryDieselImpl, role_menu::diesel_impl::RoleMenuRepositoryDieselImpl};
+
+#[cfg(feature = "seaorm_impl")]
+use crate::repositories::{role::seaorm_impl::RoleRepositorySeaormImpl, role_menu::seaorm_impl::RoleMenuRepositorySeaormImpl};
 
 /// 角色服务实现
 pub struct RoleServiceImpl {
@@ -28,7 +37,9 @@ impl RoleServiceImpl {
     /// 返回新的角色服务实例
     pub async fn new(database_url: &str) -> Self {
         #[cfg(feature = "sqlx_impl")]
-        let repository = RoleRepositorySqlxImpl::from_database_url(database_url).await;
+        let repository = RoleRepositorySqlxImpl::from_database_url(database_url)
+            .await
+            .unwrap();
 
         #[cfg(feature = "diesel_impl")]
         let repository = RoleRepositoryDieselImpl::new(); // Diesel不需要数据库URL
@@ -37,13 +48,15 @@ impl RoleServiceImpl {
         let repository = RoleRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
 
         #[cfg(feature = "sqlx_impl")]
-        let role_menu_repository = RoleMenuRepositorySqlxImpl::new(/* TODO: 添加数据库连接参数 */);
+        let role_menu_repository = RoleMenuRepositorySqlxImpl::from_database_url(database_url)
+            .await
+            .unwrap();
 
         #[cfg(feature = "diesel_impl")]
         let role_menu_repository = RoleMenuRepositoryDieselImpl::new(); // Diesel实现
 
         #[cfg(feature = "seaorm_impl")]
-        let role_menu_repository = RoleMenuRepositorySeaormImpl::new(/* TODO: 添加数据库连接参数 */); // SeaORM实现
+        let role_menu_repository = RoleMenuRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
 
         Self {
             repository: Box::new(repository),

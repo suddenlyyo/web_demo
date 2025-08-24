@@ -69,7 +69,7 @@ fn is_type_of(ty: &Type, type_name: &str) -> bool {
         .path
         .segments
         .last()
-        .map_or(false, |segment| segment.ident == type_name)
+        .is_some_and(|segment| segment.ident == type_name)
 }
 
 /// 检查类型是否为数字类型
@@ -267,14 +267,14 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                     if let Ok(val) = value.parse::<LitInt>() {
                         if is_number {
                             number_min = val.base10_parse().ok();
-                        } else if is_string || is_vec {
-                            if let Ok(num) = val.base10_parse::<usize>() {
-                                let current_max = match length_range {
-                                    Some((_, max)) => max,
-                                    None => usize::MAX,
-                                };
-                                length_range = Some((num, current_max));
-                            }
+                        } else if (is_string || is_vec)
+                            && let Ok(num) = val.base10_parse::<usize>()
+                        {
+                            let current_max = match length_range {
+                                Some((_, max)) => max,
+                                None => usize::MAX,
+                            };
+                            length_range = Some((num, current_max));
                         }
                     }
                 } else if meta.path.is_ident("max") {
@@ -282,14 +282,14 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
                     if let Ok(val) = value.parse::<LitInt>() {
                         if is_number {
                             number_max = val.base10_parse().ok();
-                        } else if is_string || is_vec {
-                            if let Ok(num) = val.base10_parse::<usize>() {
-                                let current_min = match length_range {
-                                    Some((min, _)) => min,
-                                    None => 0,
-                                };
-                                length_range = Some((current_min, num));
-                            }
+                        } else if (is_string || is_vec)
+                            && let Ok(num) = val.base10_parse::<usize>()
+                        {
+                            let current_min = match length_range {
+                                Some((min, _)) => min,
+                                None => 0,
+                            };
+                            length_range = Some((current_min, num));
                         }
                     }
                 } else if meta.path.is_ident("date_format") {
@@ -352,10 +352,10 @@ pub fn derive_validatable(input: TokenStream) -> TokenStream {
         }
 
         // 处理 length_range
-        if let Some((min, max)) = length_range {
-            if is_string || is_vec {
-                length_rules.push(quote! { ValidationRulesEnum::LengthRange(#min, #max) });
-            }
+        if let Some((min, max)) = length_range
+            && (is_string || is_vec)
+        {
+            length_rules.push(quote! { ValidationRulesEnum::LengthRange(#min, #max) });
         }
 
         if is_number {

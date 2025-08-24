@@ -1,11 +1,10 @@
-use chrono::{NaiveDateTime, Utc};
-use sqlx::Row;
-use sqlx::mysql::{MySqlPool, MySqlRow};
+use crate::models::User;
+use crate::repositories::user::user_repository::UserRepository;
+use chrono::{DateTime, Utc};
+use rocket::async_trait;
+use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
-
-use crate::models::{User, UserRole};
-use crate::services::params::user_param::UserParam;
-use common_wrapper::PageInfo;
+use std::sync::Arc;
 
 /// 用户表的所有字段，用于SQL查询
 const USER_FIELDS: &str = "id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark";

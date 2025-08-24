@@ -5,12 +5,13 @@ use std::fmt::Debug;
 use rocket::async_trait;
 
 use crate::models::Menu;
+use crate::services::params::user_param::MenuParam;
 
 /// 菜单数据访问trait
 #[async_trait]
 pub trait MenuRepository: Debug + Send + Sync {
     /// 根据主键删除菜单
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn StdError + Send + Sync>>;
 
     /// 插入菜单记录
     async fn insert(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
@@ -19,13 +20,13 @@ pub trait MenuRepository: Debug + Send + Sync {
     async fn insert_selective(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 
     /// 根据主键查询菜单
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn select_menu_by_id(&self, id: &str) -> Result<Option<Menu>, Box<dyn StdError + Send + Sync>>;
 
     /// 根据主键选择性更新菜单
-    async fn update_by_primary_key_selective(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn update_by_id_selective(&self, row: &Menu) -> Result<u64, Box<dyn StdError + Send + Sync>>;
 
     /// 根据主键更新菜单
-    async fn update_by_primary_key(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    async fn update_by_id(&self, row: &Menu) -> Result<u64, Box<dyn StdError + Send + Sync>>;
 
     /// 根据用户ID查询菜单列表
     async fn select_sys_menu_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>>;
@@ -37,7 +38,7 @@ pub trait MenuRepository: Debug + Send + Sync {
     async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>>;
 
     /// 查询菜单列表
-    async fn select_sys_menu_list(&self, menu_param: &Menu) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn select_menu_list(&self, menu_param: MenuParam) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>>;
 
     /// 根据父菜单ID查询子菜单列表
     async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>>;

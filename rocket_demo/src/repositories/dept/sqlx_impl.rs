@@ -2,9 +2,12 @@ use chrono::{NaiveDateTime, Utc};
 use sqlx::Row;
 use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
+use std::sync::OnceLock;
 
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
+
+static DB_POOL: OnceLock<MySqlPool> = OnceLock::new();
 
 mod constants {
     use super::*;
@@ -55,14 +58,14 @@ pub struct DeptRepositorySqlxImpl {
 
 impl DeptRepositorySqlxImpl {
     /// 创建新的部门数据访问实例
-    pub fn new(pool: MySqlPool) -> Self {
+    pub fn new() -> Self {
+        let pool = DB_POOL.get().expect("数据库连接池未初始化").clone();
         Self { pool }
     }
 
-    /// 从数据库URL创建连接池并初始化Repository
-    pub async fn from_database_url(database_url: &str) -> Result<Self, Box<dyn StdError + Send + Sync>> {
-        let pool = MySqlPool::connect(database_url).await?;
-        Ok(Self::new(pool))
+    /// 初始化数据库连接池
+    pub fn init_pool(pool: MySqlPool) {
+        DB_POOL.set(pool).ok(); // 如果已经设置过，则忽略
     }
 }
 
