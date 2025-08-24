@@ -10,39 +10,39 @@ pub enum ValidationRulesEnum {
     /// 不允许为空
     NotNull,
     /// 固定长度，len：指定长度，如 5 表示长度为5
-    /// 
+    ///
     /// # 参数
     /// * `usize` - 指定字符串的固定长度
     Length(usize),
     /// 长度区间，min/max：最小/最大长度，如 min=5, max=20 表示5~20之间
-    /// 
+    ///
     /// # 参数
     /// * `usize` - 最小长度
     /// * `usize` - 最大长度
     LengthRange(usize, usize),
     /// 存在时验证固定长度，len：指定长度
-    /// 
+    ///
     /// # 参数
     /// * `usize` - 指定字符串的固定长度（当值存在时）
     ExistLength(usize),
     /// 存在时验证长度区间，min/max：最小/最大长度，如 min=5, max=20 表示5~20之间
-    /// 
+    ///
     /// # 参数
     /// * `usize` - 最小长度（当值存在时）
     /// * `usize` - 最大长度（当值存在时）
     ExistLengthRange(usize, usize),
     /// 指定格式的日期时间，format：日期格式枚举
-    /// 
+    ///
     /// # 参数
     /// * [DateTimeFormatEnum] - 日期格式枚举
     DateFormat(DateTimeFormatEnum),
     /// 数字最小值，min：最小值
-    /// 
+    ///
     /// # 参数
     /// * `i64` - 最小数值
     NumberMin(i64),
     /// 数字最大值，max：最大值
-    /// 
+    ///
     /// # 参数
     /// * `i64` - 最大数值
     NumberMax(i64),

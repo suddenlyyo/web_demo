@@ -5,26 +5,23 @@
 use serde::{Deserialize, Serialize};
 
 use crate::wrapper::response_trait::ResponseTrait;
+use crate::wrapper::response_wrapper::ResponseWrapper;
 
 /// 单个对象包装结构体
-/// 
+///
 /// 用于统一 API 单个对象响应格式，包含状态码、消息和单个数据对象
-/// 
-/// 参见: [ResponseTrait]
+///
+/// 参见: [ResponseTrait], [ResponseWrapper]
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SingleWrapper<T> {
-    /// 状态码
-    /// 
-    /// 类型: [i32]
-    code: i32,
-    /// 响应消息
-    /// 
-    /// 类型: [String]
-    message: String,
+    /// 基础响应包装器
+    ///
+    /// 类型: [ResponseWrapper]
+    base: ResponseWrapper,
     /// 数据对象
-    /// 
-    /// 类型: [T] (泛型)
-    data: T,
+    ///
+    /// 类型: [Option]<T> (泛型)
+    data: Option<T>,
 }
 
 impl<T> SingleWrapper<T> {

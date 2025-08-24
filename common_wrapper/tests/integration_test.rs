@@ -38,25 +38,22 @@ fn test_list_wrapper() {
     // 测试成功状态
     let mut list_wrapper = ListWrapper::new();
     list_wrapper.set_success(vec!["item1", "item2", "item3"]);
-
     assert_eq!(list_wrapper.get_code(), WrapperErrEnum::Success as i32);
     assert_eq!(list_wrapper.get_message(), "Success");
     assert!(list_wrapper.is_success());
-    assert_eq!(list_wrapper.get_data(), Some(&vec!["item1", "item2", "item3"]));
+    assert_eq!(list_wrapper.get_data(), &vec!["item1", "item2", "item3"]);
 
-    // 测试失败状态
-    list_wrapper.set_fail("List operation failed");
+    list_wrapper.set_fail("List loading failed");
     assert_eq!(list_wrapper.get_code(), WrapperErrEnum::Fail as i32);
-    assert_eq!(list_wrapper.get_message(), "List operation failed");
+    assert_eq!(list_wrapper.get_message(), "List loading failed");
     assert!(!list_wrapper.is_success());
-    assert_eq!(list_wrapper.get_data(), None);
+    assert_eq!(list_wrapper.get_data(), &Vec::<&str>::new());
 
-    // 测试未知错误状态
-    list_wrapper.set_unknown_error("Unknown error in list operation");
+    list_wrapper.set_unknown_error("Unknown error in list loading");
     assert_eq!(list_wrapper.get_code(), WrapperErrEnum::UnknownError as i32);
-    assert_eq!(list_wrapper.get_message(), "Unknown error in list operation");
+    assert_eq!(list_wrapper.get_message(), "Unknown error in list loading");
     assert!(!list_wrapper.is_success());
-    assert_eq!(list_wrapper.get_data(), None);
+    assert_eq!(list_wrapper.get_data(), &Vec::<&str>::new());
 }
 
 /// 测试PageWrapper的基本功能
@@ -67,10 +64,10 @@ fn test_page_wrapper() {
         assert_eq!(wrapper.get_code(), err_code as i32);
         assert_eq!(wrapper.get_message(), err_message);
         assert!(!wrapper.is_success());
-        assert_eq!(wrapper.get_data(), None);
+        assert_eq!(wrapper.get_data(), &Vec::<&str>::new());
         assert_eq!(wrapper.get_total_count(), 0);
         assert_eq!(wrapper.get_total_page_count(), 0);
-        assert_eq!(wrapper.get_current_page_num(), 0);
+        assert_eq!(wrapper.get_current_page_num(), 1);
         assert_eq!(wrapper.get_page_size(), 0);
     }
 
@@ -81,7 +78,7 @@ fn test_page_wrapper() {
     assert_eq!(page_wrapper.get_code(), WrapperErrEnum::Success as i32);
     assert_eq!(page_wrapper.get_message(), "Success");
     assert!(page_wrapper.is_success());
-    assert_eq!(page_wrapper.get_data(), Some(&vec!["item1", "item2"]));
+    assert_eq!(page_wrapper.get_data(), &vec!["item1", "item2"]);
     assert_eq!(page_wrapper.get_total_count(), 100);
     assert_eq!(page_wrapper.get_total_page_count(), 10);
     assert_eq!(page_wrapper.get_current_page_num(), 1);
@@ -195,7 +192,7 @@ fn test_serialization() {
     assert_eq!(page_wrapper.get_message(), deserialized.get_message());
     assert_eq!(page_wrapper.get_data(), deserialized.get_data());
     assert_eq!(page_wrapper.get_total_count(), deserialized.get_total_count());
-    assert_eq!(page_wrapper.get_total_page(), deserialized.get_total_page());
+    assert_eq!(page_wrapper.get_total_page_count(), deserialized.get_total_page_count());
     assert_eq!(page_wrapper.get_current_page_num(), deserialized.get_current_page_num());
     assert_eq!(page_wrapper.get_page_size(), deserialized.get_page_size());
 }
