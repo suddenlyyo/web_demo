@@ -69,27 +69,21 @@ fn test_page_wrapper() {
         assert!(!wrapper.is_success());
         assert_eq!(wrapper.get_data(), None);
         assert_eq!(wrapper.get_total_count(), 0);
-        assert_eq!(wrapper.get_total_page(), 0);
-        assert_eq!(wrapper.get_current_page_num(), 1);
+        assert_eq!(wrapper.get_total_page_count(), 0);
+        assert_eq!(wrapper.get_current_page_num(), 0);
         assert_eq!(wrapper.get_page_size(), 0);
     }
 
     // 测试成功状态
     let mut page_wrapper = PageWrapper::new();
-    page_wrapper.set_success(
-        vec!["item1", "item2"],
-        100, // total_count
-        10,  // total_page
-        1,   // current_page_num
-        10,  // page_size
-    );
+    page_wrapper.set_success(vec!["item1", "item2"], 100, 1, 10);
 
     assert_eq!(page_wrapper.get_code(), WrapperErrEnum::Success as i32);
     assert_eq!(page_wrapper.get_message(), "Success");
     assert!(page_wrapper.is_success());
     assert_eq!(page_wrapper.get_data(), Some(&vec!["item1", "item2"]));
     assert_eq!(page_wrapper.get_total_count(), 100);
-    assert_eq!(page_wrapper.get_total_page(), 10);
+    assert_eq!(page_wrapper.get_total_page_count(), 10);
     assert_eq!(page_wrapper.get_current_page_num(), 1);
     assert_eq!(page_wrapper.get_page_size(), 10);
 
@@ -194,7 +188,7 @@ fn test_serialization() {
 
     // 测试PageWrapper序列化
     let mut page_wrapper = PageWrapper::new();
-    page_wrapper.set_success(vec!["a".to_string(), "b".to_string()], 100, 10, 1, 10);
+    page_wrapper.set_success(vec!["a".to_string(), "b".to_string()], 100, 1, 10);
     let serialized = serde_json::to_string(&page_wrapper).unwrap();
     let deserialized: PageWrapper<String> = serde_json::from_str(&serialized).unwrap();
     assert_eq!(page_wrapper.get_code(), deserialized.get_code());

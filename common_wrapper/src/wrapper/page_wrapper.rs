@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 /// use common_wrapper::{PageWrapper,ResponseTrait};
 ///
 /// let mut wrapper = PageWrapper::new();
-/// wrapper.set_success(vec!["Hello", "World"], 100, 5, 1, 20);
+/// wrapper.set_success(vec!["Hello", "World"], 100, 1, 10);
 /// assert!(wrapper.is_success());
 /// assert_eq!(wrapper.get_total(), Some(&100));
 /// ```
@@ -63,7 +63,7 @@ impl<T> PageWrapper<T> {
     /// - `current_page`: 当前页码
     /// - `page_size`: 每页条数
     pub fn set_success_pagination(&mut self, data: Vec<T>, total: u64, total_page: u64, current_page: u64, page_size: u64) {
-        self.base = ResponseWrapper::new(200, "操作成功");
+        self.base = ResponseWrapper::success_default();
         self.data = Some(data);
         self.total = Some(total);
         self.total_page = Some(total_page);
@@ -121,17 +121,48 @@ impl<T> PageWrapper<T> {
         self.page_size.as_ref()
     }
 
-    /// 设置为成功响应，并附带数据和分页信息
+    /// 设置为成功响应，并附带数据和分页信息（自动计算总页数）
     ///
     /// # 参数
     ///
     /// * `data` - 要包装的数据列表
     /// * `total` - 总条数
-    /// * `total_page` - 总页数
     /// * `current_page` - 当前页码
     /// * `page_size` - 每页大小
-    pub fn set_success(&mut self, data: Vec<T>, total: u64, total_page: u64, current_page: u64, page_size: u64) {
+    pub fn set_success(&mut self, data: Vec<T>, total: u64, current_page: u64, page_size: u64) {
+        let total_page = Self::calculate_total_pages(total, page_size);
         self.set_success_pagination(data, total, total_page, current_page, page_size);
+    }
+
+    /// 根据总记录数和每页大小计算总页数
+    ///
+    /// 使用公式: total_page = (total + page_size - 1) / page_size
+    /// 这种计算方式避免了使用浮点运算或条件判断，更高效且准确
+    ///
+    /// # 参数
+    ///
+    /// * `total` - 总记录数
+    /// * `page_size` - 每页大小
+    ///
+    /// # 返回值
+    ///
+    /// 总页数
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use common_wrapper::PageWrapper;
+    ///
+    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(0, 10), 0);  // 0条记录 = 0页
+    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(1, 10), 1);  // 1条记录 = 1页
+    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(10, 10), 1); // 10条记录 = 1页
+    /// assert_eq!(PageWrapper::<String>::calculate_total_pages(11, 10), 2); // 11条记录 = 2页
+    /// ```
+    pub fn calculate_total_pages(total: u64, page_size: u64) -> u64 {
+        if page_size == 0 {
+            return 0;
+        }
+        (total + page_size - 1) / page_size
     }
 
     /// 获取总条数
@@ -274,7 +305,7 @@ impl PageInfo {
     ///
     /// 新的PageInfo实例
     pub fn new_with_defaults(page_num: Option<u64>, page_size: Option<u64>) -> Self {
-        Self { current_page_num: page_num, page_size: page_size }
+        Self::new(page_num, page_size)
     }
 
     /// 获取页面大小（带默认值逻辑）
@@ -330,9 +361,7 @@ impl PageInfo {
     ///
     /// 分页偏移量
     pub fn calculate_offset(&self) -> u64 {
-        let current_page = self.get_current_page_num();
-        let page_size = self.get_page_size();
-        (current_page - 1) * page_size
+        self.get_page_offset()
     }
 }
 
@@ -357,5 +386,35 @@ mod tests {
     fn test_calculate_offset_with_defaults() {
         let page_info = PageInfo::new_with_defaults(None, None);
         assert_eq!(page_info.calculate_offset(), 0); // (1-1)*20 = 0 (默认页码为1，默认页面大小为20)
+    }
+
+    #[test]
+    fn test_page_wrapper_calculate_total_pages() {
+        // 测试 PageWrapper 中的计算总页数方法
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(0, 10), 0); // 0条记录 = 0页
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(1, 10), 1); // 1条记录 = 1页
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(10, 10), 1); // 10条记录 = 1页
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(11, 10), 2); // 11条记录 = 2页
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(20, 10), 2); // 20条记录 = 2页
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(21, 10), 3); // 21条记录 = 3页
+
+        // 测试页面大小为0的情况
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(10, 0), 0); // 页面大小为0时，总页数为0
+
+        // 测试大数值
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(1000, 10), 100); // 1000条记录，每页10条 = 100页
+        assert_eq!(PageWrapper::<String>::calculate_total_pages(1001, 10), 101); // 1001条记录，每页10条 = 101页
+    }
+
+    #[test]
+    fn test_page_wrapper_set_success() {
+        let mut page_wrapper = PageWrapper::new();
+        page_wrapper.set_success(vec!["item1", "item2"], 25, 1, 10);
+
+        assert_eq!(page_wrapper.get_total_count(), 25);
+        assert_eq!(page_wrapper.get_total_page_count(), 3); // 自动计算的总页数 (25 + 10 - 1) / 10 = 3
+        assert_eq!(page_wrapper.get_current_page_num(), 1);
+        assert_eq!(page_wrapper.get_page_size(), 10);
+        assert_eq!(page_wrapper.get_data(), Some(&vec!["item1", "item2"]));
     }
 }
