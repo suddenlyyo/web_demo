@@ -1,20 +1,78 @@
 //! 角色数据访问层 Diesel 实现
 
-use diesel::sql_types::{BigInt, Integer, Text, Timestamp};
-use diesel::{QueryableByName, RunQueryDsl, sql_query};
+use diesel::prelude::*;
 
 use crate::models::Role;
+use crate::models::constants::ROLE_FIELDS;
 use crate::repositories::role::role_repository::RoleRepository;
-use common_wrapper::PageInfo;
 
-/// 角色表的所有字段，用于SQL查询
-const ROLE_FIELDS: &str = "id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark";
+table! {
+    sys_role (id) {
+        id -> Text,
+        name -> Nullable<Text>,
+        role_key -> Nullable<Text>,
+        status -> Nullable<Integer>,
+        seq_no -> Nullable<Integer>,
+        create_by -> Nullable<Text>,
+        create_time -> Nullable<Timestamp>,
+        update_by -> Nullable<Text>,
+        update_time -> Nullable<Timestamp>,
+        remark -> Nullable<Text>,
+    }
+}
 
-/// 用于获取COUNT查询结果的结构体
-#[derive(QueryableByName, Debug)]
-struct CountResult {
-    #[diesel(sql_type = BigInt)]
-    count: u64,
+#[derive(Queryable, Selectable, Debug, AsChangeset)]
+#[diesel(table_name = sys_role)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+struct RoleRow {
+    id: String,
+    name: Option<String>,
+    role_key: Option<String>,
+    status: Option<i32>,
+    seq_no: Option<i32>,
+    create_by: Option<String>,
+    create_time: Option<chrono::NaiveDateTime>,
+    update_by: Option<String>,
+    update_time: Option<chrono::NaiveDateTime>,
+    remark: Option<String>,
+}
+
+impl From<RoleRow> for Role {
+    fn from(row: RoleRow) -> Self {
+        Role {
+            id: row.id,
+            name: row.name,
+            role_key: row.role_key,
+            status: row.status,
+            seq_no: row.seq_no,
+            create_by: row.create_by,
+            create_time: row
+                .create_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            update_by: row.update_by,
+            update_time: row
+                .update_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            remark: row.remark,
+        }
+    }
+}
+
+impl From<&Role> for RoleRow {
+    fn from(role: &Role) -> Self {
+        RoleRow {
+            id: role.id.clone(),
+            name: role.name.clone(),
+            role_key: role.role_key.clone(),
+            status: role.status,
+            seq_no: role.seq_no,
+            create_by: role.create_by.clone(),
+            create_time: role.create_time.map(|t| t.naive_utc()),
+            update_by: role.update_by.clone(),
+            update_time: role.update_time.map(|t| t.naive_utc()),
+            remark: role.remark.clone(),
+        }
+    }
 }
 
 /// 角色数据访问 Diesel 实现
@@ -36,119 +94,98 @@ impl RoleRepositoryDieselImpl {
 
 #[rocket::async_trait]
 impl RoleRepository for RoleRepositoryDieselImpl {
-    /// 根据ID获取角色信息
-    async fn get_role_by_id(&self, id: &str) -> Result<Role, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel查询角色信息
-        let role_query = sql_query("SELECT id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark FROM sys_role WHERE id = ?")
-            .bind::<Text, _>(id)
-            .get_result::<Role>(&mut self.connection)?;
+    /// 根据主键删除角色
+    async fn delete_by_primary_key(&self, role_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        Ok(role_query)
+        diesel::delete(sys_role.filter(id.eq(role_id))).execute(&mut self.connection)?;
+        Ok(())
     }
 
-    /// 获取角色列表
-    async fn list_roles(&self) -> Result<Vec<Role>, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel查询角色列表
-        let roles_query = sql_query("SELECT id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark FROM sys_role ORDER BY seq_no").load::<Role>(&mut self.connection)?;
+    /// 插入角色记录
+    async fn insert(&self, row: &Role) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        Ok(roles_query)
+        let role_row: RoleRow = row.into();
+        diesel::insert_into(sys_role)
+            .values(&role_row)
+            .execute(&mut self.connection)?;
+        Ok(())
     }
 
-    /// 分页查询角色列表
-    async fn list_roles_by_page(&self, page_num: Option<u64>, page_size: Option<u64>) -> Result<(Vec<Role>, u64, u64), Box<dyn std::error::Error + Send + Sync>> {
-        // 处理分页参数
-        let current_page = page_num.unwrap_or(PageInfo::DEFAULT_CURRENT_PAGE);
-        let page_size = page_size
-            .unwrap_or(PageInfo::DEFAULT_PAGE_SIZE)
-            .min(PageInfo::MAX_PAGE_SIZE);
-        let offset = (current_page - 1) * page_size;
+    /// 选择性插入角色记录
+    async fn insert_selective(&self, row: &Role) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        // 构建查询SQL
-        let sql = "SELECT id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark FROM sys_role ORDER BY seq_no LIMIT ? OFFSET ?";
-
-        // 构建统计查询
-        let count_sql = "SELECT COUNT(*) as count FROM sys_role";
-
-        // 查询总记录数
-        let count_result = sql_query(count_sql).get_result::<CountResult>(&mut self.connection)?;
-        let total_count = count_result.count;
-
-        // 计算总页数
-        let total_pages = (total_count + page_size - 1) / page_size;
-
-        // 查询当前页数据
-        let roles_result = sql_query(&sql)
-            .bind::<BigInt, _>(page_size as i64)
-            .bind::<BigInt, _>(offset as i64)
-            .load::<Role>(&mut self.connection)?;
-
-        Ok((roles_result, total_count, total_pages))
+        let role_row: RoleRow = row.into();
+        diesel::insert_into(sys_role)
+            .values(&role_row)
+            .execute(&mut self.connection)?;
+        Ok(())
     }
 
-    /// 新增角色
-    async fn add_role(&self, role: Role) -> Result<Role, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel新增角色
-        let insert_query = sql_query("INSERT INTO sys_role (id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind::<Text, _>(role.id)
-            .bind::<Text, _>(role.name)
-            .bind::<Text, _>(role.role_key)
-            .bind::<Integer, _>(role.seq_no)
-            .bind::<Integer, _>(role.status)
-            .bind::<Text, _>(role.create_by.unwrap_or_default())
-            .bind::<Timestamp, _>(role.create_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(role.update_by.unwrap_or_default())
-            .bind::<Timestamp, _>(role.update_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(role.remark.unwrap_or_default());
+    /// 根据主键查询角色
+    async fn select_role_by_id(&self, role_id: &str) -> Result<Option<Role>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        insert_query.execute(&mut self.connection)?;
-
-        Ok(role)
+        let result = sys_role
+            .filter(id.eq(role_id))
+            .first::<RoleRow>(&mut self.connection)
+            .optional()?;
+        Ok(result.map(Role::from))
     }
 
-    /// 修改角色
-    async fn update_role(&self, role: Role) -> Result<Role, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel修改角色
-        let update_query = sql_query("UPDATE sys_role SET name = ?, role_key = ?, seq_no = ?, status = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?")
-            .bind::<Text, _>(role.name)
-            .bind::<Text, _>(role.role_key)
-            .bind::<Integer, _>(role.seq_no)
-            .bind::<Integer, _>(role.status)
-            .bind::<Text, _>(role.update_by.unwrap_or_default())
-            .bind::<Timestamp, _>(role.update_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(role.remark.unwrap_or_default())
-            .bind::<Text, _>(role.id);
+    /// 查询角色列表
+    async fn select_role_list(&self, role_param: crate::services::params::user_param::RoleParam) -> Result<Vec<Role>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        update_query.execute(&mut self.connection)?;
+        let mut query = sys_role.into_boxed();
 
-        Ok(role)
+        if let Some(name_filter) = &role_param.name {
+            query = query.filter(name.like(format!("%{}%", name_filter)));
+        }
+
+        if let Some(role_key_filter) = &role_param.role_key {
+            query = query.filter(role_key.like(format!("%{}%", role_key_filter)));
+        }
+
+        if let Some(status_filter) = role_param.status {
+            query = query.filter(status.eq(status_filter));
+        }
+
+        let result = query
+            .order(id.asc())
+            .load::<RoleRow>(&mut self.connection)?;
+        Ok(result.into_iter().map(Role::from).collect())
     }
 
-    /// 删除角色
-    async fn delete_role(&self, id: &str) -> Result<Role, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel删除角色
-        let delete_query = sql_query("DELETE FROM sys_role WHERE id = ?").bind::<Text, _>(id);
-        delete_query.execute(&mut self.connection)?;
+    /// 根据主键更新角色
+    async fn update_by_id(&self, row: &Role) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        // 查询删除的角色信息（模拟返回）
-        let role = Role { id: id.to_string(), ..Default::default() };
-
-        Ok(role)
+        let role_row: RoleRow = row.into();
+        let result = diesel::update(sys_role.filter(id.eq(&row.id)))
+            .set(&role_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 
-    /// 修改角色状态
-    async fn update_role_status(&self, id: &str, status: i32) -> Result<Role, Box<dyn std::error::Error + Send + Sync>> {
-        // 使用Diesel修改角色状态
-        let update_query = sql_query("UPDATE sys_role SET status = ?, update_time = CURRENT_TIMESTAMP WHERE id = ?")
-            .bind::<Integer, _>(status)
-            .bind::<Text, _>(id);
+    /// 根据主键选择性更新角色
+    async fn update_by_id_selective(&self, row: &Role) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        update_query.execute(&mut self.connection)?;
+        let role_row: RoleRow = row.into();
+        let result = diesel::update(sys_role.filter(id.eq(&row.id)))
+            .set(&role_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
+    }
 
-        // 查询更新后的角色信息
-        let role_query = sql_query("SELECT id, name, role_key, seq_no, status, create_by, create_time, update_by, update_time, remark FROM sys_role WHERE id = ?")
-            .bind::<Text, _>(id)
-            .get_result::<Role>(&mut self.connection)?;
+    /// 根据主键删除角色
+    async fn delete_by_id(&self, role_id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role::diesel_impl::sys_role::dsl::*;
 
-        Ok(role_query)
+        let result = diesel::delete(sys_role.filter(id.eq(role_id))).execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 }

@@ -1,12 +1,75 @@
 //! 菜单数据访问层 SeaORM 实现
 
-use common_wrapper::PageInfo;
-use sea_orm::sea_query::Order;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder};
+use sea_orm::ActiveValue::Set;
+use sea_orm::sea_query::{Condition, Order};
+use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
+
+use crate::models::Menu;
+use crate::models::constants::MENU_FIELDS;
+use crate::repositories::menu::menu_repository::MenuRepository;
+use crate::services::params::user_param::MenuParam;
 
 // 导入SeaORM实体
 use crate::entities::sys_menu;
-use crate::entities::sys_menu::{Column, Entity};
+use crate::entities::sys_menu::{ActiveModel, Column, Entity, Model};
+
+impl From<&Menu> for ActiveModel {
+    fn from(menu: &Menu) -> Self {
+        ActiveModel {
+            id: Set(menu.id.clone()),
+            menu_name: Set(menu.menu_name.clone()),
+            menu_level: Set(menu.menu_level.clone()),
+            parent_id: Set(menu.parent_id.clone()),
+            seq_no: Set(menu.seq_no),
+            path: Set(menu.path.clone()),
+            component: Set(menu.component.clone()),
+            query: Set(menu.query.clone()),
+            is_frame: Set(menu.is_frame),
+            is_cache: Set(menu.is_cache),
+            menu_type: Set(menu.menu_type.clone()),
+            visible: Set(menu.visible.clone()),
+            status: Set(menu.status),
+            perms: Set(menu.perms.clone()),
+            icon: Set(menu.icon.clone()),
+            create_by: Set(menu.create_by.clone()),
+            create_time: Set(menu.create_time.map(|t| t.naive_utc())),
+            update_by: Set(menu.update_by.clone()),
+            update_time: Set(menu.update_time.map(|t| t.naive_utc())),
+            remark: Set(menu.remark.clone()),
+        }
+    }
+}
+
+impl From<Model> for Menu {
+    fn from(model: Model) -> Self {
+        Menu {
+            id: model.id,
+            menu_name: model.menu_name,
+            menu_level: model.menu_level,
+            parent_id: model.parent_id,
+            seq_no: model.seq_no,
+            path: model.path,
+            component: model.component,
+            query: model.query,
+            is_frame: model.is_frame,
+            is_cache: model.is_cache,
+            menu_type: model.menu_type,
+            visible: model.visible,
+            status: model.status,
+            perms: model.perms,
+            icon: model.icon,
+            create_by: model.create_by,
+            create_time: model
+                .create_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            update_by: model.update_by,
+            update_time: model
+                .update_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            remark: model.remark,
+        }
+    }
+}
 
 /// 菜单数据访问 SeaORM 实现
 #[derive(Debug)]
@@ -25,6 +88,21 @@ impl MenuRepositorySeaormImpl {
 
         Self { connection }
     }
+
+    /// 构建查询条件
+    fn build_condition(query: &MenuParam) -> Condition {
+        let mut condition = Condition::all();
+
+        if let Some(menu_name) = &query.menu_name {
+            condition = condition.add(Column::MenuName.contains(menu_name));
+        }
+
+        if let Some(status) = query.status {
+            condition = condition.add(Column::Status.eq(status));
+        }
+
+        condition
+    }
 }
 
 #[rocket::async_trait]
@@ -42,117 +120,55 @@ impl MenuRepository for MenuRepositorySeaormImpl {
 
     /// 插入菜单记录
     async fn insert(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_menu::ActiveModel = row.into();
-        let result = model.insert(&self.connection).await?;
-
+        let model: ActiveModel = row.into();
+        model.insert(&self.connection).await?;
         Ok(())
     }
 
     /// 选择性插入菜单记录
     async fn insert_selective(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_menu::ActiveModel = row.into();
-        let result = model.insert(&self.connection).await?;
-
+        let model: ActiveModel = row.into();
+        model.insert(&self.connection).await?;
         Ok(())
     }
 
     /// 根据主键查询菜单
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let menu = Entity::find_by_id(id).one(&self.connection).await?;
-
-        match menu {
-            Some(menu) => Ok(Some(menu.into())),
-            None => Ok(None),
-        }
-    }
-
-    /// 根据主键选择性更新菜单
-    async fn update_by_primary_key_selective(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_menu::ActiveModel = row.into();
-        let result = model.update(&self.connection).await?;
-
-        Ok(())
-    }
-
-    /// 根据主键更新菜单
-    async fn update_by_primary_key(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_menu::ActiveModel = row.into();
-        let result = model.update(&self.connection).await?;
-
-        Ok(())
-    }
-
-    /// 根据用户ID查询菜单列表
-    async fn select_sys_menu_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        // 这里简化实现，实际应该关联查询用户角色和角色菜单表
-        let menus = Entity::find()
-            .filter(Column::Status.eq(1))
-            .order_by(Column::SeqNo, Order::Asc)
-            .all(&self.connection)
-            .await?;
-
-        Ok(menus.into_iter().map(|m| m.into()).collect())
-    }
-
-    /// 查询所有菜单树
-    async fn select_menu_tree_all(&self) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let menus = Entity::find()
-            .filter(Column::Status.eq(1))
-            .order_by(Column::SeqNo, Order::Asc)
-            .all(&self.connection)
-            .await?;
-
-        Ok(menus.into_iter().map(|m| m.into()).collect())
-    }
-
-    /// 根据用户ID查询菜单树
-    async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        // 这里简化实现，实际应该关联查询用户角色和角色菜单表
-        let menus = Entity::find()
-            .filter(Column::Status.eq(1))
-            .order_by(Column::SeqNo, Order::Asc)
-            .all(&self.connection)
-            .await?;
-
-        Ok(menus.into_iter().map(|m| m.into()).collect())
+    async fn select_menu_by_id(&self, id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::find_by_id(id).one(&self.connection).await?;
+        Ok(result.map(Menu::from))
     }
 
     /// 查询菜单列表
-    async fn select_sys_menu_list(&self, menu_param: &Menu) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let mut query = Entity::find();
-
-        if let Some(name) = &menu_param.name {
-            query = query.filter(Column::Name.contains(name));
-        }
-
-        if let Some(status) = menu_param.status {
-            query = query.filter(Column::Status.eq(status));
-        }
-
-        let menus = query
-            .order_by(Column::SeqNo, Order::Asc)
+    async fn select_menu_list(&self, menu_param: MenuParam) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
+        let condition = Self::build_condition(&menu_param);
+        let result = Entity::find()
+            .filter(condition)
+            .order_by(Column::Id, Order::Asc)
             .all(&self.connection)
             .await?;
 
-        Ok(menus.into_iter().map(|m| m.into()).collect())
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 
-    /// 根据父菜单ID查询子菜单列表
-    async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let menus = Entity::find()
-            .filter(Column::ParentId.eq(parent_id))
-            .order_by(Column::SeqNo, Order::Asc)
-            .all(&self.connection)
-            .await?;
-
-        Ok(menus.into_iter().map(|m| m.into()).collect())
+    /// 根据主键更新菜单
+    async fn update_by_id(&self, row: &Menu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let model: ActiveModel = row.into();
+        model.update(&self.connection).await?;
+        Ok(1) // SeaORM更新成功时返回1行受影响
     }
 
-    /// 根据角色ID查询菜单ID列表
-    async fn select_menu_ids_by_role_id(&self, role_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        // 这里简化实现，实际应该关联查询角色菜单表
-        let menus = Entity::find().all(&self.connection).await?;
+    /// 根据主键选择性更新菜单
+    async fn update_by_id_selective(&self, row: &Menu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let mut model: ActiveModel = row.into();
+        // 将主键设置为未修改，因为我们使用它进行查找而不是更新
+        model.id = sea_orm::ActiveValue::Unchanged(row.id.clone());
+        model.update(&self.connection).await?;
+        Ok(1) // SeaORM更新成功时返回1行受影响
+    }
 
-        Ok(menus.into_iter().map(|m| m.into()).collect())
+    /// 根据主键删除菜单
+    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::delete_by_id(id).exec(&self.connection).await?;
+        Ok(result.rows_affected)
     }
 }

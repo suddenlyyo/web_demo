@@ -1,59 +1,69 @@
-use chrono::{NaiveDateTime, Utc};
-use sqlx::Row;
+/// 部门表的所有字段，用于SQL查询
+pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
+use chrono::{DateTime, NaiveDateTime, Utc};
+use sqlx::FromRow;
 use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
 use std::sync::OnceLock;
 
 use crate::models::Dept;
+use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 
 static DB_POOL: OnceLock<MySqlPool> = OnceLock::new();
-
-mod constants {
-    use super::*;
-
-    /// 部门表的所有字段，用于SQL查询
-    pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
-}
-
-mod mappers {
-    use super::*;
-
-    /// 数据库映射器
-    struct DbMapper;
-
-    impl DbMapper {
-        /// 将数据库行映射为部门对象
-        fn map_to_dept(row: &sqlx::mysql::MySqlRow) -> Result<Dept, sqlx::Error> {
-            Ok(Dept {
-                id: row.try_get("id")?,
-                parent_id: row.try_get("parent_id")?,
-                name: row.try_get("name")?,
-                email: row.try_get("email")?,
-                telephone: row.try_get("telephone")?,
-                address: row.try_get("address")?,
-                logo: row.try_get("logo")?,
-                dept_level: row.try_get("dept_level")?,
-                seq_no: row.try_get("seq_no")?,
-                status: row.try_get("status")?,
-                create_by: row.try_get("create_by")?,
-                create_time: row
-                    .try_get::<Option<NaiveDateTime>, _>("create_time")?
-                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-                update_by: row.try_get("update_by")?,
-                update_time: row
-                    .try_get::<Option<NaiveDateTime>, _>("update_time")?
-                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-                remark: row.try_get("remark")?,
-            })
-        }
-    }
-}
 
 /// SQLx实现的部门数据访问
 #[derive(Debug)]
 pub struct DeptRepositorySqlxImpl {
     pool: MySqlPool,
+}
+
+/// SQLx的部门实体映射
+#[derive(Debug, FromRow)]
+struct DeptRow {
+    id: String,
+    parent_id: Option<String>,
+    name: Option<String>,
+    email: Option<String>,
+    telephone: Option<String>,
+    address: Option<String>,
+    logo: Option<String>,
+    dept_level: Option<String>,
+    seq_no: Option<i32>,
+    status: Option<i32>,
+    create_by: Option<String>,
+    #[sqlx(rename = "create_time")]
+    create_time_raw: Option<NaiveDateTime>,
+    update_by: Option<String>,
+    #[sqlx(rename = "update_time")]
+    update_time_raw: Option<NaiveDateTime>,
+    remark: Option<String>,
+}
+
+impl From<DeptRow> for Dept {
+    fn from(row: DeptRow) -> Self {
+        Dept {
+            id: row.id,
+            parent_id: row.parent_id,
+            name: row.name,
+            email: row.email,
+            telephone: row.telephone,
+            address: row.address,
+            logo: row.logo,
+            dept_level: row.dept_level,
+            seq_no: row.seq_no,
+            status: row.status,
+            create_by: row.create_by,
+            create_time: row
+                .create_time_raw
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+            update_by: row.update_by,
+            update_time: row
+                .update_time_raw
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+            remark: row.remark,
+        }
+    }
 }
 
 impl DeptRepositorySqlxImpl {
@@ -210,12 +220,9 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
         let sql = format!("INSERT INTO sys_dept ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
 
-        let mut query = sqlx::query(&sql);
-        for param in params {
-            query = query.bind(param);
-        }
-
+        let query = sqlx::query(&sql).bind_all(params);
         let result = query.execute(&self.pool).await?;
+
         if result.rows_affected() == 0 {
             return Err(Box::from("部门插入失败"));
         }
@@ -224,120 +231,45 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     }
 
     /// 根据主键查询部门
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn StdError + Send + Sync>> {
+    async fn select_dept_by_id(&self, id: &str) -> Result<Option<Dept>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_dept WHERE id = ?", DEPT_FIELDS);
-        let result = sqlx::query(&sql)
+        let result: Option<DeptRow> = sqlx::query_as(&sql)
             .bind(id)
             .fetch_optional(&self.pool)
             .await?;
 
-        match result {
-            Some(row) => {
-                let dept = DbMapper::map_to_dept(&row)?;
-                Ok(Some(dept))
-            },
-            None => Ok(None),
-        }
+        Ok(result.map(Dept::from))
     }
 
-    /// 根据主键选择性更新部门
-    async fn update_by_primary_key_selective(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        // 构建动态SQL
-        let mut updates = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+    /// 查询部门列表
+    async fn select_dept_list(&self, dept_param: crate::services::params::user_param::DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+        let mut sql = format!("SELECT {} FROM sys_dept WHERE 1=1", DEPT_FIELDS);
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
-        if row.parent_id.is_some() {
-            updates.push("parent_id = ?");
-            params.push(&row.parent_id);
+        if let Some(name) = dept_param.name {
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
         }
 
-        if row.name.is_some() {
-            updates.push("name = ?");
-            params.push(&row.name);
+        if let Some(status) = dept_param.status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
         }
 
-        if row.email.is_some() {
-            updates.push("email = ?");
-            params.push(&row.email);
+        sql.push_str(" ORDER BY id");
+
+        // 构建查询
+        let mut query = sqlx::query_as::<_, DeptRow>(&sql);
+        for param in &params {
+            query = query.bind(param.as_ref());
         }
 
-        if row.telephone.is_some() {
-            updates.push("telephone = ?");
-            params.push(&row.telephone);
-        }
-
-        if row.address.is_some() {
-            updates.push("address = ?");
-            params.push(&row.address);
-        }
-
-        if row.logo.is_some() {
-            updates.push("logo = ?");
-            params.push(&row.logo);
-        }
-
-        if row.dept_level.is_some() {
-            updates.push("dept_level = ?");
-            params.push(&row.dept_level);
-        }
-
-        if row.seq_no.is_some() {
-            updates.push("seq_no = ?");
-            params.push(&row.seq_no);
-        }
-
-        if row.status.is_some() {
-            updates.push("status = ?");
-            params.push(&row.status);
-        }
-
-        if row.create_by.is_some() {
-            updates.push("create_by = ?");
-            params.push(&row.create_by);
-        }
-
-        if row.create_time.is_some() {
-            updates.push("create_time = ?");
-            params.push(&row.create_time.map(|t| t.naive_utc()));
-        }
-
-        if row.update_by.is_some() {
-            updates.push("update_by = ?");
-            params.push(&row.update_by);
-        }
-
-        if row.update_time.is_some() {
-            updates.push("update_time = ?");
-            params.push(&row.update_time.map(|t| t.naive_utc()));
-        }
-
-        if row.remark.is_some() {
-            updates.push("remark = ?");
-            params.push(&row.remark);
-        }
-
-        if updates.is_empty() {
-            return Ok(());
-        }
-
-        let sql = format!("UPDATE sys_dept SET {} WHERE id = ?", updates.join(", "));
-
-        let mut query = sqlx::query(&sql);
-        for param in params {
-            query = query.bind(param);
-        }
-        query = query.bind(&row.id);
-
-        let result = query.execute(&self.pool).await?;
-        if result.rows_affected() == 0 {
-            return Err(Box::from("部门更新失败"));
-        }
-
-        Ok(())
+        let result = query.fetch_all(&self.pool).await?;
+        Ok(result.into_iter().map(Dept::from).collect())
     }
 
     /// 根据主键更新部门
-    async fn update_by_primary_key(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
+    async fn update_by_id(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let sql = "UPDATE sys_dept SET parent_id = ?, name = ?, email = ?, telephone = ?, address = ?, logo = ?, dept_level = ?, seq_no = ?, status = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
 
         let result = sqlx::query(sql)
@@ -359,60 +291,107 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             .execute(&self.pool)
             .await?;
 
-        if result.rows_affected() == 0 {
-            return Err(Box::from("部门更新失败"));
-        }
-
-        Ok(())
+        Ok(result.rows_affected())
     }
 
-    /// 查询部门列表
-    async fn select_dept_list(&self, row: &Dept) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
-        // 构建动态SQL
-        let mut conditions = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+    /// 根据主键选择性更新部门
+    async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let mut sets = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
-        if let Some(parent_id) = &row.parent_id {
-            conditions.push("parent_id = ?");
-            params.push(parent_id);
+        if row.parent_id.is_some() {
+            sets.push("parent_id = ?");
+            params.push(Box::new(&row.parent_id));
         }
 
-        if let Some(name) = &row.name {
-            conditions.push("name = ?");
-            params.push(name);
+        if row.name.is_some() {
+            sets.push("name = ?");
+            params.push(Box::new(&row.name));
         }
 
-        if let Some(status) = row.status {
-            conditions.push("status = ?");
-            params.push(&status);
+        if row.email.is_some() {
+            sets.push("email = ?");
+            params.push(Box::new(&row.email));
         }
 
-        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
+        if row.telephone.is_some() {
+            sets.push("telephone = ?");
+            params.push(Box::new(&row.telephone));
+        }
 
-        let sql = format!("SELECT {} FROM sys_dept {} ORDER BY seq_no", DEPT_FIELDS, where_clause);
+        if row.address.is_some() {
+            sets.push("address = ?");
+            params.push(Box::new(&row.address));
+        }
 
+        if row.logo.is_some() {
+            sets.push("logo = ?");
+            params.push(Box::new(&row.logo));
+        }
+
+        if row.dept_level.is_some() {
+            sets.push("dept_level = ?");
+            params.push(Box::new(&row.dept_level));
+        }
+
+        if row.seq_no.is_some() {
+            sets.push("seq_no = ?");
+            params.push(Box::new(&row.seq_no));
+        }
+
+        if row.status.is_some() {
+            sets.push("status = ?");
+            params.push(Box::new(&row.status));
+        }
+
+        if row.create_by.is_some() {
+            sets.push("create_by = ?");
+            params.push(Box::new(&row.create_by));
+        }
+
+        if row.create_time.is_some() {
+            sets.push("create_time = ?");
+            params.push(Box::new(&row.create_time.map(|t| t.naive_utc())));
+        }
+
+        if row.update_by.is_some() {
+            sets.push("update_by = ?");
+            params.push(Box::new(&row.update_by));
+        }
+
+        if row.update_time.is_some() {
+            sets.push("update_time = ?");
+            params.push(Box::new(&row.update_time.map(|t| t.naive_utc())));
+        }
+
+        if row.remark.is_some() {
+            sets.push("remark = ?");
+            params.push(Box::new(&row.remark));
+        }
+
+        if sets.is_empty() {
+            return Ok(0);
+        }
+
+        let mut sql = format!("UPDATE sys_dept SET {}", sets.join(", "));
+        sql.push_str(" WHERE id = ?");
+        params.push(Box::new(&row.id));
+
+        // 构建查询
         let mut query = sqlx::query(&sql);
-        for param in params {
-            query = query.bind(param);
+        for param in &params {
+            query = query.bind(param.as_ref());
         }
+        query = query.bind(&row.id);
 
-        let rows = query.fetch_all(&self.pool).await?;
-        let depts: Result<Vec<Dept>, _> = rows.iter().map(|row| DbMapper::map_to_dept(row)).collect();
-
-        Ok(depts?)
+        let result = query.execute(&self.pool).await?;
+        Ok(result.rows_affected())
     }
 
-    /// 根据父部门ID查询子部门列表
-    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
-        let sql = format!("SELECT {} FROM sys_dept WHERE parent_id = ? ORDER BY seq_no", DEPT_FIELDS);
-
-        let rows = sqlx::query(&sql)
-            .bind(parent_id)
-            .fetch_all(&self.pool)
-            .await?;
-
-        let depts: Result<Vec<Dept>, _> = rows.iter().map(|row| DbMapper::map_to_dept(row)).collect();
-
-        Ok(depts?)
+    /// 根据主键删除部门
+    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_dept WHERE id = ?";
+        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
+        Ok(result.rows_affected())
     }
 }

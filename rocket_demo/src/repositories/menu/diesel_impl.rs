@@ -1,17 +1,118 @@
 //! 菜单数据访问层 Diesel 实现
 
-use crate::models::Menu;
-use crate::repositories::menu::menu_repository::MenuRepository;
 use diesel::prelude::*;
 
-/// 菜单表的所有字段，用于SQL查询
-const MENU_FIELDS: &str = "id, name, menu_type, url, perms, icon, seq_no, status, create_by, create_time, update_by, update_time, remark, parent_id, hidden, always_show, redirect, component, href, no_cache, affix, breadcrumb, active_menu";
+use crate::models::Menu;
+use crate::models::constants::MENU_FIELDS;
+use crate::repositories::menu::menu_repository::MenuRepository;
 
-/// 用于获取COUNT查询结果的结构体
-#[derive(QueryableByName, Debug)]
-struct CountResult {
-    #[diesel(sql_type = BigInt)]
-    count: u64,
+table! {
+    sys_menu (id) {
+        id -> Text,
+        menu_name -> Nullable<Text>,
+        menu_level -> Nullable<Text>,
+        parent_id -> Nullable<Text>,
+        seq_no -> Nullable<Integer>,
+        path -> Nullable<Text>,
+        component -> Nullable<Text>,
+        query -> Nullable<Text>,
+        is_frame -> Nullable<Integer>,
+        is_cache -> Nullable<Integer>,
+        menu_type -> Nullable<Text>,
+        visible -> Nullable<Text>,
+        status -> Nullable<Integer>,
+        perms -> Nullable<Text>,
+        icon -> Nullable<Text>,
+        create_by -> Nullable<Text>,
+        create_time -> Nullable<Timestamp>,
+        update_by -> Nullable<Text>,
+        update_time -> Nullable<Timestamp>,
+        remark -> Nullable<Text>,
+    }
+}
+
+#[derive(Queryable, Selectable, Debug, AsChangeset)]
+#[diesel(table_name = sys_menu)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+struct MenuRow {
+    id: String,
+    menu_name: Option<String>,
+    menu_level: Option<String>,
+    parent_id: Option<String>,
+    seq_no: Option<i32>,
+    path: Option<String>,
+    component: Option<String>,
+    query: Option<String>,
+    is_frame: Option<i32>,
+    is_cache: Option<i32>,
+    menu_type: Option<String>,
+    visible: Option<String>,
+    status: Option<i32>,
+    perms: Option<String>,
+    icon: Option<String>,
+    create_by: Option<String>,
+    create_time: Option<chrono::NaiveDateTime>,
+    update_by: Option<String>,
+    update_time: Option<chrono::NaiveDateTime>,
+    remark: Option<String>,
+}
+
+impl From<MenuRow> for Menu {
+    fn from(row: MenuRow) -> Self {
+        Menu {
+            id: row.id,
+            menu_name: row.menu_name,
+            menu_level: row.menu_level,
+            parent_id: row.parent_id,
+            seq_no: row.seq_no,
+            path: row.path,
+            component: row.component,
+            query: row.query,
+            is_frame: row.is_frame,
+            is_cache: row.is_cache,
+            menu_type: row.menu_type,
+            visible: row.visible,
+            status: row.status,
+            perms: row.perms,
+            icon: row.icon,
+            create_by: row.create_by,
+            create_time: row
+                .create_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            update_by: row.update_by,
+            update_time: row
+                .update_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            remark: row.remark,
+        }
+    }
+}
+
+impl From<&Menu> for MenuRow {
+    fn from(menu: &Menu) -> Self {
+        MenuRow {
+            id: menu.id.clone(),
+            menu_name: menu.menu_name.clone(),
+            menu_level: menu.menu_level.clone(),
+            parent_id: menu.parent_id.clone(),
+            seq_no: menu.seq_no,
+            path: menu.path.clone(),
+            component: menu.component.clone(),
+            query: menu.query.clone(),
+            is_frame: menu.is_frame,
+            is_cache: menu.is_cache,
+            menu_type: menu.menu_type.clone(),
+            visible: menu.visible.clone(),
+            status: menu.status,
+            perms: menu.perms.clone(),
+            icon: menu.icon.clone(),
+            create_by: menu.create_by.clone(),
+            create_time: menu.create_time.map(|t| t.naive_utc()),
+            update_by: menu.update_by.clone(),
+            update_time: menu.update_time.map(|t| t.naive_utc()),
+            remark: menu.remark.clone(),
+        }
+    }
 }
 
 /// 菜单数据访问 Diesel 实现
@@ -34,455 +135,93 @@ impl MenuRepositoryDieselImpl {
 #[rocket::async_trait]
 impl MenuRepository for MenuRepositoryDieselImpl {
     /// 根据主键删除菜单
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("DELETE FROM sys_menu WHERE id = ?")
-            .bind::<Text, _>(id)
-            .execute(&mut self.connection)?;
+    async fn delete_by_primary_key(&self, menu_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
 
-        if result == 0 {
-            return Err(Box::from("菜单删除失败"));
-        }
-
+        diesel::delete(sys_menu.filter(id.eq(menu_id))).execute(&mut self.connection)?;
         Ok(())
     }
 
     /// 插入菜单记录
     async fn insert(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("INSERT INTO sys_menu (id, name, parent_id, seq_no, menu_type, url, perms, status, hidden, always_show, redirect, component, href, icon, no_cache, affix, breadcrumb, active_menu, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind::<Text, _>(&row.id)
-            .bind::<Text, _>(&row.name.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.parent_id.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.seq_no.unwrap_or_default())
-            .bind::<Text, _>(&row.menu_type.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.url.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.perms.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.status.unwrap_or_default())
-            .bind::<Integer, _>(row.hidden.unwrap_or_default())
-            .bind::<Integer, _>(row.always_show.unwrap_or_default())
-            .bind::<Text, _>(&row.redirect.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.component.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.href.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.icon.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.no_cache.unwrap_or_default())
-            .bind::<Integer, _>(row.affix.unwrap_or_default())
-            .bind::<Integer, _>(row.breadcrumb.unwrap_or_default())
-            .bind::<Text, _>(&row.active_menu.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.create_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.create_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.update_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.update_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.remark.clone().unwrap_or_default())
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
+
+        let menu_row: MenuRow = row.into();
+        diesel::insert_into(sys_menu)
+            .values(&menu_row)
             .execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("菜单插入失败"));
-        }
-
         Ok(())
     }
 
     /// 选择性插入菜单记录
     async fn insert_selective(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 构建动态SQL
-        let mut fields = vec!["id".to_string()];
-        let mut placeholders = vec!["?".to_string()];
-        let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
 
-        bindings.push(Box::new(row.id.clone()) as Box<dyn std::any::Any>);
-
-        if row.name.is_some() {
-            fields.push("name".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.name.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.parent_id.is_some() {
-            fields.push("parent_id".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.parent_id.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.seq_no.is_some() {
-            fields.push("seq_no".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.seq_no.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.menu_type.is_some() {
-            fields.push("menu_type".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.menu_type.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.url.is_some() {
-            fields.push("url".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.url.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.perms.is_some() {
-            fields.push("perms".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.perms.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.status.is_some() {
-            fields.push("status".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.status.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.hidden.is_some() {
-            fields.push("hidden".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.hidden.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.always_show.is_some() {
-            fields.push("always_show".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.always_show.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.redirect.is_some() {
-            fields.push("redirect".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.redirect.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.component.is_some() {
-            fields.push("component".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.component.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.href.is_some() {
-            fields.push("href".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.href.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.icon.is_some() {
-            fields.push("icon".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.icon.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.no_cache.is_some() {
-            fields.push("no_cache".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.no_cache.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.affix.is_some() {
-            fields.push("affix".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.affix.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.breadcrumb.is_some() {
-            fields.push("breadcrumb".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.breadcrumb.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.active_menu.is_some() {
-            fields.push("active_menu".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.active_menu.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_by.is_some() {
-            fields.push("create_by".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.create_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_time.is_some() {
-            fields.push("create_time".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.create_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_by.is_some() {
-            fields.push("update_by".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.update_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_time.is_some() {
-            fields.push("update_time".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.update_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.remark.is_some() {
-            fields.push("remark".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.remark.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        let sql = format!("INSERT INTO sys_menu ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
-
-        let result = sql_query(&sql).execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("菜单插入失败"));
-        }
-
+        let menu_row: MenuRow = row.into();
+        diesel::insert_into(sys_menu)
+            .values(&menu_row)
+            .execute(&mut self.connection)?;
         Ok(())
     }
 
     /// 根据主键查询菜单
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        match sql_query(&format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS))
-            .bind::<Text, _>(id)
-            .get_result::<Menu>(&mut self.connection)
-        {
-            Ok(menu) => Ok(Some(menu)),
-            Err(_) => Ok(None),
-        }
-    }
+    async fn select_menu_by_id(&self, menu_id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
 
-    /// 根据主键选择性更新菜单
-    async fn update_by_primary_key_selective(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 构建动态SQL
-        let mut updates = vec![];
-        let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
-
-        if row.name.is_some() {
-            updates.push("name = ?".to_string());
-            bindings.push(Box::new(row.name.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.parent_id.is_some() {
-            updates.push("parent_id = ?".to_string());
-            bindings.push(Box::new(row.parent_id.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.seq_no.is_some() {
-            updates.push("seq_no = ?".to_string());
-            bindings.push(Box::new(row.seq_no.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.menu_type.is_some() {
-            updates.push("menu_type = ?".to_string());
-            bindings.push(Box::new(row.menu_type.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.url.is_some() {
-            updates.push("url = ?".to_string());
-            bindings.push(Box::new(row.url.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.perms.is_some() {
-            updates.push("perms = ?".to_string());
-            bindings.push(Box::new(row.perms.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.status.is_some() {
-            updates.push("status = ?".to_string());
-            bindings.push(Box::new(row.status.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.hidden.is_some() {
-            updates.push("hidden = ?".to_string());
-            bindings.push(Box::new(row.hidden.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.always_show.is_some() {
-            updates.push("always_show = ?".to_string());
-            bindings.push(Box::new(row.always_show.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.redirect.is_some() {
-            updates.push("redirect = ?".to_string());
-            bindings.push(Box::new(row.redirect.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.component.is_some() {
-            updates.push("component = ?".to_string());
-            bindings.push(Box::new(row.component.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.href.is_some() {
-            updates.push("href = ?".to_string());
-            bindings.push(Box::new(row.href.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.icon.is_some() {
-            updates.push("icon = ?".to_string());
-            bindings.push(Box::new(row.icon.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.no_cache.is_some() {
-            updates.push("no_cache = ?".to_string());
-            bindings.push(Box::new(row.no_cache.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.affix.is_some() {
-            updates.push("affix = ?".to_string());
-            bindings.push(Box::new(row.affix.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.breadcrumb.is_some() {
-            updates.push("breadcrumb = ?".to_string());
-            bindings.push(Box::new(row.breadcrumb.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.active_menu.is_some() {
-            updates.push("active_menu = ?".to_string());
-            bindings.push(Box::new(row.active_menu.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_by.is_some() {
-            updates.push("create_by = ?".to_string());
-            bindings.push(Box::new(row.create_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_time.is_some() {
-            updates.push("create_time = ?".to_string());
-            bindings.push(Box::new(row.create_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_by.is_some() {
-            updates.push("update_by = ?".to_string());
-            bindings.push(Box::new(row.update_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_time.is_some() {
-            updates.push("update_time = ?".to_string());
-            bindings.push(Box::new(row.update_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.remark.is_some() {
-            updates.push("remark = ?".to_string());
-            bindings.push(Box::new(row.remark.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if updates.is_empty() {
-            return Ok(());
-        }
-
-        let sql = format!("UPDATE sys_menu SET {} WHERE id = ?", updates.join(", "));
-
-        let mut query = sql_query(&sql);
-        query = query.bind::<Text, _>(&row.id);
-
-        let result = query.execute(&mut self.connection)?;
-        if result == 0 {
-            return Err(Box::from("菜单更新失败"));
-        }
-
-        Ok(())
-    }
-
-    /// 根据主键更新菜单
-    async fn update_by_primary_key(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("UPDATE sys_menu SET name = ?, parent_id = ?, seq_no = ?, menu_type = ?, url = ?, perms = ?, status = ?, hidden = ?, always_show = ?, redirect = ?, component = ?, href = ?, icon = ?, no_cache = ?, affix = ?, breadcrumb = ?, active_menu = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?")
-            .bind::<Text, _>(&row.name.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.parent_id.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.seq_no.unwrap_or_default())
-            .bind::<Text, _>(&row.menu_type.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.url.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.perms.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.status.unwrap_or_default())
-            .bind::<Integer, _>(row.hidden.unwrap_or_default())
-            .bind::<Integer, _>(row.always_show.unwrap_or_default())
-            .bind::<Text, _>(&row.redirect.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.component.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.href.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.icon.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.no_cache.unwrap_or_default())
-            .bind::<Integer, _>(row.affix.unwrap_or_default())
-            .bind::<Integer, _>(row.breadcrumb.unwrap_or_default())
-            .bind::<Text, _>(&row.active_menu.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.create_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.create_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.update_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.update_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.remark.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.id)
-            .execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("菜单更新失败"));
-        }
-
-        Ok(())
-    }
-
-    /// 根据用户ID查询菜单列表
-    async fn select_sys_menu_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!(
-            "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
-            MENU_FIELDS
-        ))
-        .bind::<Text, _>(user_id)
-        .load::<Menu>(&mut self.connection)?;
-
-        Ok(result)
-    }
-
-    /// 查询所有菜单树
-    async fn select_menu_tree_all(&self) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT {} FROM sys_menu WHERE status = 1 ORDER BY seq_no", MENU_FIELDS)).load::<Menu>(&mut self.connection)?;
-
-        Ok(result)
-    }
-
-    /// 根据用户ID查询菜单树
-    async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!(
-            "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
-            MENU_FIELDS
-        ))
-        .bind::<Text, _>(user_id)
-        .load::<Menu>(&mut self.connection)?;
-
-        Ok(result)
+        let result = sys_menu
+            .filter(id.eq(menu_id))
+            .first::<MenuRow>(&mut self.connection)
+            .optional()?;
+        Ok(result.map(Menu::from))
     }
 
     /// 查询菜单列表
-    async fn select_sys_menu_list(&self, menu_param: &Menu) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        // 构建动态SQL
-        let mut conditions = vec![];
-        let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
+    async fn select_menu_list(&self, menu_param: crate::services::params::user_param::MenuParam) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
 
-        if let Some(name) = &menu_param.name {
-            conditions.push("name LIKE ?".to_string());
-            bindings.push(Box::new(format!("%{}%", name)) as Box<dyn std::any::Any>);
+        let mut query = sys_menu.into_boxed();
+
+        if let Some(menu_name_filter) = &menu_param.menu_name {
+            query = query.filter(menu_name.like(format!("%{}%", menu_name_filter)));
         }
 
-        if let Some(status) = menu_param.status {
-            conditions.push("status = ?".to_string());
-            bindings.push(Box::new(status) as Box<dyn std::any::Any>);
+        if let Some(status_filter) = menu_param.status {
+            query = query.filter(status.eq(status_filter));
         }
 
-        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
-
-        let sql = format!("SELECT {} FROM sys_menu {} ORDER BY seq_no", MENU_FIELDS, where_clause);
-
-        let result = sql_query(&sql).load::<Menu>(&mut self.connection)?;
-
-        Ok(result)
+        let result = query
+            .order(id.asc())
+            .load::<MenuRow>(&mut self.connection)?;
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 
-    /// 根据父菜单ID查询子菜单列表
-    async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT {} FROM sys_menu WHERE parent_id = ? ORDER BY seq_no", MENU_FIELDS))
-            .bind::<Text, _>(parent_id)
-            .load::<Menu>(&mut self.connection)?;
+    /// 根据主键更新菜单
+    async fn update_by_id(&self, row: &Menu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
 
-        Ok(result)
+        let menu_row: MenuRow = row.into();
+        let result = diesel::update(sys_menu.filter(id.eq(&row.id)))
+            .set(&menu_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 
-    /// 根据角色ID查询菜单ID列表
-    async fn select_menu_ids_by_role_id(&self, role_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id WHERE rm.role_id = ?", MENU_FIELDS))
-            .bind::<Text, _>(role_id)
-            .load::<Menu>(&mut self.connection)?;
+    /// 根据主键选择性更新菜单
+    async fn update_by_id_selective(&self, row: &Menu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
 
-        Ok(result)
+        let menu_row: MenuRow = row.into();
+        let result = diesel::update(sys_menu.filter(id.eq(&row.id)))
+            .set(&menu_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
+    }
+
+    /// 根据主键删除菜单
+    async fn delete_by_id(&self, menu_id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
+
+        let result = diesel::delete(sys_menu.filter(id.eq(menu_id))).execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 }

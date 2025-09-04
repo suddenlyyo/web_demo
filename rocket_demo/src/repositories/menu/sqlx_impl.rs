@@ -1,81 +1,104 @@
 //! 菜单数据访问层SQLx实现
 
-use chrono::Utc;
-use sqlx::Row;
+use chrono::{DateTime, NaiveDateTime, Utc};
+use sqlx::FromRow;
 use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
+use std::sync::Arc;
 
 use crate::models::Menu;
+use crate::models::constants::MENU_FIELDS;
 use crate::repositories::menu::menu_repository::MenuRepository;
 
-mod constants_and_mappers {
-    use super::*;
+/// SQLx的菜单实体映射
+#[derive(Debug, FromRow)]
+struct MenuRow {
+    id: String,
+    name: String,
+    parent_id: Option<String>,
+    seq_no: Option<i32>,
+    menu_type: Option<String>,
+    url: Option<String>,
+    perms: Option<String>,
+    status: Option<i32>,
+    hidden: Option<i32>,
+    always_show: Option<i32>,
+    redirect: Option<String>,
+    component: Option<String>,
+    href: Option<String>,
+    icon: Option<String>,
+    no_cache: Option<i32>,
+    affix: Option<i32>,
+    breadcrumb: Option<i32>,
+    active_menu: Option<String>,
+    create_by: Option<String>,
+    #[sqlx(rename = "create_time")]
+    create_time_raw: Option<NaiveDateTime>,
+    update_by: Option<String>,
+    #[sqlx(rename = "update_time")]
+    update_time_raw: Option<NaiveDateTime>,
+    remark: Option<String>,
+}
 
-    /// 菜单表的所有字段，用于SQL查询
-    pub const MENU_FIELDS: &str = "id, name, menu_type, url, perms, icon, seq_no, status, create_by, create_time, update_by, update_time, remark, parent_id, hidden, always_show, redirect, component, href, no_cache, affix, breadcrumb, active_menu";
-
-    /// 数据库映射器
-    pub struct DbMapper;
-
-    impl DbMapper {
-        /// 将数据库行映射为菜单对象
-        pub fn map_to_menu(row: &sqlx::mysql::MySqlRow) -> Result<Menu, sqlx::Error> {
-            Ok(Menu {
-                id: row.try_get("id")?,
-                name: row.try_get("name")?,
-                parent_id: row.try_get("parent_id")?,
-                seq_no: row.try_get("seq_no")?,
-                menu_type: row.try_get("menu_type")?,
-                url: row.try_get("url")?,
-                perms: row.try_get("perms")?,
-                status: row.try_get("status")?,
-                hidden: row.try_get("hidden")?,
-                always_show: row.try_get("always_show")?,
-                redirect: row.try_get("redirect")?,
-                component: row.try_get("component")?,
-                href: row.try_get("href")?,
-                icon: row.try_get("icon")?,
-                no_cache: row.try_get("no_cache")?,
-                affix: row.try_get("affix")?,
-                breadcrumb: row.try_get("breadcrumb")?,
-                active_menu: row.try_get("active_menu")?,
-                create_by: row.try_get("create_by")?,
-                create_time: row
-                    .try_get::<Option<chrono::NaiveDateTime>, _>("create_time")?
-                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-                update_by: row.try_get("update_by")?,
-                update_time: row
-                    .try_get::<Option<chrono::NaiveDateTime>, _>("update_time")?
-                    .map(|t| chrono::DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-                remark: row.try_get("remark")?,
-            })
+impl From<MenuRow> for Menu {
+    fn from(row: MenuRow) -> Self {
+        Menu {
+            id: row.id,
+            name: row.name,
+            parent_id: row.parent_id,
+            seq_no: row.seq_no,
+            menu_type: row.menu_type,
+            url: row.url,
+            perms: row.perms,
+            status: row.status,
+            hidden: row.hidden,
+            always_show: row.always_show,
+            redirect: row.redirect,
+            component: row.component,
+            href: row.href,
+            icon: row.icon,
+            no_cache: row.no_cache,
+            affix: row.affix,
+            breadcrumb: row.breadcrumb,
+            active_menu: row.active_menu,
+            create_by: row.create_by,
+            create_time: row
+                .create_time_raw
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+            update_by: row.update_by,
+            update_time: row
+                .update_time_raw
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+            remark: row.remark,
         }
     }
 }
 
-use constants_and_mappers::{DbMapper, MENU_FIELDS};
-
 /// SQLx实现的菜单数据访问
 #[derive(Debug)]
 pub struct MenuRepositorySqlxImpl {
-    pool: MySqlPool,
+    pool: Arc<MySqlPool>,
 }
 
 impl MenuRepositorySqlxImpl {
     /// 创建新的菜单数据访问实例
     pub fn new(pool: MySqlPool) -> Self {
-        Self { pool }
-    }
-
-    /// 从数据库URL创建连接池并初始化Repository
-    pub async fn from_database_url(database_url: &str) -> Result<Self, Box<dyn StdError + Send + Sync>> {
-        let pool = MySqlPool::connect(database_url).await?;
-        Ok(Self::new(pool))
+        Self { pool: Arc::new(pool) }
     }
 }
 
 #[rocket::async_trait]
 impl MenuRepository for MenuRepositorySqlxImpl {
+    /// 根据主键查询菜单
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS);
+        let result: Option<MenuRow> = sqlx::query_as(&sql)
+            .bind(id)
+            .fetch_optional(self.pool.as_ref())
+            .await?;
+        Ok(result.map(Menu::from))
+    }
+
     /// 根据主键删除菜单
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_menu WHERE id = ?";
@@ -495,12 +518,8 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     /// 查询所有菜单树
     async fn select_menu_tree_all(&self) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu WHERE status = 1 ORDER BY seq_no", MENU_FIELDS);
-
-        let rows = sqlx::query(&sql).fetch_all(&self.pool).await?;
-
-        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
-
-        Ok(menus?)
+        let result: Vec<MenuRow> = sqlx::query_as(&sql).fetch_all(self.pool.as_ref()).await?;
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 
     /// 根据用户ID查询菜单树
@@ -509,73 +528,56 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             "SELECT DISTINCT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id LEFT JOIN sys_user_role ur ON rm.role_id = ur.role_id WHERE ur.user_id = ? AND m.status = 1 ORDER BY m.seq_no",
             MENU_FIELDS
         );
-
-        let rows = sqlx::query(&sql)
+        let result: Vec<MenuRow> = sqlx::query_as(&sql)
             .bind(user_id)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool.as_ref())
             .await?;
-
-        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
-
-        Ok(menus?)
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 
     /// 查询菜单列表
     async fn select_sys_menu_list(&self, menu_param: &Menu) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
-        // 构建动态SQL
-        let mut conditions = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut sql = format!("SELECT {} FROM sys_menu WHERE 1=1", MENU_FIELDS);
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
         if let Some(name) = &menu_param.name {
-            conditions.push("name LIKE ?");
-            params.push(&format!("%{}%", name));
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
         }
 
         if let Some(status) = menu_param.status {
-            conditions.push("status = ?");
-            params.push(&status);
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
         }
 
-        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
+        sql.push_str(" ORDER BY seq_no");
 
-        let sql = format!("SELECT {} FROM sys_menu {} ORDER BY seq_no", MENU_FIELDS, where_clause);
-
-        let mut query = sqlx::query(&sql);
-        for param in params {
-            query = query.bind(param);
+        let mut query = sqlx::query_as::<_, MenuRow>(&sql);
+        for param in &params {
+            query = query.bind(param.as_ref());
         }
 
-        let rows = query.fetch_all(&self.pool).await?;
-        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
-
-        Ok(menus?)
+        let result = query.fetch_all(self.pool.as_ref()).await?;
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 
     /// 根据父菜单ID查询子菜单列表
     async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu WHERE parent_id = ? ORDER BY seq_no", MENU_FIELDS);
-
-        let rows = sqlx::query(&sql)
+        let result: Vec<MenuRow> = sqlx::query_as(&sql)
             .bind(parent_id)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool.as_ref())
             .await?;
-
-        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
-
-        Ok(menus?)
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 
     /// 根据角色ID查询菜单ID列表
     async fn select_menu_ids_by_role_id(&self, role_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu m LEFT JOIN sys_role_menu rm ON m.id = rm.menu_id WHERE rm.role_id = ?", MENU_FIELDS);
-
-        let rows = sqlx::query(&sql)
+        let result: Vec<MenuRow> = sqlx::query_as(&sql)
             .bind(role_id)
-            .fetch_all(&self.pool)
+            .fetch_all(self.pool.as_ref())
             .await?;
-
-        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
-
-        Ok(menus?)
+        Ok(result.into_iter().map(Menu::from).collect())
     }
 }

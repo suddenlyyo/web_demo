@@ -1,18 +1,52 @@
-//! 角色菜单数据访问层 Diesel 实现
+//! 角色菜单关联数据访问层 Diesel 实现
 
-use diesel::{RunQueryDsl, sql_query};
+use diesel::prelude::*;
 
-use crate::models::RoleMenu;
+use crate::models::SysRoleMenu;
+use crate::models::constants::ROLE_MENU_FIELDS;
 use crate::repositories::role_menu::role_menu_repository::RoleMenuRepository;
 
-/// 角色菜单数据访问 Diesel 实现
+table! {
+    sys_role_menu (id) {
+        id -> Text,
+        role_id -> Nullable<Text>,
+        menu_id -> Nullable<Text>,
+    }
+}
+
+#[derive(Queryable, Selectable, Debug, AsChangeset)]
+#[diesel(table_name = sys_role_menu)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+struct RoleMenuRow {
+    id: String,
+    role_id: Option<String>,
+    menu_id: Option<String>,
+}
+
+impl From<RoleMenuRow> for SysRoleMenu {
+    fn from(row: RoleMenuRow) -> Self {
+        SysRoleMenu { id: row.id, role_id: row.role_id, menu_id: row.menu_id }
+    }
+}
+
+impl From<&SysRoleMenu> for RoleMenuRow {
+    fn from(role_menu: &SysRoleMenu) -> Self {
+        RoleMenuRow {
+            id: role_menu.id.clone(),
+            role_id: role_menu.role_id.clone(),
+            menu_id: role_menu.menu_id.clone(),
+        }
+    }
+}
+
+/// 角色菜单关联数据访问 Diesel 实现
 #[derive(Debug)]
 pub struct RoleMenuRepositoryDieselImpl {
     connection: diesel::sqlite::SqliteConnection,
 }
 
 impl RoleMenuRepositoryDieselImpl {
-    /// 创建角色菜单仓库 Diesel 实例
+    /// 创建角色菜单关联仓库 Diesel 实例
     pub fn new() -> Self {
         // 初始化数据库连接
         let database_url = std::env::var("DATABASE_URL").unwrap_or("data.db".to_string());
@@ -24,94 +58,94 @@ impl RoleMenuRepositoryDieselImpl {
 
 #[rocket::async_trait]
 impl RoleMenuRepository for RoleMenuRepositoryDieselImpl {
-    /// 根据角色ID和菜单ID删除角色菜单
-    async fn delete_by_primary_key(&self, role_id: &str, menu_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("DELETE FROM sys_role_menu WHERE role_id = ? AND menu_id = ?")
-            .bind::<diesel::sql_types::Text, _>(role_id)
-            .bind::<diesel::sql_types::Text, _>(menu_id)
+    /// 根据主键删除角色菜单关联
+    async fn delete_by_primary_key(&self, role_menu_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
+
+        diesel::delete(sys_role_menu.filter(id.eq(role_menu_id))).execute(&mut self.connection)?;
+        Ok(())
+    }
+
+    /// 插入角色菜单关联记录
+    async fn insert(&self, row: &SysRoleMenu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
+
+        let role_menu_row: RoleMenuRow = row.into();
+        diesel::insert_into(sys_role_menu)
+            .values(&role_menu_row)
             .execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("角色菜单删除失败"));
-        }
-
         Ok(())
     }
 
-    /// 插入角色菜单记录
-    async fn insert(&self, row: &RoleMenu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("INSERT INTO sys_role_menu (role_id, menu_id) VALUES (?, ?)")
-            .bind::<diesel::sql_types::Text, _>(&row.role_id)
-            .bind::<diesel::sql_types::Text, _>(&row.menu_id)
+    /// 选择性插入角色菜单关联记录
+    async fn insert_selective(&self, row: &SysRoleMenu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
+
+        let role_menu_row: RoleMenuRow = row.into();
+        diesel::insert_into(sys_role_menu)
+            .values(&role_menu_row)
             .execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("角色菜单插入失败"));
-        }
-
         Ok(())
     }
 
-    /// 选择性插入角色菜单记录
-    async fn insert_selective(&self, row: &RoleMenu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        self.insert(row).await
+    /// 根据主键查询角色菜单关联
+    async fn select_by_id(&self, role_menu_id: &str) -> Result<Option<SysRoleMenu>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
+
+        let result = sys_role_menu
+            .filter(id.eq(role_menu_id))
+            .first::<RoleMenuRow>(&mut self.connection)
+            .optional()?;
+        Ok(result.map(SysRoleMenu::from))
     }
 
-    /// 根据角色ID查询角色菜单列表
-    async fn select_role_menu_by_role_id(&self, role_id: &str) -> Result<Vec<RoleMenu>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("SELECT role_id, menu_id FROM sys_role_menu WHERE role_id = ?")
-            .bind::<diesel::sql_types::Text, _>(role_id)
-            .load::<RoleMenu>(&mut self.connection)?;
+    /// 查询角色菜单关联列表
+    async fn select_list(&self, role_menu_param: crate::services::params::user_param::RoleMenuParam) -> Result<Vec<SysRoleMenu>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
 
-        Ok(result)
+        let mut query = sys_role_menu.into_boxed();
+
+        if let Some(role_id_filter) = &role_menu_param.role_id {
+            query = query.filter(role_id.eq(role_id_filter));
+        }
+
+        if let Some(menu_id_filter) = &role_menu_param.menu_id {
+            query = query.filter(menu_id.eq(menu_id_filter));
+        }
+
+        let result = query
+            .order(id.asc())
+            .load::<RoleMenuRow>(&mut self.connection)?;
+        Ok(result.into_iter().map(SysRoleMenu::from).collect())
     }
 
-    /// 批量插入角色菜单
-    async fn batch_insert(&self, list: &[RoleMenu]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if list.is_empty() {
-            return Ok(());
-        }
+    /// 根据主键更新角色菜单关联
+    async fn update_by_id(&self, row: &SysRoleMenu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
 
-        // 构建VALUES部分
-        let values_placeholders: Vec<String> = (0..list.len()).map(|_| "(?, ?)".to_string()).collect();
-        let sql = format!("INSERT INTO sys_role_menu (role_id, menu_id) VALUES {}", values_placeholders.join(", "));
-
-        let mut query = sql_query(&sql);
-        for role_menu in list {
-            query = query
-                .bind::<diesel::sql_types::Text, _>(&role_menu.role_id)
-                .bind::<diesel::sql_types::Text, _>(&role_menu.menu_id);
-        }
-
-        query.execute(&mut self.connection)?;
-        Ok(())
-    }
-
-    /// 根据角色ID和菜单ID列表批量删除角色菜单
-    async fn batch_delete_by_role_id_and_menu_ids(&self, role_id: &str, list: &[String]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        if list.is_empty() {
-            return Ok(());
-        }
-
-        let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
-        let sql = format!("DELETE FROM sys_role_menu WHERE role_id = ? AND menu_id IN ({})", placeholders.join(", "));
-
-        let mut query = sql_query(&sql);
-        query = query.bind::<diesel::sql_types::Text, _>(role_id);
-        for menu_id in list {
-            query = query.bind::<diesel::sql_types::Text, _>(menu_id);
-        }
-
-        query.execute(&mut self.connection)?;
-        Ok(())
-    }
-
-    /// 根据角色ID删除角色菜单
-    async fn delete_by_role_id(&self, role_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        sql_query("DELETE FROM sys_role_menu WHERE role_id = ?")
-            .bind::<diesel::sql_types::Text, _>(role_id)
+        let role_menu_row: RoleMenuRow = row.into();
+        let result = diesel::update(sys_role_menu.filter(id.eq(&row.id)))
+            .set(&role_menu_row)
             .execute(&mut self.connection)?;
+        Ok(result as u64)
+    }
 
-        Ok(())
+    /// 根据主键选择性更新角色菜单关联
+    async fn update_by_id_selective(&self, row: &SysRoleMenu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
+
+        let role_menu_row: RoleMenuRow = row.into();
+        let result = diesel::update(sys_role_menu.filter(id.eq(&row.id)))
+            .set(&role_menu_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
+    }
+
+    /// 根据主键删除角色菜单关联
+    async fn delete_by_id(&self, role_menu_id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::role_menu::diesel_impl::sys_role_menu::dsl::*;
+
+        let result = diesel::delete(sys_role_menu.filter(id.eq(role_menu_id))).execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 }

@@ -1,251 +1,231 @@
-//! User data access layer Diesel implementation
+//! 公共常量定义
 
+/// 用户表字段常量
+pub const USER_FIELDS: &str = "id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark";
+/// 用户数据访问层 Diesel 实现
 use diesel::prelude::*;
-use diesel::sql_types::{BigInt, Integer, Text};
 
 use crate::models::User;
+use crate::models::constants::USER_FIELDS;
 use crate::repositories::user::user_repository::UserRepository;
-use crate::services::params::user_param::UserParam;
-use common_wrapper::PageInfo;
 
-/// User table fields, used for SQL queries
-const USER_FIELDS: &str = "id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark";
-
-/// Struct for getting COUNT query result
-#[derive(QueryableByName, Debug)]
-struct CountResult {
-    #[diesel(sql_type = BigInt)]
-    count: u64,
+table! {
+    sys_user (id) {
+        id -> Text,
+        dept_id -> Nullable<Text>,
+        name -> Nullable<Text>,
+        email -> Nullable<Text>,
+        phone_number -> Nullable<Text>,
+        sex -> Nullable<Text>,
+        password -> Nullable<Text>,
+        avatar -> Nullable<Text>,
+        status -> Nullable<Integer>,
+        login_ip -> Nullable<Text>,
+        login_time -> Nullable<Timestamp>,
+        create_by -> Nullable<Text>,
+        create_time -> Nullable<Timestamp>,
+        update_by -> Nullable<Text>,
+        update_time -> Nullable<Timestamp>,
+        remark -> Nullable<Text>,
+    }
 }
 
-/// User data access Diesel implementation
+#[derive(Queryable, Selectable, Debug, AsChangeset)]
+#[diesel(table_name = sys_user)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+struct UserRow {
+    id: String,
+    dept_id: Option<String>,
+    name: Option<String>,
+    email: Option<String>,
+    phone_number: Option<String>,
+    sex: Option<String>,
+    password: Option<String>,
+    avatar: Option<String>,
+    status: Option<i32>,
+    login_ip: Option<String>,
+    login_time: Option<chrono::NaiveDateTime>,
+    create_by: Option<String>,
+    create_time: Option<chrono::NaiveDateTime>,
+    update_by: Option<String>,
+    update_time: Option<chrono::NaiveDateTime>,
+    remark: Option<String>,
+}
+
+impl From<UserRow> for User {
+    fn from(row: UserRow) -> Self {
+        User {
+            id: row.id,
+            dept_id: row.dept_id,
+            name: row.name,
+            email: row.email,
+            phone_number: row.phone_number,
+            sex: row.sex,
+            password: row.password,
+            avatar: row.avatar,
+            status: row.status,
+            login_ip: row.login_ip,
+            login_time: row
+                .login_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            create_by: row.create_by,
+            create_time: row
+                .create_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            update_by: row.update_by,
+            update_time: row
+                .update_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            remark: row.remark,
+        }
+    }
+}
+
+impl From<&User> for UserRow {
+    fn from(user: &User) -> Self {
+        UserRow {
+            id: user.id.clone(),
+            dept_id: user.dept_id.clone(),
+            name: user.name.clone(),
+            email: user.email.clone(),
+            phone_number: user.phone_number.clone(),
+            sex: user.sex.clone(),
+            password: user.password.clone(),
+            avatar: user.avatar.clone(),
+            status: user.status,
+            login_ip: user.login_ip.clone(),
+            login_time: user.login_time.map(|t| t.naive_utc()),
+            create_by: user.create_by.clone(),
+            create_time: user.create_time.map(|t| t.naive_utc()),
+            update_by: user.update_by.clone(),
+            update_time: user.update_time.map(|t| t.naive_utc()),
+            remark: user.remark.clone(),
+        }
+    }
+}
+
+/// 用户数据访问 Diesel 实现
 #[derive(Debug)]
 pub struct UserRepositoryDieselImpl {
     connection: diesel::sqlite::SqliteConnection,
 }
 
 impl UserRepositoryDieselImpl {
-    /// Create user repository Diesel instance
+    /// 创建用户仓库 Diesel 实例
     pub fn new() -> Self {
-        // Initialize database connection
+        // 初始化数据库连接
         let database_url = std::env::var("DATABASE_URL").unwrap_or("data.db".to_string());
         let connection = diesel::sqlite::SqliteConnection::establish(&database_url).expect("Error connecting to SQLite database");
 
         Self { connection }
     }
-
-    /// Build query conditions
-    fn build_where_clause(query: &UserParam) -> (String, Vec<String>) {
-        let mut where_conditions = Vec::new();
-        let mut params = Vec::new();
-
-        // Add ID query condition
-        if let Some(id) = &query.id {
-            where_conditions.push("id = ?");
-            params.push(id.clone());
-        }
-
-        // Add name query condition
-        if let Some(name) = &query.name {
-            where_conditions.push("name LIKE ?");
-            params.push(format!("%{}%", name));
-        }
-
-        // Add department ID query condition
-        if let Some(dept_id) = &query.dept_id {
-            where_conditions.push("dept_id = ?");
-            params.push(dept_id.clone());
-        }
-
-        // Add email query condition
-        if let Some(email) = &query.email {
-            where_conditions.push("email LIKE ?");
-            params.push(format!("%{}%", email));
-        }
-
-        // Add phone number query condition
-        if let Some(phone_number) = &query.phone_number {
-            where_conditions.push("phone_number LIKE ?");
-            params.push(format!("%{}%", phone_number));
-        }
-
-        // Add sex query condition
-        if let Some(sex) = &query.sex {
-            where_conditions.push("sex = ?");
-            params.push(sex.clone());
-        }
-
-        // Add status query condition
-        if let Some(status) = query.status {
-            where_conditions.push("status = ?");
-            params.push(status.to_string());
-        }
-
-        // Add remark query condition
-        if let Some(remark) = &query.remark {
-            where_conditions.push("remark LIKE ?");
-            params.push(format!("%{}%", remark));
-        }
-
-        // Add date range query condition
-        if let (Some(start_date), Some(end_date)) = (&query.start_date, &query.end_date) {
-            where_conditions.push("create_time BETWEEN ? AND ?");
-            params.push(start_date.naive_utc().to_string());
-            params.push(end_date.naive_utc().to_string());
-        } else if let Some(start_date) = &query.start_date {
-            where_conditions.push("create_time >= ?");
-            params.push(start_date.naive_utc().to_string());
-        } else if let Some(end_date) = &query.end_date {
-            where_conditions.push("create_time <= ?");
-            params.push(end_date.naive_utc().to_string());
-        }
-
-        let where_clause = if !where_conditions.is_empty() { format!("WHERE {}", where_conditions.join(" AND ")) } else { String::new() };
-
-        (where_clause, params)
-    }
 }
 
 #[rocket::async_trait]
 impl UserRepository for UserRepositoryDieselImpl {
-    /// Get user information by ID
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
-        // Use Diesel to query user information
-        let result = sql_query(format!("SELECT {} FROM sys_user WHERE id = ?", USER_FIELDS))
-            .bind::<Text, _>(id)
-            .get_result::<User>(&mut self.connection);
+    /// 根据主键删除用户
+    async fn delete_by_primary_key(&self, user_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
 
-        match result {
-            Ok(user) => Ok(Some(user)),
-            Err(diesel::result::Error::NotFound) => Ok(None),
-            Err(e) => Err(Box::new(e)),
+        diesel::delete(sys_user.filter(id.eq(user_id))).execute(&mut self.connection)?;
+        Ok(())
+    }
+
+    /// 插入用户记录
+    async fn insert(&self, row: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let user_row: UserRow = row.into();
+        diesel::insert_into(sys_user)
+            .values(&user_row)
+            .execute(&mut self.connection)?;
+        Ok(())
+    }
+
+    /// 选择性插入用户记录
+    async fn insert_selective(&self, row: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let user_row: UserRow = row.into();
+        diesel::insert_into(sys_user)
+            .values(&user_row)
+            .execute(&mut self.connection)?;
+        Ok(())
+    }
+
+    /// 根据主键查询用户
+    async fn select_user_by_id(&self, user_id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let result = sys_user
+            .filter(id.eq(user_id))
+            .first::<UserRow>(&mut self.connection)
+            .optional()?;
+        Ok(result.map(User::from))
+    }
+
+    /// 查询用户列表
+    async fn select_user_list(&self, user_param: crate::services::params::user_param::UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let mut query = sys_user.into_boxed();
+
+        if let Some(id_filter) = &user_param.id {
+            query = query.filter(id.eq(id_filter));
         }
-    }
 
-    /// Find user by name
-    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(format!("SELECT {} FROM sys_user WHERE name = ?", USER_FIELDS))
-            .bind::<Text, _>(name)
-            .get_result::<User>(&mut self.connection);
-
-        match result {
-            Ok(user) => Ok(Some(user)),
-            Err(diesel::result::Error::NotFound) => Ok(None),
-            Err(e) => Err(Box::new(e)),
+        if let Some(name_filter) = &user_param.name {
+            query = query.filter(name.like(format!("%{}%", name_filter)));
         }
-    }
 
-    /// Query user list
-    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let user_query: UserParam = user.into();
-        let (where_clause, _params) = Self::build_where_clause(&user_query);
-
-        let sql = format!("SELECT {} FROM sys_user {}", USER_FIELDS, where_clause);
-        let users_query = sql_query(&sql).load::<User>(&mut self.connection)?;
-        Ok(users_query)
-    }
-
-    /// Get user list count
-    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let (where_clause, _params) = Self::build_where_clause(query);
-
-        let sql = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
-        let count_result = sql_query(&sql).get_result::<CountResult>(&mut self.connection)?;
-        Ok(count_result.count)
-    }
-
-    /// Paginate user list
-    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let page_info = PageInfo::new(query.current_page_num, query.page_size);
-        let offset = page_info.get_page_offset();
-        let limit = page_info.get_page_size();
-
-        let (where_clause, _params) = Self::build_where_clause(query);
-
-        let sql = format!("SELECT {} FROM sys_user {} ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS, where_clause);
-        let users_query = sql_query(&sql)
-            .bind::<Integer, _>(limit as i32)
-            .bind::<Integer, _>(offset as i32)
-            .load::<User>(&mut self.connection)?;
-
-        Ok(users_query)
-    }
-
-    /// Insert user record
-    async fn insert(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Build insert statement
-        let result = sql_query("INSERT INTO sys_user (id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind::<Text, _>(&user.id)
-            .bind::<Text, _>(&user.dept_id.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.name.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.email.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.phone_number.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.sex.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.password.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.avatar.clone().unwrap_or_default())
-            .bind::<Integer, _>(user.status.unwrap_or(0))
-            .bind::<Text, _>(&user.login_ip.clone().unwrap_or_default())
-            .bind::<Text, _>("") // login_time
-            .bind::<Text, _>(&user.create_by.clone().unwrap_or_default())
-            .bind::<Text, _>("") // create_time
-            .bind::<Text, _>(&user.update_by.clone().unwrap_or_default())
-            .bind::<Text, _>("") // update_time
-            .bind::<Text, _>(&user.remark.clone().unwrap_or_default())
-            .execute(&mut self.connection);
-
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Box::new(e)),
+        if let Some(dept_id_filter) = &user_param.dept_id {
+            query = query.filter(dept_id.eq(dept_id_filter));
         }
+
+        let result = query
+            .order(id.asc())
+            .load::<UserRow>(&mut self.connection)?;
+        Ok(result.into_iter().map(User::from).collect())
     }
 
-    /// Selective insert user record
-    async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Same implementation as insert method, can be differentiated based on needs in actual application
-        self.insert(user).await
+    /// 根据主键更新用户
+    async fn update_by_id(&self, row: &User) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let user_row: UserRow = row.into();
+        let result = diesel::update(sys_user.filter(id.eq(&row.id)))
+            .set(&user_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 
-    /// Update user information by ID
-    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("UPDATE sys_user SET dept_id = ?, name = ?, email = ?, phone_number = ?, sex = ?, password = ?, avatar = ?, status = ?, login_ip = ?, login_time = ?, create_by = ?, create_time = ?, update_by = ?, update_time = datetime('now'), remark = ? WHERE id = ?")
-            .bind::<Text, _>(&user.dept_id.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.name.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.email.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.phone_number.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.sex.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.password.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.avatar.clone().unwrap_or_default())
-            .bind::<Integer, _>(user.status.unwrap_or(0))
-            .bind::<Text, _>(&user.login_ip.clone().unwrap_or_default())
-            .bind::<Text, _>("") // login_time
-            .bind::<Text, _>(&user.create_by.clone().unwrap_or_default())
-            .bind::<Text, _>("") // create_time
-            .bind::<Text, _>(&user.update_by.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.remark.clone().unwrap_or_default())
-            .bind::<Text, _>(&user.id)
-            .execute(&mut self.connection);
+    /// 根据主键选择性更新用户
+    async fn update_by_id_selective(&self, row: &User) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
 
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Box::new(e)),
-        }
+        let user_row: UserRow = row.into();
+        let result = diesel::update(sys_user.filter(id.eq(&row.id)))
+            .set(&user_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 
-    /// Selective update user information by ID
-    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Same implementation as update_by_primary_key method, can be differentiated based on needs in actual application
-        self.update_by_primary_key(user).await
+    /// 根据主键删除用户
+    async fn delete_by_id(&self, user_id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let result = diesel::delete(sys_user.filter(id.eq(user_id))).execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 
-    /// Delete user by ID
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("DELETE FROM sys_user WHERE id = ?")
-            .bind::<Text, _>(id)
-            .execute(&mut self.connection);
+    /// 根据用户名查询用户
+    async fn select_user_by_name(&self, username: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
 
-        match result {
-            Ok(_) => Ok(()),
-            Err(e) => Err(Box::new(e)),
-        }
+        let result = sys_user
+            .filter(name.eq(username))
+            .first::<UserRow>(&mut self.connection)
+            .optional()?;
+        Ok(result.map(User::from))
     }
 }

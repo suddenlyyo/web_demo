@@ -1,19 +1,100 @@
 //! 部门数据访问层 Diesel 实现
 
 use diesel::prelude::*;
+use diesel::sql_query;
 use diesel::sql_types::Text;
 
 use crate::models::Dept;
+use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 
-/// 部门表的所有字段，用于SQL查询
-const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
+table! {
+    sys_dept (id) {
+        id -> Text,
+        parent_id -> Nullable<Text>,
+        name -> Nullable<Text>,
+        email -> Nullable<Text>,
+        telephone -> Nullable<Text>,
+        address -> Nullable<Text>,
+        logo -> Nullable<Text>,
+        dept_level -> Nullable<Text>,
+        seq_no -> Nullable<Integer>,
+        status -> Nullable<Integer>,
+        create_by -> Nullable<Text>,
+        create_time -> Nullable<Timestamp>,
+        update_by -> Nullable<Text>,
+        update_time -> Nullable<Timestamp>,
+        remark -> Nullable<Text>,
+    }
+}
 
-/// 用于获取COUNT查询结果的结构体
-#[derive(QueryableByName, Debug)]
-struct CountResult {
-    #[diesel(sql_type = BigInt)]
-    count: u64,
+#[derive(Queryable, Selectable, Debug, AsChangeset)]
+#[diesel(table_name = sys_dept)]
+#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+struct DeptRow {
+    id: String,
+    parent_id: Option<String>,
+    name: Option<String>,
+    email: Option<String>,
+    telephone: Option<String>,
+    address: Option<String>,
+    logo: Option<String>,
+    dept_level: Option<String>,
+    seq_no: Option<i32>,
+    status: Option<i32>,
+    create_by: Option<String>,
+    create_time: Option<chrono::NaiveDateTime>,
+    update_by: Option<String>,
+    update_time: Option<chrono::NaiveDateTime>,
+    remark: Option<String>,
+}
+
+impl From<DeptRow> for Dept {
+    fn from(row: DeptRow) -> Self {
+        Dept {
+            id: row.id,
+            parent_id: row.parent_id,
+            name: row.name,
+            email: row.email,
+            telephone: row.telephone,
+            address: row.address,
+            logo: row.logo,
+            dept_level: row.dept_level,
+            seq_no: row.seq_no,
+            status: row.status,
+            create_by: row.create_by,
+            create_time: row
+                .create_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            update_by: row.update_by,
+            update_time: row
+                .update_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            remark: row.remark,
+        }
+    }
+}
+
+impl From<&Dept> for DeptRow {
+    fn from(dept: &Dept) -> Self {
+        DeptRow {
+            id: dept.id.clone(),
+            parent_id: dept.parent_id.clone(),
+            name: dept.name.clone(),
+            email: dept.email.clone(),
+            telephone: dept.telephone.clone(),
+            address: dept.address.clone(),
+            logo: dept.logo.clone(),
+            dept_level: dept.dept_level.clone(),
+            seq_no: dept.seq_no,
+            status: dept.status,
+            create_by: dept.create_by.clone(),
+            create_time: dept.create_time.map(|t| t.naive_utc()),
+            update_by: dept.update_by.clone(),
+            update_time: dept.update_time.map(|t| t.naive_utc()),
+            remark: dept.remark.clone(),
+        }
+    }
 }
 
 /// 部门数据访问 Diesel 实现
@@ -37,6 +118,8 @@ impl DeptRepositoryDieselImpl {
 impl DeptRepository for DeptRepositoryDieselImpl {
     /// 根据主键删除部门
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
+
         let result = sql_query("DELETE FROM sys_dept WHERE id = ?")
             .bind::<Text, _>(id)
             .execute(&mut self.connection)?;
@@ -50,302 +133,86 @@ impl DeptRepository for DeptRepositoryDieselImpl {
 
     /// 插入部门记录
     async fn insert(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("INSERT INTO sys_dept (id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-            .bind::<Text, _>(&row.id)
-            .bind::<Text, _>(&row.parent_id.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.name.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.email.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.telephone.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.address.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.logo.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.dept_level.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.seq_no.unwrap_or_default())
-            .bind::<Integer, _>(row.status.unwrap_or_default())
-            .bind::<Text, _>(&row.create_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.create_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.update_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.update_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.remark.clone().unwrap_or_default())
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
+
+        let dept_row: DeptRow = row.into();
+        diesel::insert_into(sys_dept)
+            .values(&dept_row)
             .execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("部门插入失败"));
-        }
-
         Ok(())
     }
 
     /// 选择性插入部门记录
     async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 构建动态SQL
-        let mut fields = vec!["id".to_string()];
-        let mut placeholders = vec!["?".to_string()];
-        let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
 
-        bindings.push(Box::new(row.id.clone()) as Box<dyn std::any::Any>);
-
-        if row.parent_id.is_some() {
-            fields.push("parent_id".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.parent_id.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.name.is_some() {
-            fields.push("name".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.name.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.email.is_some() {
-            fields.push("email".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.email.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.telephone.is_some() {
-            fields.push("telephone".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.telephone.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.address.is_some() {
-            fields.push("address".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.address.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.logo.is_some() {
-            fields.push("logo".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.logo.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.dept_level.is_some() {
-            fields.push("dept_level".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.dept_level.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.seq_no.is_some() {
-            fields.push("seq_no".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.seq_no.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.status.is_some() {
-            fields.push("status".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.status.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_by.is_some() {
-            fields.push("create_by".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.create_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_time.is_some() {
-            fields.push("create_time".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.create_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_by.is_some() {
-            fields.push("update_by".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.update_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_time.is_some() {
-            fields.push("update_time".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.update_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.remark.is_some() {
-            fields.push("remark".to_string());
-            placeholders.push("?".to_string());
-            bindings.push(Box::new(row.remark.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        let sql = format!("INSERT INTO sys_dept ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
-
-        let result = sql_query(&sql).execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("部门插入失败"));
-        }
-
+        let dept_row: DeptRow = row.into();
+        diesel::insert_into(sys_dept)
+            .values(&dept_row)
+            .execute(&mut self.connection)?;
         Ok(())
     }
 
     /// 根据主键查询部门
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        match sql_query(&format!("SELECT {} FROM sys_dept WHERE id = ?", DEPT_FIELDS))
-            .bind::<Text, _>(id)
-            .get_result::<Dept>(&mut self.connection)
-        {
-            Ok(dept) => Ok(Some(dept)),
-            Err(_) => Ok(None),
-        }
-    }
+    async fn select_dept_by_id(&self, dept_id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
 
-    /// 根据主键选择性更新部门
-    async fn update_by_primary_key_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // 构建动态SQL
-        let mut updates = vec![];
-        let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
+        let result = sys_dept
+            .filter(id.eq(dept_id))
+            .first::<DeptRow>(&mut self.connection)
+            .optional()?;
 
-        if row.parent_id.is_some() {
-            updates.push("parent_id = ?".to_string());
-            bindings.push(Box::new(row.parent_id.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.name.is_some() {
-            updates.push("name = ?".to_string());
-            bindings.push(Box::new(row.name.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.email.is_some() {
-            updates.push("email = ?".to_string());
-            bindings.push(Box::new(row.email.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.telephone.is_some() {
-            updates.push("telephone = ?".to_string());
-            bindings.push(Box::new(row.telephone.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.address.is_some() {
-            updates.push("address = ?".to_string());
-            bindings.push(Box::new(row.address.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.logo.is_some() {
-            updates.push("logo = ?".to_string());
-            bindings.push(Box::new(row.logo.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.dept_level.is_some() {
-            updates.push("dept_level = ?".to_string());
-            bindings.push(Box::new(row.dept_level.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.seq_no.is_some() {
-            updates.push("seq_no = ?".to_string());
-            bindings.push(Box::new(row.seq_no.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.status.is_some() {
-            updates.push("status = ?".to_string());
-            bindings.push(Box::new(row.status.unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_by.is_some() {
-            updates.push("create_by = ?".to_string());
-            bindings.push(Box::new(row.create_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.create_time.is_some() {
-            updates.push("create_time = ?".to_string());
-            bindings.push(Box::new(row.create_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_by.is_some() {
-            updates.push("update_by = ?".to_string());
-            bindings.push(Box::new(row.update_by.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if row.update_time.is_some() {
-            updates.push("update_time = ?".to_string());
-            bindings.push(Box::new(row.update_time.unwrap().naive_utc()) as Box<dyn std::any::Any>);
-        }
-
-        if row.remark.is_some() {
-            updates.push("remark = ?".to_string());
-            bindings.push(Box::new(row.remark.clone().unwrap()) as Box<dyn std::any::Any>);
-        }
-
-        if updates.is_empty() {
-            return Ok(());
-        }
-
-        let sql = format!("UPDATE sys_dept SET {} WHERE id = ?", updates.join(", "));
-
-        let mut query = sql_query(&sql);
-        query = query.bind::<Text, _>(&row.id);
-
-        let result = query.execute(&mut self.connection)?;
-        if result == 0 {
-            return Err(Box::from("部门更新失败"));
-        }
-
-        Ok(())
-    }
-
-    /// 根据主键更新部门
-    async fn update_by_primary_key(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query("UPDATE sys_dept SET parent_id = ?, name = ?, email = ?, telephone = ?, address = ?, logo = ?, dept_level = ?, seq_no = ?, status = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?")
-            .bind::<Text, _>(&row.parent_id.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.name.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.email.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.telephone.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.address.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.logo.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.dept_level.clone().unwrap_or_default())
-            .bind::<Integer, _>(row.seq_no.unwrap_or_default())
-            .bind::<Integer, _>(row.status.unwrap_or_default())
-            .bind::<Text, _>(&row.create_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.create_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.update_by.clone().unwrap_or_default())
-            .bind::<Timestamp, _>(row.update_time.unwrap_or_default().naive_utc())
-            .bind::<Text, _>(&row.remark.clone().unwrap_or_default())
-            .bind::<Text, _>(&row.id)
-            .execute(&mut self.connection)?;
-
-        if result == 0 {
-            return Err(Box::from("部门更新失败"));
-        }
-
-        Ok(())
+        Ok(result.map(Dept::from))
     }
 
     /// 查询部门列表
-    async fn select_dept_list(&self, row: &Dept) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        // 构建动态SQL
-        let mut conditions = vec![];
-        let mut bindings: Vec<Box<dyn std::any::Any>> = vec![];
+    async fn select_dept_list(&self, dept_param: crate::services::params::user_param::DeptParam) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
 
-        if let Some(parent_id) = &row.parent_id {
-            conditions.push("parent_id = ?".to_string());
-            bindings.push(Box::new(parent_id.clone()) as Box<dyn std::any::Any>);
+        let mut query = sys_dept.into_boxed();
+
+        if let Some(name_filter) = dept_param.name {
+            query = query.filter(name.like(format!("%{}%", name_filter)));
         }
 
-        if let Some(name) = &row.name {
-            conditions.push("name = ?".to_string());
-            bindings.push(Box::new(name.clone()) as Box<dyn std::any::Any>);
+        if let Some(status_filter) = dept_param.status {
+            query = query.filter(status.eq(status_filter));
         }
 
-        if let Some(status) = row.status {
-            conditions.push("status = ?".to_string());
-            bindings.push(Box::new(status) as Box<dyn std::any::Any>);
-        }
+        let result = query
+            .order(id.asc())
+            .load::<DeptRow>(&mut self.connection)?;
 
-        let where_clause = if conditions.is_empty() { String::new() } else { format!("WHERE {}", conditions.join(" AND ")) };
-
-        let sql = format!("SELECT {} FROM sys_dept {} ORDER BY seq_no", DEPT_FIELDS, where_clause);
-
-        let result = sql_query(&sql).load::<Dept>(&mut self.connection)?;
-
-        Ok(result)
+        Ok(result.into_iter().map(Dept::from).collect())
     }
 
-    /// 根据父部门ID查询子部门列表
-    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = sql_query(&format!("SELECT {} FROM sys_dept WHERE parent_id = ? ORDER BY seq_no", DEPT_FIELDS))
-            .bind::<Text, _>(parent_id)
-            .load::<Dept>(&mut self.connection)?;
+    /// 根据主键更新部门
+    async fn update_by_id(&self, row: &Dept) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
 
-        Ok(result)
+        let dept_row: DeptRow = row.into();
+        let result = diesel::update(sys_dept.filter(id.eq(&row.id)))
+            .set(&dept_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
+    }
+
+    /// 根据主键选择性更新部门
+    async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
+
+        let dept_row: DeptRow = row.into();
+        let result = diesel::update(sys_dept.filter(id.eq(&row.id)))
+            .set(&dept_row)
+            .execute(&mut self.connection)?;
+        Ok(result as u64)
+    }
+
+    /// 根据主键删除部门
+    async fn delete_by_id(&self, dept_id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::dept::diesel_impl::sys_dept::dsl::*;
+
+        let result = diesel::delete(sys_dept.filter(id.eq(dept_id))).execute(&mut self.connection)?;
+        Ok(result as u64)
     }
 }

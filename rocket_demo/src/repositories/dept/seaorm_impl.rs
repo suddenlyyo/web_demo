@@ -1,15 +1,65 @@
 //! 部门数据访问层 SeaORM 实现
 
+use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::Order;
 use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
 
 use crate::models::Dept;
+use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use common_wrapper::PageInfo;
 
 // 导入SeaORM实体
 use crate::entities::sys_dept;
-use crate::entities::sys_dept::{Column, Entity};
+use crate::entities::sys_dept::{ActiveModel, Column, Entity, Model};
+
+impl From<&Dept> for ActiveModel {
+    fn from(dept: &Dept) -> Self {
+        ActiveModel {
+            id: Set(dept.id.clone()),
+            parent_id: Set(dept.parent_id.clone()),
+            name: Set(dept.name.clone()),
+            email: Set(dept.email.clone()),
+            telephone: Set(dept.telephone.clone()),
+            address: Set(dept.address.clone()),
+            logo: Set(dept.logo.clone()),
+            dept_level: Set(dept.dept_level.clone()),
+            seq_no: Set(dept.seq_no),
+            status: Set(dept.status),
+            create_by: Set(dept.create_by.clone()),
+            create_time: Set(dept.create_time.map(|t| t.naive_utc())),
+            update_by: Set(dept.update_by.clone()),
+            update_time: Set(dept.update_time.map(|t| t.naive_utc())),
+            remark: Set(dept.remark.clone()),
+        }
+    }
+}
+
+impl From<Model> for Dept {
+    fn from(model: Model) -> Self {
+        Dept {
+            id: model.id,
+            parent_id: model.parent_id,
+            name: model.name,
+            email: model.email,
+            telephone: model.telephone,
+            address: model.address,
+            logo: model.logo,
+            dept_level: model.dept_level,
+            seq_no: model.seq_no,
+            status: model.status,
+            create_by: model.create_by,
+            create_time: model
+                .create_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            update_by: model.update_by,
+            update_time: model
+                .update_time
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
+            remark: model.remark,
+        }
+    }
+}
 
 /// 部门数据访问 SeaORM 实现
 #[derive(Debug)]
@@ -45,78 +95,63 @@ impl DeptRepository for DeptRepositorySeaormImpl {
 
     /// 插入部门记录
     async fn insert(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_dept::ActiveModel = row.into();
-        let result = model.insert(&self.connection).await?;
-
+        let model: ActiveModel = row.into();
+        model.insert(&self.connection).await?;
         Ok(())
     }
 
     /// 选择性插入部门记录
     async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_dept::ActiveModel = row.into();
-        let result = model.insert(&self.connection).await?;
-
+        let model: ActiveModel = row.into();
+        model.insert(&self.connection).await?;
         Ok(())
     }
 
     /// 根据主键查询部门
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        let dept = Entity::find_by_id(id).one(&self.connection).await?;
-
-        match dept {
-            Some(dept) => Ok(Some(dept.into())),
-            None => Ok(None),
-        }
-    }
-
-    /// 根据主键选择性更新部门
-    async fn update_by_primary_key_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_dept::ActiveModel = row.into();
-        let result = model.update(&self.connection).await?;
-
-        Ok(())
-    }
-
-    /// 根据主键更新部门
-    async fn update_by_primary_key(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let model: sys_dept::ActiveModel = row.into();
-        let result = model.update(&self.connection).await?;
-
-        Ok(())
+    async fn select_dept_by_id(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::find_by_id(id).one(&self.connection).await?;
+        Ok(result.map(Dept::from))
     }
 
     /// 查询部门列表
-    async fn select_dept_list(&self, row: &Dept) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn select_dept_list(&self, dept_param: crate::services::params::user_param::DeptParam) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
         let mut query = Entity::find();
 
-        if let Some(parent_id) = &row.parent_id {
-            query = query.filter(Column::ParentId.eq(parent_id));
+        if let Some(name) = dept_param.name {
+            query = query.filter(Column::Name.contains(name));
         }
 
-        if let Some(name) = &row.name {
-            query = query.filter(Column::Name.eq(name));
-        }
-
-        if let Some(status) = row.status {
+        if let Some(status) = dept_param.status {
             query = query.filter(Column::Status.eq(status));
         }
 
-        let depts = query
-            .order_by(Column::SeqNo, Order::Asc)
+        let result = query
+            .order_by(Column::Id, Order::Asc)
             .all(&self.connection)
             .await?;
 
-        Ok(depts.into_iter().map(|d| d.into()).collect())
+        Ok(result.into_iter().map(Dept::from).collect())
     }
 
-    /// 根据父部门ID查询子部门列表
-    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
-        let depts = Entity::find()
-            .filter(Column::ParentId.eq(parent_id))
-            .order_by(Column::SeqNo, Order::Asc)
-            .all(&self.connection)
-            .await?;
+    /// 根据主键更新部门
+    async fn update_by_id(&self, row: &Dept) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let model: ActiveModel = row.into();
+        let result = model.update(&self.connection).await?;
+        Ok(1) // SeaORM更新成功时返回1行受影响
+    }
 
-        Ok(depts.into_iter().map(|d| d.into()).collect())
+    /// 根据主键选择性更新部门
+    async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let mut model: ActiveModel = row.into();
+        // 将主键设置为未修改，因为我们使用它进行查找而不是更新
+        model.id = sea_orm::ActiveValue::Unchanged(row.id.clone());
+        let result = model.update(&self.connection).await?;
+        Ok(1) // SeaORM更新成功时返回1行受影响
+    }
+
+    /// 根据主键删除部门
+    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::delete_by_id(id).exec(&self.connection).await?;
+        Ok(result.rows_affected)
     }
 }
