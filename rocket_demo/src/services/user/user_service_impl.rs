@@ -1,11 +1,17 @@
 use std::sync::Arc;
 
-use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper, SingleWrapper};
+use common_wrapper::{ListWrapper, PageInfo, PageWrapper, ResponseTrait, ResponseWrapper, SingleWrapper};
+use rocket::data::N;
 use uuid::Uuid;
 
 use crate::{
+    config::Config,
+    controllers::user,
     models::{User, UserRole},
-    params::{page_param::PageParam, user_param::UserParam},
+    params::{
+        page_param::{self, PageParam},
+        user_param::UserParam,
+    },
     repositories::{user::user_repository::UserRepository, user_role::user_role_repository::UserRoleRepository},
     services::user::user_service::UserService,
 };
@@ -37,28 +43,22 @@ pub struct UserServiceImpl {
 impl UserServiceImpl {
     /// 创建用户服务实例
     ///
-    /// # 参数
-    ///
-    /// - `database_url`: 数据库连接URL
-    ///
     /// # 返回值
     ///
     /// 返回新的用户服务实例
-    pub async fn new(_database_url: &str) -> Self {
+    pub async fn new() -> Self {
         #[cfg(feature = "sqlx_impl")]
-        let user_repository = UserRepositorySqlxImpl::new(_database_url).await.unwrap();
+        let user_repository = UserRepositorySqlxImpl::new().await.unwrap();
         #[cfg(feature = "sqlx_impl")]
-        let user_role_repository = UserRoleRepositorySqlxImpl::new(_database_url)
-            .await
-            .unwrap();
+        let user_role_repository = UserRoleRepositorySqlxImpl::new().await.unwrap();
 
         #[cfg(feature = "diesel_impl")]
-        let user_repository = UserRepositoryDieselImpl::new(); // Diesel不需要数据库URL
+        let user_repository = UserRepositoryDieselImpl::new();
         #[cfg(feature = "diesel_impl")]
         let user_role_repository = UserRoleRepositoryDieselImpl::new();
 
         #[cfg(feature = "seaorm_impl")]
-        let user_repository = UserRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
+        let user_repository = UserRepositorySeaormImpl::new().await.unwrap();
         #[cfg(feature = "seaorm_impl")]
         let user_role_repository = UserRoleRepositorySeaormImpl::new().await.unwrap();
 
@@ -83,12 +83,12 @@ impl UserService for UserServiceImpl {
             password: user_param.password.clone(),
             avatar: user_param.avatar.clone(),
             status: user_param.status,
-            login_ip: user_param.login_ip.clone(),
-            login_time: user_param.login_time,
+            login_ip: None,   //创建时不设置登录IP
+            login_time: None, //创建时不设置登录时间
             create_by: user_param.create_by.clone(),
             create_time: Some(chrono::Utc::now()),
-            update_by: user_param.update_by.clone(),
-            update_time: user_param.update_time,
+            update_by: None,   //创建时不设置更新者
+            update_time: None, //创建时不设置更新时间
             remark: user_param.remark.clone(),
         };
 
@@ -115,9 +115,9 @@ impl UserService for UserServiceImpl {
                 password: user_param.password.clone(),
                 avatar: user_param.avatar.clone(),
                 status: user_param.status,
-                login_ip: user_param.login_ip.clone(),
-                login_time: user_param.login_time,
-                create_by: user_param.create_by.clone(),
+                login_ip: None,    // 不更新登录IP
+                login_time: None,  // 不更新登录时间
+                create_by: None,   // 不更新创建者
                 create_time: None, // 不更新创建时间
                 update_by: user_param.update_by.clone(),
                 update_time: Some(chrono::Utc::now()),
@@ -161,7 +161,7 @@ impl UserService for UserServiceImpl {
             login_time: None,
             create_by: None,
             create_time: None,
-            update_by: None,
+            update_by: user_param.update_by.clone(),
             remark: None,
         };
 
@@ -197,36 +197,34 @@ impl UserService for UserServiceImpl {
         }
     }
 
-    async fn get_user_list_by_page(&self, user_param: UserParam) -> PageWrapper<User> {
-        let page_param = user_param.page_param.clone().unwrap_or_default();
-        // 构建查询条件
-        let user = User {
-            id: String::new(),
-            dept_id: user_param.dept_id.clone(),
-            name: user_param.name.clone(),
-            email: user_param.email.clone(),
-            phone_number: user_param.phone_number.clone(),
-            sex: user_param.sex.clone(),
-            password: user_param.password.clone(),
-            avatar: user_param.avatar.clone(),
-            status: user_param.status,
-            login_ip: user_param.login_ip.clone(),
-            login_time: user_param.login_time,
-            create_by: user_param.create_by.clone(),
-            create_time: user_param.create_time,
-            update_by: user_param.update_by.clone(),
-            update_time: user_param.update_time,
-            remark: user_param.remark.clone(),
+    async fn get_user_list_by_page(&self, mut user_param: UserParam) -> PageWrapper<User> {
+        // 设置分页参数
+        let page_param = PageInfo::new(user_param.page_param.page_num, user_param.page_param.page_size);
+        user_param.page_param = page_param;
+
+        // 获取用户总数
+        let count_result = self.user_repository.get_user_list_count(&user_param).await;
+        let count = match count_result {
+            Ok(count) => count,
+            Err(e) => {
+                let mut wrapper = PageWrapper::new();
+                wrapper.set_fail(&format!("获取用户总数失败: {}", e));
+                return wrapper;
+            },
         };
 
-        match self.user_repository.select_user_list(&user).await {
+        // 获取用户列表
+        let user_list_result = self
+            .user_repository
+            .get_user_list_by_page(&user_param)
+            .await;
+        match user_list_result {
             Ok(user_list) => {
                 // 创建分页包装器
                 let mut wrapper = PageWrapper::new();
-                // 这里需要根据实际的分页逻辑进行调整，暂时使用固定值
-                let total = user_list.len() as u64;
-                let current_page = page_param.page_num.unwrap_or(1) as u64;
-                let page_size = page_param.page_size.unwrap_or(10) as u64;
+                let total = count;
+                let current_page = page_param::get_current_page_num(&user_param.page_param);
+                let page_size = page_param::get_page_size(&user_param.page_param);
                 wrapper.set_success(user_list, total, current_page, page_size);
                 wrapper
             },

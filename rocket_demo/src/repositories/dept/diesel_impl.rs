@@ -1,5 +1,6 @@
 //! 部门数据访问层 Diesel 实现
 
+// ==================== 数据库连接 ====================
 use diesel::prelude::*;
 use diesel::sql_query;
 use diesel::sql_types::Text;
@@ -8,6 +9,8 @@ use crate::models::Dept;
 use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 
+// ==================== 表结构体映射 ====================
+// 数据库表定义
 table! {
     sys_dept (id) {
         id -> Text,
@@ -28,9 +31,10 @@ table! {
     }
 }
 
+/// Diesel的部门实体映射
 #[derive(Queryable, Selectable, Debug, AsChangeset)]
 #[diesel(table_name = sys_dept)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 struct DeptRow {
     id: String,
     parent_id: Option<String>,
@@ -49,6 +53,7 @@ struct DeptRow {
     remark: Option<String>,
 }
 
+// 实现从DeptRow到Dept的转换
 impl From<DeptRow> for Dept {
     fn from(row: DeptRow) -> Self {
         Dept {
@@ -75,6 +80,7 @@ impl From<DeptRow> for Dept {
     }
 }
 
+// 实现从Dept到DeptRow的转换
 impl From<&Dept> for DeptRow {
     fn from(dept: &Dept) -> Self {
         DeptRow {
@@ -97,18 +103,24 @@ impl From<&Dept> for DeptRow {
     }
 }
 
+// ==================== SQL trait 实现 ====================
 /// 部门数据访问 Diesel 实现
 #[derive(Debug)]
 pub struct DeptRepositoryDieselImpl {
-    connection: diesel::sqlite::SqliteConnection,
+    connection: diesel::mysql::MysqlConnection,
 }
 
 impl DeptRepositoryDieselImpl {
     /// 创建部门仓库 Diesel 实例
     pub fn new() -> Self {
         // 初始化数据库连接
-        let database_url = std::env::var("DATABASE_URL").unwrap_or("data.db".to_string());
-        let connection = diesel::sqlite::SqliteConnection::establish(&database_url).expect("Error connecting to SQLite database");
+        let database_url = if let Ok(config) = crate::config::Config::from_default_file() {
+            config.database.url
+        } else {
+            panic!("无法从配置文件获取数据库连接信息");
+        };
+
+        let connection = diesel::mysql::MysqlConnection::establish(&database_url).expect("连接MySQL数据库时出错");
 
         Self { connection }
     }

@@ -1,5 +1,6 @@
 //! 部门数据访问层 SeaORM 实现
 
+// ==================== 数据库连接 ====================
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::Order;
 use sea_orm::{EntityTrait, QueryFilter, QueryOrder};
@@ -9,10 +10,12 @@ use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use common_wrapper::PageInfo;
 
+// ==================== 表结构体映射 ====================
 // 导入SeaORM实体
 use crate::entities::sys_dept;
 use crate::entities::sys_dept::{ActiveModel, Column, Entity, Model};
 
+/// 将部门模型转换为SeaORM的ActiveModel
 impl From<&Dept> for ActiveModel {
     fn from(dept: &Dept) -> Self {
         ActiveModel {
@@ -61,20 +64,26 @@ impl From<Model> for Dept {
     }
 }
 
-/// 部门数据访问 SeaORM 实现
+// ==================== SQL trait 实现 ====================
+/// 部门仓库的SeaORM实现
 #[derive(Debug)]
 pub struct DeptRepositorySeaormImpl {
     connection: sea_orm::DatabaseConnection,
 }
 
 impl DeptRepositorySeaormImpl {
-    /// 创建部门仓库 SeaORM 实例
+    /// 创建并返回一个新的部门仓库实例
     pub async fn new() -> Self {
         // 初始化数据库连接
-        let database_url = std::env::var("DATABASE_URL").unwrap_or("sqlite://data.db".to_string());
+        let database_url = if let Ok(config) = crate::config::Config::from_default_file() {
+            config.database.url
+        } else {
+            panic!("无法从配置文件获取数据库连接信息");
+        };
+
         let connection = sea_orm::Database::connect(&database_url)
             .await
-            .expect("Error connecting to SQLite database");
+            .expect("连接MySQL数据库时出错");
 
         Self { connection }
     }
@@ -82,7 +91,7 @@ impl DeptRepositorySeaormImpl {
 
 #[rocket::async_trait]
 impl DeptRepository for DeptRepositorySeaormImpl {
-    /// 根据主键删除部门
+    /// 根据主键删除部门记录
     async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = Entity::delete_by_id(id).exec(&self.connection).await?;
 
@@ -93,27 +102,27 @@ impl DeptRepository for DeptRepositorySeaormImpl {
         Ok(())
     }
 
-    /// 插入部门记录
+    /// 插入新的部门记录
     async fn insert(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let model: ActiveModel = row.into();
         model.insert(&self.connection).await?;
         Ok(())
     }
 
-    /// 选择性插入部门记录
+    /// 选择性插入部门记录（仅插入非空字段）
     async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let model: ActiveModel = row.into();
         model.insert(&self.connection).await?;
         Ok(())
     }
 
-    /// 根据主键查询部门
+    /// 根据主键查询部门信息
     async fn select_dept_by_id(&self, id: &str) -> Result<Option<Dept>, Box<dyn std::error::Error + Send + Sync>> {
         let result = Entity::find_by_id(id).one(&self.connection).await?;
         Ok(result.map(Dept::from))
     }
 
-    /// 查询部门列表
+    /// 根据条件查询部门列表
     async fn select_dept_list(&self, dept_param: crate::services::params::user_param::DeptParam) -> Result<Vec<Dept>, Box<dyn std::error::Error + Send + Sync>> {
         let mut query = Entity::find();
 
@@ -133,23 +142,28 @@ impl DeptRepository for DeptRepositorySeaormImpl {
         Ok(result.into_iter().map(Dept::from).collect())
     }
 
-    /// 根据主键更新部门
-    async fn update_by_id(&self, row: &Dept) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    /// 根据主键更新部门信息
+    async fn update_by_id(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let model: ActiveModel = row.into();
-        let result = model.update(&self.connection).await?;
+        let result = Entity::update(model)
+            .filter(Column::Id.eq(&row.id))
+            .exec(&self.connection)
+            .await?;
+
         Ok(1) // SeaORM更新成功时返回1行受影响
     }
 
-    /// 根据主键选择性更新部门
-    async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let mut model: ActiveModel = row.into();
-        // 将主键设置为未修改，因为我们使用它进行查找而不是更新
-        model.id = sea_orm::ActiveValue::Unchanged(row.id.clone());
-        let result = model.update(&self.connection).await?;
+    async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let model: ActiveModel = row.into();
+        let result = Entity::update(model)
+            .filter(Column::Id.eq(&row.id))
+            .exec(&self.connection)
+            .await?;
+
         Ok(1) // SeaORM更新成功时返回1行受影响
     }
 
-    /// 根据主键删除部门
+    /// 根据主键删除部门记录
     async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         let result = Entity::delete_by_id(id).exec(&self.connection).await?;
         Ok(result.rows_affected)

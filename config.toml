@@ -1,0 +1,3 @@
+# 数据库配置
+[database]
+url = "mysql://root:Lv997945%21@localhost:3306/demo"

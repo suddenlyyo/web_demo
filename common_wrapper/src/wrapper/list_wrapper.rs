@@ -110,7 +110,7 @@ impl<T> ResponseTrait for ListWrapper<T> {
 
     /// 获取响应消息
     ///
-    /// # 返回값
+    /// # 返回值
     ///
     /// 响应消息的引用
     fn get_message(&self) -> &str {

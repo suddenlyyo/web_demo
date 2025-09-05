@@ -1,11 +1,13 @@
 //! 菜单数据访问层 Diesel 实现
 
+// ==================== 导入依赖 ====================
 use diesel::prelude::*;
 
 use crate::models::Menu;
 use crate::models::constants::MENU_FIELDS;
 use crate::repositories::menu::menu_repository::MenuRepository;
 
+// ==================== 数据库表结构定义 ====================
 table! {
     sys_menu (id) {
         id -> Text,
@@ -31,9 +33,10 @@ table! {
     }
 }
 
+// ==================== 数据库实体映射 ====================
 #[derive(Queryable, Selectable, Debug, AsChangeset)]
 #[diesel(table_name = sys_menu)]
-#[diesel(check_for_backend(diesel::sqlite::Sqlite))]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
 struct MenuRow {
     id: String,
     menu_name: Option<String>,
@@ -115,18 +118,24 @@ impl From<&Menu> for MenuRow {
     }
 }
 
+// ==================== 数据库连接管理 ====================
 /// 菜单数据访问 Diesel 实现
 #[derive(Debug)]
 pub struct MenuRepositoryDieselImpl {
-    connection: diesel::sqlite::SqliteConnection,
+    connection: diesel::mysql::MysqlConnection,
 }
 
 impl MenuRepositoryDieselImpl {
     /// 创建菜单仓库 Diesel 实例
     pub fn new() -> Self {
         // 初始化数据库连接
-        let database_url = std::env::var("DATABASE_URL").unwrap_or("data.db".to_string());
-        let connection = diesel::sqlite::SqliteConnection::establish(&database_url).expect("Error connecting to SQLite database");
+        let database_url = if let Ok(config) = crate::config::Config::from_default_file() {
+            config.database.url
+        } else {
+            panic!("无法从配置文件获取数据库连接信息");
+        };
+
+        let connection = diesel::mysql::MysqlConnection::establish(&database_url).expect("Error connecting to MySQL database");
 
         Self { connection }
     }
@@ -134,6 +143,7 @@ impl MenuRepositoryDieselImpl {
 
 #[rocket::async_trait]
 impl MenuRepository for MenuRepositoryDieselImpl {
+    // ==================== CRUD 操作实现 ====================
     /// 根据主键删除菜单
     async fn delete_by_primary_key(&self, menu_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
@@ -164,6 +174,7 @@ impl MenuRepository for MenuRepositoryDieselImpl {
         Ok(())
     }
 
+    // ==================== 查询操作实现 ====================
     /// 根据主键查询菜单
     async fn select_menu_by_id(&self, menu_id: &str) -> Result<Option<Menu>, Box<dyn std::error::Error + Send + Sync>> {
         use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
@@ -195,6 +206,7 @@ impl MenuRepository for MenuRepositoryDieselImpl {
         Ok(result.into_iter().map(Menu::from).collect())
     }
 
+    // ==================== 更新操作实现 ====================
     /// 根据主键更新菜单
     async fn update_by_id(&self, row: &Menu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;
@@ -217,6 +229,7 @@ impl MenuRepository for MenuRepositoryDieselImpl {
         Ok(result as u64)
     }
 
+    // ==================== 删除操作实现 ====================
     /// 根据主键删除菜单
     async fn delete_by_id(&self, menu_id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         use crate::repositories::menu::diesel_impl::sys_menu::dsl::*;

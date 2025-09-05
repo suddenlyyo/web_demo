@@ -2,9 +2,15 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::query_dsl::methods::{FilterDsl, LoadQuery};
 
+// ==================== 数据库连接 ====================
+use diesel::mysql::MysqlConnection;
+use diesel::prelude::*;
+use diesel::query_dsl::methods::{FilterDsl, LoadQuery};
+
 use crate::models::UserRole;
 use crate::repositories::user_role::user_role_repository::UserRoleRepository;
 
+// ==================== 表结构体映射 ====================
 table! {
     sys_user_role (id) {
         id -> Text,
@@ -15,6 +21,7 @@ table! {
 
 #[derive(Queryable, Selectable, Debug, AsChangeset)]
 #[diesel(table_name = sys_user_role)]
+#[diesel(check_for_backend(diesel::mysql::Mysql))]
 struct UserRoleRow {
     id: String,
     user_id: Option<String>,
@@ -37,23 +44,21 @@ impl From<&UserRole> for UserRoleRow {
     }
 }
 
-/// 用户角色数据访问Diesel实现
+// ==================== SQL trait 实现 ====================
+/// 用户角色数据访问 Diesel 实现
 #[derive(Debug)]
 pub struct UserRoleRepositoryDieselImpl {
-    connection: PgConnection,
+    connection: diesel::mysql::MysqlConnection,
 }
 
 impl UserRoleRepositoryDieselImpl {
-    /// 创建新的用户角色仓库Diesel实现
-    ///
-    /// # 参数
-    ///
-    /// * `connection` - PostgreSQL连接，类型: [PgConnection]
-    ///
-    /// # 返回值
-    ///
-    /// 新的用户角色仓库Diesel实现实例
-    pub fn new(connection: PgConnection) -> Self {
+    /// 创建用户角色仓库 Diesel 实例
+    pub fn new() -> Self {
+        // 初始化数据库连接
+        let database_url = if let Ok(config) = crate::config::Config::from_default_file() { config.database.url } else { "mysql://root:123456@localhost:3306/demo".to_string() };
+
+        let connection = diesel::mysql::MysqlConnection::establish(&database_url).expect("无法连接到数据库");
+
         Self { connection }
     }
 }

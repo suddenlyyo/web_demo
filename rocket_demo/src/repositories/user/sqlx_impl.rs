@@ -1,39 +1,51 @@
 use crate::models::constants::USER_FIELDS;
 use crate::models::user::User;
+use crate::models::user_role::UserRole;
+use crate::params::user_param::UserParam;
 use crate::repositories::user::user_repository::UserRepository;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::FromRow;
 use sqlx::mysql::MySqlPool;
-use std::error::Error as StdError;
-use std::sync::Arc;
+use std::sync::OnceLock;
 
-/// 用户仓库SQLx实现
+// 数据库连接池
+static DB_POOL: OnceLock<MySqlPool> = OnceLock::new();
+
 #[derive(Debug)]
 pub struct UserRepositorySqlxImpl {
-    pool: Arc<MySqlPool>,
+    pool: MySqlPool,
 }
 
-/// SQLx的用户实体映射
+impl UserRepositorySqlxImpl {
+    pub fn new() -> Self {
+        let pool = DB_POOL.get().expect("数据库连接池未初始化").clone();
+        Self { pool }
+    }
+
+    pub fn init_pool(pool: MySqlPool) {
+        DB_POOL.set(pool).ok(); // 如果已经设置过，则忽略
+    }
+}
+
+// ==================== 表结构体映射 ====================
 #[derive(Debug, FromRow)]
 struct UserRow {
     id: String,
-    dept_id: Option<String>,
-    name: Option<String>,
-    email: Option<String>,
-    phone_number: Option<String>,
-    sex: Option<String>,
+    username: Option<String>,
     password: Option<String>,
+    salt: Option<String>,
+    nickname: Option<String>,
+    phone: Option<String>,
+    email: Option<String>,
     avatar: Option<String>,
+    sex: Option<String>,
     status: Option<i32>,
-    login_ip: Option<String>,
-    #[sqlx(rename = "login_time")]
-    login_time_raw: Option<NaiveDateTime>,
     create_by: Option<String>,
     #[sqlx(rename = "create_time")]
-    create_time_raw: Option<NaiveDateTime>,
+    create_time_raw: Option<chrono::NaiveDateTime>,
     update_by: Option<String>,
     #[sqlx(rename = "update_time")]
-    update_time_raw: Option<NaiveDateTime>,
+    update_time_raw: Option<chrono::NaiveDateTime>,
     remark: Option<String>,
 }
 
@@ -41,81 +53,236 @@ impl From<UserRow> for User {
     fn from(row: UserRow) -> Self {
         User {
             id: row.id,
-            dept_id: row.dept_id,
-            name: row.name,
-            email: row.email,
-            phone_number: row.phone_number,
-            sex: row.sex,
+            username: row.username,
             password: row.password,
+            salt: row.salt,
+            nickname: row.nickname,
+            phone: row.phone,
+            email: row.email,
             avatar: row.avatar,
+            sex: row.sex,
             status: row.status,
-            login_ip: row.login_ip,
-            login_time: row
-                .login_time_raw
-                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
             create_by: row.create_by,
             create_time: row
                 .create_time_raw
-                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
             update_by: row.update_by,
             update_time: row
                 .update_time_raw
-                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
             remark: row.remark,
         }
     }
 }
 
-#[rocket::async_trait]
-impl UserRepository for UserRepositorySqlxImpl {
-    /// 根据ID获取用户信息
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn StdError + Send + Sync>> {
-        let user_query = sqlx::query_as::<_, UserRow>(&format!("SELECT {} FROM sys_user WHERE id = ?", USER_FIELDS))
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?;
+// 用户角色映射
+#[derive(Debug, FromRow)]
+struct UserRoleRow {
+    id: String,
+    user_id: String,
+    role_id: String,
+    create_by: Option<String>,
+    #[sqlx(rename = "create_time")]
+    create_time_raw: Option<NaiveDateTime>,
+}
 
-        match user_query {
-            Some(row) => Ok(Some(User::from(row))),
-            None => Ok(None),
+impl From<UserRoleRow> for UserRole {
+    fn from(row: UserRoleRow) -> Self {
+        UserRole {
+            id: row.id,
+            user_id: row.user_id,
+            role_id: row.role_id,
+            create_by: row.create_by,
+            create_time: row
+                .create_time_raw
+                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
         }
     }
+}
 
-    /// 根据用户名查找用户
-    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn StdError + Send + Sync>> {
-        let user_query = sqlx::query_as::<_, UserRow>(&format!("SELECT {} FROM sys_user WHERE name = ?", USER_FIELDS))
+// ==================== SQL trait 实现 ====================
+#[rocket::async_trait]
+impl UserRepository for UserRepositorySqlxImpl {
+    async fn insert(&self, row: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "INSERT INTO sys_user (id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        let result = sqlx::query(sql)
+            .bind(&row.id)
+            .bind(&row.username)
+            .bind(&row.password)
+            .bind(&row.salt)
+            .bind(&row.nickname)
+            .bind(&row.phone)
+            .bind(&row.email)
+            .bind(&row.avatar)
+            .bind(&row.sex)
+            .bind(row.status)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("用户插入失败"));
+        }
+
+        Ok(())
+    }
+
+    async fn insert_selective(&self, row: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 构建动态SQL
+        let mut fields = vec![];
+        let mut placeholders = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)> = vec![];
+
+        fields.push("id");
+        placeholders.push("?");
+        params.push(&row.id);
+
+        if row.username.is_some() {
+            fields.push("username");
+            placeholders.push("?");
+            params.push(&row.username);
+        }
+
+        if row.password.is_some() {
+            fields.push("password");
+            placeholders.push("?");
+            params.push(&row.password);
+        }
+
+        if row.salt.is_some() {
+            fields.push("salt");
+            placeholders.push("?");
+            params.push(&row.salt);
+        }
+
+        if row.nickname.is_some() {
+            fields.push("nickname");
+            placeholders.push("?");
+            params.push(&row.nickname);
+        }
+
+        if row.phone.is_some() {
+            fields.push("phone");
+            placeholders.push("?");
+            params.push(&row.phone);
+        }
+
+        if row.email.is_some() {
+            fields.push("email");
+            placeholders.push("?");
+            params.push(&row.email);
+        }
+
+        if row.avatar.is_some() {
+            fields.push("avatar");
+            placeholders.push("?");
+            params.push(&row.avatar);
+        }
+
+        if row.sex.is_some() {
+            fields.push("sex");
+            placeholders.push("?");
+            params.push(&row.sex);
+        }
+
+        if row.status.is_some() {
+            fields.push("status");
+            placeholders.push("?");
+            params.push(&row.status);
+        }
+
+        if row.create_by.is_some() {
+            fields.push("create_by");
+            placeholders.push("?");
+            params.push(&row.create_by);
+        }
+
+        if row.create_time.is_some() {
+            fields.push("create_time");
+            placeholders.push("?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
+        }
+
+        if row.update_by.is_some() {
+            fields.push("update_by");
+            placeholders.push("?");
+            params.push(&row.update_by);
+        }
+
+        if row.update_time.is_some() {
+            fields.push("update_time");
+            placeholders.push("?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
+        }
+
+        if row.remark.is_some() {
+            fields.push("remark");
+            placeholders.push("?");
+            params.push(&row.remark);
+        }
+
+        let sql = format!("INSERT INTO sys_user ({}) VALUES ({})", fields.join(", "), placeholders.join(", "));
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("用户插入失败"));
+        }
+
+        Ok(())
+    }
+
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "SELECT id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE username = ?";
+        let result: Option<UserRow> = sqlx::query_as(sql)
             .bind(name)
             .fetch_optional(&self.pool)
             .await?;
 
-        match user_query {
-            Some(row) => Ok(Some(User::from(row))),
-            None => Ok(None),
-        }
+        Ok(result.map(User::from))
     }
 
-    /// 查询用户列表
-    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
-        let mut sql = format!("SELECT {} FROM sys_user WHERE 1=1", USER_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "SELECT id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE id = ?";
+        let result: Option<UserRow> = sqlx::query_as(sql)
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
 
-        if !user.id.is_empty() {
-            sql.push_str(" AND id = ?");
-            params.push(Box::new(user.id.clone()));
+        Ok(result.map(User::from))
+    }
+
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut sql = "SELECT id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        if let Some(username) = &user.username {
+            sql.push_str(" AND username LIKE ?");
+            params.push(Box::new(format!("%{}%", username)));
         }
 
-        if let Some(name) = &user.name {
-            sql.push_str(" AND name LIKE ?");
-            params.push(Box::new(format!("%{}%", name)));
+        if let Some(phone) = &user.phone {
+            sql.push_str(" AND phone LIKE ?");
+            params.push(Box::new(format!("%{}%", phone)));
         }
 
-        if let Some(dept_id) = &user.dept_id {
-            sql.push_str(" AND dept_id = ?");
-            params.push(Box::new(dept_id.clone()));
+        if let Some(status) = user.status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
         }
 
         sql.push_str(" ORDER BY id");
 
+        // 构建查询
         let mut query = sqlx::query_as::<_, UserRow>(&sql);
         for param in &params {
             query = query.bind(param.as_ref());
@@ -125,206 +292,269 @@ impl UserRepository for UserRepositorySqlxImpl {
         Ok(result.into_iter().map(User::from).collect())
     }
 
-    /// 获取用户列表数量
-    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn StdError + Send + Sync>> {
-        let (where_clause, params) = Self::build_where_clause(query);
+    async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "SELECT id, user_id, role_id, create_by, create_time FROM sys_user_role WHERE role_id = ?";
+        let result: Vec<UserRoleRow> = sqlx::query_as(sql)
+            .bind(role_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(result.into_iter().map(UserRole::from).collect())
+    }
 
-        let sql = format!("SELECT COUNT(*) as count FROM sys_user {}", where_clause);
-        let mut query_builder = sqlx::query(&sql);
+    async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "SELECT id, user_id, role_id, create_by, create_time FROM sys_user_role WHERE user_id = ?";
+        let result: Vec<UserRoleRow> = sqlx::query_as(sql)
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(result.into_iter().map(UserRole::from).collect())
+    }
 
-        for param in params {
-            query_builder = query_builder.bind(param);
+    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut sql = "SELECT id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        if let Some(username) = &query.username {
+            sql.push_str(" AND username LIKE ?");
+            params.push(Box::new(format!("%{}%", username)));
         }
 
-        let count_row = query_builder.fetch_one(&self.pool).await?;
-        let total: u64 = count_row.try_get("count")?;
+        if let Some(phone) = &query.phone {
+            sql.push_str(" AND phone LIKE ?");
+            params.push(Box::new(format!("%{}%", phone)));
+        }
+
+        if let Some(status) = query.status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        // 添加排序和分页
+        sql.push_str(" ORDER BY id LIMIT ? OFFSET ?");
+        params.push(Box::new(query.page_size));
+        params.push(Box::new((query.page_num - 1) * query.page_size));
+
+        // 构建查询列表的语句
+        let mut query_builder = sqlx::query_as::<_, UserRow>(&sql);
+        for param in &params {
+            query_builder = query_builder.bind(param.as_ref());
+        }
+
+        let result = query_builder.fetch_all(&self.pool).await?;
+        Ok(result.into_iter().map(User::from).collect())
+    }
+
+    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        let mut sql = "SELECT COUNT(*) FROM sys_user WHERE 1=1".to_string();
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        if let Some(username) = &query.username {
+            sql.push_str(" AND username LIKE ?");
+            params.push(Box::new(format!("%{}%", username)));
+        }
+
+        if let Some(phone) = &query.phone {
+            sql.push_str(" AND phone LIKE ?");
+            params.push(Box::new(format!("%{}%", phone)));
+        }
+
+        if let Some(status) = query.status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        // 构建查询总数的语句
+        let mut count_query = sqlx::query_scalar(&sql);
+        for param in &params {
+            count_query = count_query.bind(param.as_ref());
+        }
+
+        let total: u64 = count_query.fetch_one(&self.pool).await?;
         Ok(total)
     }
 
-    /// 分页获取用户列表
-    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn StdError + Send + Sync>> {
-        let page_info = PageInfo::new(query.current_page_num, query.page_size);
-        let offset = page_info.get_page_offset();
-        let limit = page_info.get_page_size();
+    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "UPDATE sys_user SET username = ?, password = ?, salt = ?, nickname = ?, phone = ?, email = ?, avatar = ?, sex = ?, status = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
 
-        let (where_clause, params) = Self::build_where_clause(query);
-
-        let user_query = format!("SELECT {} FROM sys_user {} ORDER BY create_time DESC LIMIT ? OFFSET ?", USER_FIELDS, where_clause);
-        let mut query_builder = sqlx::query(&user_query);
-
-        for param in params {
-            query_builder = query_builder.bind(param);
-        }
-
-        query_builder = query_builder.bind(limit as i64).bind(offset as i64);
-        let users_query = query_builder.fetch_all(&self.pool).await?;
-        let users: Result<Vec<User>, _> = users_query
-            .iter()
-            .map(|row| {
-                let user_row = UserRow {
-                    id: row.get("id"),
-                    dept_id: row.get("dept_id"),
-                    name: row.get("name"),
-                    email: row.get("email"),
-                    phone_number: row.get("phone_number"),
-                    sex: row.get("sex"),
-                    password: row.get("password"),
-                    avatar: row.get("avatar"),
-                    status: row.get("status"),
-                    login_ip: row.get("login_ip"),
-                    login_time_raw: row.get("login_time"),
-                    create_by: row.get("create_by"),
-                    create_time_raw: row.get("create_time"),
-                    update_by: row.get("update_by"),
-                    update_time_raw: row.get("update_time"),
-                    remark: row.get("remark"),
-                };
-                Ok(User::from(user_row))
-            })
-            .collect();
-        Ok(users?)
-    }
-
-    /// 插入用户记录
-    async fn insert(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let login_time: Option<chrono::NaiveDateTime> = user.login_time.map(|t| t.naive_utc());
-        let create_time: Option<chrono::NaiveDateTime> = user.create_time.map(|t| t.naive_utc());
-        let update_time: Option<chrono::NaiveDateTime> = user.update_time.map(|t| t.naive_utc());
-
-        let result = sqlx::query(&format!("INSERT INTO sys_user ({}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", USER_FIELDS))
-            .bind(&user.id)
-            .bind(&user.dept_id)
-            .bind(&user.name)
-            .bind(&user.email)
-            .bind(&user.phone_number)
-            .bind(&user.sex)
+        let result = sqlx::query(sql)
+            .bind(&user.username)
             .bind(&user.password)
-            .bind(&user.avatar)
-            .bind(&user.status)
-            .bind(&user.login_ip)
-            .bind(&login_time)
-            .bind(&user.create_by)
-            .bind(&create_time)
-            .bind(&user.update_by)
-            .bind(&update_time)
-            .bind(&user.remark)
-            .execute(&self.pool)
-            .await?;
-
-        if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to add user".into()) }
-    }
-
-    /// 选择性插入用户记录
-    async fn insert_selective(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        // 与insert方法实现相同，在实际应用中可以根据需要进行区分
-        self.insert(user).await
-    }
-
-    /// 根据ID更新用户信息
-    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let login_time: Option<chrono::NaiveDateTime> = user.login_time.map(|t| t.naive_utc());
-        let create_time: Option<chrono::NaiveDateTime> = user.create_time.map(|t| t.naive_utc());
-
-        let result = sqlx::query("UPDATE sys_user SET dept_id = ?, name = ?, email = ?, phone_number = ?, sex = ?, password = ?, avatar = ?, status = ?, login_ip = ?, login_time = ?, create_by = ?, create_time = ?, update_by = ?, update_time = NOW(), remark = ? WHERE id = ?")
-            .bind(&user.dept_id)
-            .bind(&user.name)
+            .bind(&user.salt)
+            .bind(&user.nickname)
+            .bind(&user.phone)
             .bind(&user.email)
-            .bind(&user.phone_number)
-            .bind(&user.sex)
-            .bind(&user.password)
             .bind(&user.avatar)
-            .bind(&user.status)
-            .bind(&user.login_ip)
-            .bind(&login_time)
+            .bind(&user.sex)
+            .bind(user.status)
             .bind(&user.create_by)
-            .bind(&create_time)
+            .bind(user.create_time.map(|t| t.naive_utc()))
             .bind(&user.update_by)
+            .bind(user.update_time.map(|t| t.naive_utc()))
             .bind(&user.remark)
             .bind(&user.id)
             .execute(&self.pool)
             .await?;
 
-        if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to update user".into()) }
-    }
-
-    /// 根据ID选择性更新用户信息
-    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        // 与update_by_primary_key方法实现相同，在实际应用中可以根据需要进行区分
-        self.update_by_primary_key(user).await
-    }
-
-    /// 根据ID删除用户
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let sql = "DELETE FROM sys_user WHERE id = ?";
-        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
-        if result.rows_affected() > 0 { Ok(()) } else { Err("Failed to delete user".into()) }
-    }
-
-    // ========== 用户角色相关方法 ==========
-
-    /// 根据角色ID查询用户角色列表
-    async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
-        let sql = "SELECT user_id, role_id FROM sys_user_role WHERE role_id = ?";
-        let rows = sqlx::query(sql).bind(role_id).fetch_all(&self.pool).await?;
-
-        let user_roles: Result<Vec<UserRole>, _> = rows
-            .iter()
-            .map(|row| {
-                Ok(UserRole {
-                    user_id: row.try_get("user_id")?,
-                    role_id: row.try_get("role_id")?,
-                })
-            })
-            .collect();
-
-        Ok(user_roles?)
-    }
-
-    /// 根据用户ID查询用户角色列表
-    async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
-        let sql = "SELECT user_id, role_id FROM sys_user_role WHERE user_id = ?";
-        let rows = sqlx::query(sql).bind(user_id).fetch_all(&self.pool).await?;
-
-        let user_roles: Result<Vec<UserRole>, _> = rows
-            .iter()
-            .map(|row| {
-                Ok(UserRole {
-                    user_id: row.try_get("user_id")?,
-                    role_id: row.try_get("role_id")?,
-                })
-            })
-            .collect();
-
-        Ok(user_roles?)
-    }
-
-    /// 批量插入用户角色
-    async fn batch_insert_user_role(&self, list: &[UserRole]) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        if list.is_empty() {
-            return Ok(());
+        if result.rows_affected() == 0 {
+            return Err(Box::from("用户更新失败"));
         }
 
-        // 构建VALUES部分
-        let values_placeholders: Vec<String> = (0..list.len()).map(|_| "(?, ?)".to_string()).collect();
-        let sql = format!("INSERT INTO sys_user_role (user_id, role_id) VALUES {}", values_placeholders.join(", "));
-
-        let mut query = sqlx::query(&sql);
-        for user_role in list {
-            query = query.bind(&user_role.user_id).bind(&user_role.role_id);
-        }
-
-        query.execute(&self.pool).await?;
         Ok(())
     }
 
-    /// 根据用户ID和角色ID列表批量删除用户角色
-    async fn batch_delete_user_role_by_user_and_role_ids(&self, user_id: &str, list: &[String]) -> Result<(), Box<dyn StdError + Send + Sync>> {
+    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // 构建动态SQL
+        let mut updates = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)> = vec![];
+
+        if user.username.is_some() {
+            updates.push("username = ?");
+            params.push(&user.username);
+        }
+
+        if user.password.is_some() {
+            updates.push("password = ?");
+            params.push(&user.password);
+        }
+
+        if user.salt.is_some() {
+            updates.push("salt = ?");
+            params.push(&user.salt);
+        }
+
+        if user.nickname.is_some() {
+            updates.push("nickname = ?");
+            params.push(&user.nickname);
+        }
+
+        if user.phone.is_some() {
+            updates.push("phone = ?");
+            params.push(&user.phone);
+        }
+
+        if user.email.is_some() {
+            updates.push("email = ?");
+            params.push(&user.email);
+        }
+
+        if user.avatar.is_some() {
+            updates.push("avatar = ?");
+            params.push(&user.avatar);
+        }
+
+        if user.sex.is_some() {
+            updates.push("sex = ?");
+            params.push(&user.sex);
+        }
+
+        if user.status.is_some() {
+            updates.push("status = ?");
+            params.push(&user.status);
+        }
+
+        if user.create_by.is_some() {
+            updates.push("create_by = ?");
+            params.push(&user.create_by);
+        }
+
+        if user.create_time.is_some() {
+            updates.push("create_time = ?");
+            params.push(&user.create_time.map(|t| t.naive_utc()));
+        }
+
+        if user.update_by.is_some() {
+            updates.push("update_by = ?");
+            params.push(&user.update_by);
+        }
+
+        if user.update_time.is_some() {
+            updates.push("update_time = ?");
+            params.push(&user.update_time.map(|t| t.naive_utc()));
+        }
+
+        if user.remark.is_some() {
+            updates.push("remark = ?");
+            params.push(&user.remark);
+        }
+
+        if updates.is_empty() {
+            return Ok(());
+        }
+
+        let sql = format!("UPDATE sys_user SET {} WHERE id = ?", updates.join(", "));
+
+        let mut query = sqlx::query(&sql);
+        for param in params {
+            query = query.bind(param);
+        }
+        query = query.bind(&user.id);
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("用户更新失败"));
+        }
+
+        Ok(())
+    }
+
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let sql = "DELETE FROM sys_user WHERE id = ?";
+        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
+
+        if result.rows_affected() == 0 {
+            return Err(Box::from("用户删除失败"));
+        }
+
+        Ok(())
+    }
+
+    async fn batch_insert_user_role(&self, list: &[UserRole]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         if list.is_empty() {
             return Ok(());
         }
 
-        let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
-        let sql = format!("DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN ({})", placeholders.join(", "));
+        let mut fields = vec![];
+        let mut placeholders = vec![];
+
+        fields.push("id");
+        fields.push("user_id");
+        fields.push("role_id");
+        fields.push("create_by");
+        fields.push("create_time");
+
+        let mut query_params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        for user_role in list {
+            placeholders.push("(?, ?, ?, ?, ?)".to_string());
+            query_params.push(Box::new(&user_role.id));
+            query_params.push(Box::new(&user_role.user_id));
+            query_params.push(Box::new(&user_role.role_id));
+            query_params.push(Box::new(&user_role.create_by));
+            query_params.push(Box::new(user_role.create_time.map(|t| t.naive_utc())));
+        }
+
+        let sql = format!("INSERT INTO sys_user_role ({}) VALUES {}", fields.join(", "), placeholders.join(", "));
+
+        let mut query = sqlx::query(&sql);
+        for param in &query_params {
+            query = query.bind(param.as_ref());
+        }
+
+        let result = query.execute(&self.pool).await?;
+        if result.rows_affected() == 0 {
+            return Err(Box::from("用户角色插入失败"));
+        }
+
+        Ok(())
+    }
+
+    async fn batch_delete_user_role_by_user_and_role_ids(&self, user_id: &str, list: &[String]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        if list.is_empty() {
+            return Ok(());
+        }
+
+        let placeholders: Vec<String> = list.iter().map(|_| "?".to_string()).collect();
+        let sql = format!("DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN ({})", placeholders.join(","));
 
         let mut query = sqlx::query(&sql);
         query = query.bind(user_id);
@@ -336,11 +566,9 @@ impl UserRepository for UserRepositorySqlxImpl {
         Ok(())
     }
 
-    /// 根据用户ID删除用户角色
-    async fn delete_user_role_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+    async fn delete_user_role_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let sql = "DELETE FROM sys_user_role WHERE user_id = ?";
         sqlx::query(sql).bind(user_id).execute(&self.pool).await?;
-
         Ok(())
     }
 }

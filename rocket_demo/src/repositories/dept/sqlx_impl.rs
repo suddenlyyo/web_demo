@@ -1,3 +1,4 @@
+// ==================== 数据库连接 ====================
 use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::FromRow;
 use sqlx::mysql::MySqlPool;
@@ -7,7 +8,9 @@ use std::sync::OnceLock;
 use crate::models::Dept;
 use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
+use crate::services::dept::dept_service::DeptParam;
 
+// 数据库连接池
 static DB_POOL: OnceLock<MySqlPool> = OnceLock::new();
 
 /// SQLx实现的部门数据访问
@@ -16,6 +19,20 @@ pub struct DeptRepositorySqlxImpl {
     pool: MySqlPool,
 }
 
+impl DeptRepositorySqlxImpl {
+    /// 创建新的部门数据访问实例
+    pub fn new() -> Self {
+        let pool = DB_POOL.get().expect("数据库连接池未初始化").clone();
+        Self { pool }
+    }
+
+    /// 初始化数据库连接池
+    pub fn init_pool(pool: MySqlPool) {
+        DB_POOL.set(pool).ok(); // 如果已经设置过，则忽略
+    }
+}
+
+// ==================== 表结构体映射 ====================
 /// SQLx的部门实体映射
 #[derive(Debug, FromRow)]
 struct DeptRow {
@@ -38,6 +55,7 @@ struct DeptRow {
     remark: Option<String>,
 }
 
+// 实现从DeptRow到Dept的转换
 impl From<DeptRow> for Dept {
     fn from(row: DeptRow) -> Self {
         Dept {
@@ -64,19 +82,7 @@ impl From<DeptRow> for Dept {
     }
 }
 
-impl DeptRepositorySqlxImpl {
-    /// 创建新的部门数据访问实例
-    pub fn new() -> Self {
-        let pool = DB_POOL.get().expect("数据库连接池未初始化").clone();
-        Self { pool }
-    }
-
-    /// 初始化数据库连接池
-    pub fn init_pool(pool: MySqlPool) {
-        DB_POOL.set(pool).ok(); // 如果已经设置过，则忽略
-    }
-}
-
+// ==================== SQL trait 实现 ====================
 #[rocket::async_trait]
 impl DeptRepository for DeptRepositorySqlxImpl {
     /// 根据主键删除部门
@@ -126,7 +132,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
         // 构建动态SQL
         let mut fields = vec![];
         let mut placeholders = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)> = vec![];
 
         fields.push("id");
         placeholders.push("?");
@@ -240,9 +246,9 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     }
 
     /// 查询部门列表
-    async fn select_dept_list(&self, dept_param: crate::params::dept_param::DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+    async fn select_dept_list(&self, dept_param: DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_dept WHERE 1=1", DEPT_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
         if let Some(name) = dept_param.name {
             sql.push_str(" AND name LIKE ?");
@@ -295,7 +301,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     /// 根据主键选择性更新部门
     async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let mut sets = vec![];
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
         if row.parent_id.is_some() {
             sets.push("parent_id = ?");

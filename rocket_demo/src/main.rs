@@ -1,32 +1,50 @@
-//! Rocket Web框架演示程序入口
-//!
-//! 本程序演示了如何使用Rocket框架构建Web应用，包括：
-//! - 用户管理（增删改查）
-//! - 部门管理（增删改查）
-//! - 角色管理（增删改查）
-//! - 菜单管理（增删改查）
+#[macro_use]
+extern crate rocket;
 
-use rocket::Config;
-use rocket::figment::Figment;
-
+mod config;
 mod controllers;
 mod models;
 mod params;
 mod repositories;
 mod services;
 
-/// 程序入口点
-#[rocket::launch]
-fn rocket() -> _ {
-    // 创建默认配置
-    let figment = Figment::from(Config::default());
+use rocket::fairing::AdHoc;
+use services::role::role_service_impl::RoleServiceImpl;
+use services::user::user_service_impl::UserServiceImpl;
 
-    // 构建Rocket实例并挂载路由
-    rocket::custom(figment)
-        // 挂载控制器路由
-        .mount("/", controllers::index::controller::routes())
-        .mount("/user", controllers::user::controller::routes())
-        .mount("/dept", controllers::dept::controller::routes())
-        .mount("/role", controllers::role::controller::routes())
-        .mount("/menu", controllers::menu::controller::routes())
+#[launch]
+async fn rocket() -> _ {
+    // 构建Rocket实例
+    rocket::build()
+        // 注册控制器
+        .mount(
+            "/",
+            routes![
+                controllers::index::controller::index,
+                controllers::user::controller::add_user,
+                controllers::user::controller::edit_user,
+                controllers::user::controller::edit_user_status,
+                controllers::user::controller::delete_user,
+                controllers::user::controller::get_user_list_by_page,
+                controllers::user::controller::reset_user_pwd,
+                controllers::user::controller::set_user_role,
+                controllers::user::controller::select_role_ids_by_user_id,
+                controllers::dept::controller::get_dept_list,
+                controllers::menu::controller::get_menu_list,
+                controllers::role::controller::get_role_list_by_page,
+                controllers::role::controller::add_role,
+                controllers::role::controller::edit_role,
+                controllers::role::controller::delete_role,
+            ],
+        )
+        // 添加用户服务作为状态管理
+        .attach(AdHoc::on_ignite("Initialize user service", |rocket| async move {
+            let user_service = UserServiceImpl::new().await;
+            rocket.manage(user_service)
+        }))
+        // 添加角色服务作为状态管理
+        .attach(AdHoc::on_ignite("Initialize role service", |rocket| async move {
+            let role_service = RoleServiceImpl::new().await;
+            rocket.manage(role_service)
+        }))
 }

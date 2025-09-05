@@ -2498,6 +2498,7 @@ dependencies = [
  "sqlx",
  "thiserror",
  "tokio",
+ "toml",
  "uuid",
 ]
 

@@ -7,6 +7,9 @@ use std::sync::Arc;
 use crate::models::Role;
 use crate::models::constants::ROLE_FIELDS;
 use crate::repositories::role::role_repository::RoleRepository;
+use crate::services::role::role_service::RoleParam;
+
+// ==================== 数据库连接 ====================
 
 /// SQLx实现的角色数据访问
 #[derive(Debug)]
@@ -52,15 +55,30 @@ impl From<RoleRow> for Role {
     }
 }
 
+// ==================== 表结构体映射 ====================
+
 impl RoleRepositorySqlxImpl {
-    /// 创建角色仓库SQLx实现
-    pub fn new(pool: MySqlPool) -> Self {
-        Self { pool: Arc::new(pool) }
+    /// 创建角色仓库 SQLx 实例
+    ///
+    /// # 返回值
+    ///
+    /// 返回新的角色仓库实例
+    pub async fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        // 从配置文件读取数据库URL
+        let database_url = if let Ok(config) = crate::config::Config::from_default_file() {
+            config.database.url
+        } else {
+            panic!("无法从配置文件获取数据库连接信息");
+        };
+
+        let pool = MySqlPool::connect(&database_url).await?;
+        Ok(Self { pool: Arc::new(pool) })
     }
 }
 
 #[rocket::async_trait]
 impl RoleRepository for RoleRepositorySqlxImpl {
+    // ==================== SQL trait 实现 ====================
     /// 根据主键查询角色
     async fn select_role_by_id(&self, id: &str) -> Result<Option<Role>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_role WHERE id = ?", ROLE_FIELDS);
@@ -132,7 +150,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
         // 构建动态SQL
         let mut fields = vec![];
         let mut placeholders = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)> = vec![];
 
         fields.push("id");
         placeholders.push("?");
@@ -211,7 +229,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     async fn update_by_id_selective(&self, row: &Role) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         // 构建动态SQL
         let mut updates = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)> = vec![];
 
         if row.name.is_some() {
             updates.push("name = ?");
@@ -277,7 +295,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     /// 查询角色列表
     async fn select_role_list(&self, role: &Role) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_role WHERE 1=1", ROLE_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
         if let Some(name) = &role.name {
             sql.push_str(" AND name LIKE ?");
@@ -347,11 +365,11 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     }
 
     /// 查询角色列表
-    async fn select_roles(&self, role_param: crate::services::role::role_service::RoleParam) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+    async fn select_roles(&self, role_param: RoleParam) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_role WHERE 1=1", ROLE_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(name) = &role_param.name {
+        if let Some(name) = role_param.name {
             sql.push_str(" AND name LIKE ?");
             params.push(Box::new(format!("%{}%", name)));
         }

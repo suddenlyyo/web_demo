@@ -1,5 +1,6 @@
 //! 角色数据访问层 SeaORM 实现
 
+// ==================== 数据库连接 ====================
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{Condition, Order};
 use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
@@ -8,6 +9,7 @@ use crate::models::Role;
 use crate::repositories::role::role_repository::RoleRepository;
 use crate::services::params::user_param::RoleParam;
 
+// ==================== 表结构体映射 ====================
 // 导入SeaORM实体
 use crate::entities::sys_role;
 use crate::entities::sys_role::{ActiveModel, Column, Entity, Model};
@@ -29,6 +31,7 @@ impl From<&Role> for ActiveModel {
     }
 }
 
+// ==================== SQL trait 实现 ====================
 impl From<Model> for Role {
     fn from(model: Model) -> Self {
         Role {
@@ -51,7 +54,6 @@ impl From<Model> for Role {
 }
 
 /// 角色数据访问 SeaORM 实现
-use crate::models::constants::ROLE_FIELDS;
 #[derive(Debug)]
 pub struct RoleRepositorySeaormImpl {
     connection: sea_orm::DatabaseConnection,
@@ -61,10 +63,15 @@ impl RoleRepositorySeaormImpl {
     /// 创建角色仓库 SeaORM 实例
     pub async fn new() -> Self {
         // 初始化数据库连接
-        let database_url = std::env::var("DATABASE_URL").unwrap_or("sqlite://data.db".to_string());
+        let database_url = if let Ok(config) = crate::config::Config::from_default_file() {
+            config.database.url
+        } else {
+            panic!("无法从配置文件获取数据库连接信息");
+        };
+
         let connection = sea_orm::Database::connect(&database_url)
             .await
-            .expect("Error connecting to SQLite database");
+            .expect("Error connecting to MySQL database");
 
         Self { connection }
     }
@@ -135,18 +142,23 @@ impl RoleRepository for RoleRepositorySeaormImpl {
     }
 
     /// 根据主键更新角色
-    async fn update_by_id(&self, row: &Role) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn update_by_id(&self, row: &Role) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let model: ActiveModel = row.into();
-        model.update(&self.connection).await?;
+        let result = Entity::update(model)
+            .filter(Column::Id.eq(&row.id))
+            .exec(&self.connection)
+            .await?;
+
         Ok(1) // SeaORM更新成功时返回1行受影响
     }
 
-    /// 根据主键选择性更新角色
-    async fn update_by_id_selective(&self, row: &Role) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let mut model: ActiveModel = row.into();
-        // 将主键设置为未修改，因为我们使用它进行查找而不是更新
-        model.id = sea_orm::ActiveValue::Unchanged(row.id.clone());
-        model.update(&self.connection).await?;
+    async fn update_by_id_selective(&self, row: &Role) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let model: ActiveModel = row.into();
+        let result = Entity::update(model)
+            .filter(Column::Id.eq(&row.id))
+            .exec(&self.connection)
+            .await?;
+
         Ok(1) // SeaORM更新成功时返回1行受影响
     }
 

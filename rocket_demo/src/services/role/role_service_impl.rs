@@ -46,21 +46,6 @@ impl RoleServiceImpl {
     ///
     /// 返回新的角色服务实例
     pub async fn new(_database_url: &str) -> Self {
-        #[cfg(feature = "sqlx_impl")]
-        let role_repository = RoleRepositorySqlxImpl::new();
-        #[cfg(feature = "sqlx_impl")]
-        let role_menu_repository = RoleMenuRepositorySqlxImpl::new();
-
-        #[cfg(feature = "diesel_impl")]
-        let role_repository = RoleRepositoryDieselImpl::new(); // Diesel不需要数据库URL
-        #[cfg(feature = "diesel_impl")]
-        let role_menu_repository = RoleMenuRepositoryDieselImpl::new();
-
-        #[cfg(feature = "seaorm_impl")]
-        let role_repository = RoleRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
-        #[cfg(feature = "seaorm_impl")]
-        let role_menu_repository = RoleMenuRepositorySeaormImpl::new().await.unwrap();
-
         Self {
             role_repository: Arc::new(role_repository),
             role_menu_repository: Arc::new(role_menu_repository),

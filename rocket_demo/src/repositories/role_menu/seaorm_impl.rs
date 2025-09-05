@@ -1,5 +1,6 @@
 //! 角色菜单关联数据访问层 SeaORM 实现
 
+// ==================== 数据库连接 ====================
 use sea_orm::ActiveValue::Set;
 use sea_orm::sea_query::{Condition, Order};
 use sea_orm::{EntityTrait, PaginatorTrait, QueryFilter, QueryOrder};
@@ -36,21 +37,24 @@ impl From<Model> for SysRoleMenu {
 /// 角色菜单关联数据访问 SeaORM 实现
 #[derive(Debug)]
 pub struct RoleMenuRepositorySeaormImpl {
-    connection: sea_orm::DatabaseConnection,
+    pool: MySqlPool,
 }
 
 impl RoleMenuRepositorySeaormImpl {
     /// 创建角色菜单关联仓库 SeaORM 实例
-    pub async fn new() -> Self {
-        // 初始化数据库连接
-        let database_url = std::env::var("DATABASE_URL").unwrap_or("sqlite://data.db".to_string());
-        let connection = sea_orm::Database::connect(&database_url)
-            .await
-            .expect("Error connecting to SQLite database");
-
-        Self { connection }
+    pub fn new() -> Self {
+        let pool = DB_POOL.get().expect("数据库连接池未初始化").clone();
+        Self { pool }
     }
 
+    /// 初始化数据库连接池
+    pub fn init_pool(pool: MySqlPool) {
+        DB_POOL.set(pool).ok(); // 如果已经设置过，则忽略
+    }
+}
+
+// ==================== 查询条件构建 ====================
+impl RoleMenuRepositorySeaormImpl {
     /// 构建查询条件
     fn build_condition(query: &RoleMenuParam) -> Condition {
         let mut condition = Condition::all();
@@ -115,16 +119,21 @@ impl RoleMenuRepository for RoleMenuRepositorySeaormImpl {
     /// 根据主键更新角色菜单关联
     async fn update_by_id(&self, row: &SysRoleMenu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         let model: ActiveModel = row.into();
-        model.update(&self.connection).await?;
+        let result = Entity::update(model)
+            .filter(Column::Id.eq(&row.id))
+            .exec(&self.connection)
+            .await?;
+
         Ok(1) // SeaORM更新成功时返回1行受影响
     }
 
-    /// 根据主键选择性更新角色菜单关联
     async fn update_by_id_selective(&self, row: &SysRoleMenu) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let mut model: ActiveModel = row.into();
-        // 将主键设置为未修改，因为我们使用它进行查找而不是更新
-        model.id = sea_orm::ActiveValue::Unchanged(row.id.clone());
-        model.update(&self.connection).await?;
+        let model: ActiveModel = row.into();
+        let result = Entity::update(model)
+            .filter(Column::Id.eq(&row.id))
+            .exec(&self.connection)
+            .await?;
+
         Ok(1) // SeaORM更新成功时返回1行受影响
     }
 
