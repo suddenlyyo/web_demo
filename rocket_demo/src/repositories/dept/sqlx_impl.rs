@@ -37,12 +37,12 @@ impl DeptRepositorySqlxImpl {
 #[derive(Debug, FromRow)]
 struct DeptRow {
     id: String,
-    parent_id: Option<String>,
     name: Option<String>,
     email: Option<String>,
     telephone: Option<String>,
     address: Option<String>,
     logo: Option<String>,
+    parent_id: Option<String>,
     dept_level: Option<String>,
     seq_no: Option<i32>,
     status: Option<i32>,

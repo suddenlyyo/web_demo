@@ -31,15 +31,17 @@ impl UserRepositorySqlxImpl {
 #[derive(Debug, FromRow)]
 struct UserRow {
     id: String,
-    username: Option<String>,
+    name: Option<String>,
     password: Option<String>,
-    salt: Option<String>,
-    nickname: Option<String>,
-    phone: Option<String>,
+    dept_id: Option<String>,
     email: Option<String>,
-    avatar: Option<String>,
+    phone_number: Option<String>,
     sex: Option<String>,
+    avatar: Option<String>,
     status: Option<i32>,
+    login_ip: Option<String>,
+    #[sqlx(rename = "login_time")]
+    login_time_raw: Option<chrono::NaiveDateTime>,
     create_by: Option<String>,
     #[sqlx(rename = "create_time")]
     create_time_raw: Option<chrono::NaiveDateTime>,
@@ -53,15 +55,18 @@ impl From<UserRow> for User {
     fn from(row: UserRow) -> Self {
         User {
             id: row.id,
-            username: row.username,
-            password: row.password,
-            salt: row.salt,
-            nickname: row.nickname,
-            phone: row.phone,
+            dept_id: row.dept_id,
+            name: row.name,
             email: row.email,
-            avatar: row.avatar,
+            phone_number: row.phone_number,
             sex: row.sex,
+            password: row.password,
+            avatar: row.avatar,
             status: row.status,
+            login_ip: row.login_ip,
+            login_time: row
+                .login_time_raw
+                .map(|t| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(t, chrono::Utc)),
             create_by: row.create_by,
             create_time: row
                 .create_time_raw
@@ -88,15 +93,7 @@ struct UserRoleRow {
 
 impl From<UserRoleRow> for UserRole {
     fn from(row: UserRoleRow) -> Self {
-        UserRole {
-            id: row.id,
-            user_id: row.user_id,
-            role_id: row.role_id,
-            create_by: row.create_by,
-            create_time: row
-                .create_time_raw
-                .map(|t| DateTime::<Utc>::from_naive_utc_and_offset(t, Utc)),
-        }
+        UserRole { user_id: row.user_id, role_id: row.role_id }
     }
 }
 
@@ -104,19 +101,20 @@ impl From<UserRoleRow> for UserRole {
 #[rocket::async_trait]
 impl UserRepository for UserRepositorySqlxImpl {
     async fn insert(&self, row: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let sql = "INSERT INTO sys_user (id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        let sql = "INSERT INTO sys_user (id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         let result = sqlx::query(sql)
             .bind(&row.id)
-            .bind(&row.username)
-            .bind(&row.password)
-            .bind(&row.salt)
-            .bind(&row.nickname)
-            .bind(&row.phone)
+            .bind(&row.dept_id)
+            .bind(&row.name)
             .bind(&row.email)
-            .bind(&row.avatar)
+            .bind(&row.phone_number)
             .bind(&row.sex)
+            .bind(&row.password)
+            .bind(&row.avatar)
             .bind(row.status)
+            .bind(&row.login_ip)
+            .bind(row.login_time.map(|t| t.naive_utc()))
             .bind(&row.create_by)
             .bind(row.create_time.map(|t| t.naive_utc()))
             .bind(&row.update_by)

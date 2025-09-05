@@ -33,15 +33,23 @@ impl MenuRepositorySqlxImpl {
 #[derive(Debug, FromRow)]
 struct MenuRow {
     id: String,
-    menu_name: Option<String>,
-    menu_level: Option<String>,
-    menu_type: Option<String>,
+    name: Option<String>,
     parent_id: Option<String>,
     seq_no: Option<i32>,
-    icon: Option<String>,
-    route_path: Option<String>,
-    route_params: Option<String>,
+    menu_type: Option<String>,
+    url: Option<String>,
+    perms: Option<String>,
     status: Option<i32>,
+    hidden: Option<i32>,
+    always_show: Option<i32>,
+    redirect: Option<String>,
+    component: Option<String>,
+    href: Option<String>,
+    icon: Option<String>,
+    no_cache: Option<i32>,
+    affix: Option<i32>,
+    breadcrumb: Option<i32>,
+    active_menu: Option<String>,
     create_by: Option<String>,
     #[sqlx(rename = "create_time")]
     create_time_raw: Option<chrono::NaiveDateTime>,
@@ -55,15 +63,23 @@ impl From<MenuRow> for Menu {
     fn from(row: MenuRow) -> Self {
         Menu {
             id: row.id,
-            menu_name: row.menu_name,
-            menu_level: row.menu_level,
-            menu_type: row.menu_type,
+            name: row.name,
             parent_id: row.parent_id,
             seq_no: row.seq_no,
-            icon: row.icon,
-            route_path: row.route_path,
-            route_params: row.route_params,
+            menu_type: row.menu_type,
+            url: row.url,
+            perms: row.perms,
             status: row.status,
+            hidden: row.hidden,
+            always_show: row.always_show,
+            redirect: row.redirect,
+            component: row.component,
+            href: row.href,
+            icon: row.icon,
+            no_cache: row.no_cache,
+            affix: row.affix,
+            breadcrumb: row.breadcrumb,
+            active_menu: row.active_menu,
             create_by: row.create_by,
             create_time: row
                 .create_time_raw
@@ -87,19 +103,27 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     }
 
     async fn insert(&self, row: &Menu) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let sql = "INSERT INTO sys_menu (id, menu_name, menu_level, menu_type, parent_id, seq_no, icon, route_path, route_params, status, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        let sql = "INSERT INTO sys_menu (id, name, parent_id, seq_no, menu_type, url, perms, status, hidden, always_show, redirect, component, href, icon, no_cache, affix, breadcrumb, active_menu, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         let result = sqlx::query(sql)
             .bind(&row.id)
-            .bind(&row.menu_name)
-            .bind(&row.menu_level)
-            .bind(&row.menu_type)
+            .bind(&row.name)
             .bind(&row.parent_id)
             .bind(row.seq_no)
-            .bind(&row.icon)
-            .bind(&row.route_path)
-            .bind(&row.route_params)
+            .bind(&row.menu_type)
+            .bind(&row.url)
+            .bind(&row.perms)
             .bind(row.status)
+            .bind(&row.hidden)
+            .bind(&row.always_show)
+            .bind(&row.redirect)
+            .bind(&row.component)
+            .bind(&row.href)
+            .bind(&row.icon)
+            .bind(&row.no_cache)
+            .bind(&row.affix)
+            .bind(&row.breadcrumb)
+            .bind(&row.active_menu)
             .bind(&row.create_by)
             .bind(row.create_time.map(|t| t.naive_utc()))
             .bind(&row.update_by)
@@ -109,7 +133,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             .await?;
 
         if result.rows_affected() == 0 {
-            return Err(Box::from("菜单插入失败"));
+            return Err("菜单插入失败".into());
         }
 
         Ok(())
