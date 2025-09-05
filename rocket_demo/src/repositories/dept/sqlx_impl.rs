@@ -246,16 +246,43 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     }
 
     /// 查询部门列表
-    async fn select_dept_list(&self, dept_param: DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+    async fn select_dept_list(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_dept WHERE 1=1", DEPT_FIELDS);
         let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(name) = dept_param.name {
+        if let Some(ref name) = name {
             sql.push_str(" AND name LIKE ?");
             params.push(Box::new(format!("%{}%", name)));
         }
 
-        if let Some(status) = dept_param.status {
+        if let Some(status) = status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        sql.push_str(" ORDER BY id");
+
+        // 构建查询
+        let mut query = sqlx::query_as::<_, DeptRow>(&sql);
+        for param in &params {
+            query = query.bind(param.as_ref());
+        }
+
+        let result = query.fetch_all(&self.pool).await?;
+        Ok(result.into_iter().map(Dept::from).collect())
+    }
+
+    /// 根据字段条件查询部门列表（MyBatis风格）
+    async fn select_dept_list_by_fields(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+        let mut sql = format!("SELECT {} FROM sys_dept WHERE 1=1", DEPT_FIELDS);
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        if let Some(ref name) = name {
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
+        }
+
+        if let Some(status) = status {
             sql.push_str(" AND status = ?");
             params.push(Box::new(status));
         }

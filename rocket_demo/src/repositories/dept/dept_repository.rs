@@ -48,11 +48,22 @@ pub trait DeptRepository: Debug + Send + Sync {
     /// 查询部门列表
     ///
     /// # 参数
-    /// * `dept_param` - 部门查询参数，类型: [DeptParam]
+    /// * `name` - 部门名称（模糊查询），类型: [Option<String>]
+    /// * `status` - 部门状态，类型: [Option<i32>]
     ///
     /// # 返回值
     /// 返回部门列表，类型: [Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>]
-    async fn select_dept_list(&self, dept_param: DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>;
+    async fn select_dept_list(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>;
+
+    /// 根据字段条件查询部门列表（MyBatis风格）
+    ///
+    /// # 参数
+    /// * `name` - 部门名称（模糊查询），类型: [Option<String>]
+    /// * `status` - 部门状态，类型: [Option<i32>]
+    ///
+    /// # 返回值
+    /// 返回部门列表，类型: [Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>]
+    async fn select_dept_list_by_fields(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>;
 
     /// 根据主键更新部门
     ///

@@ -365,18 +365,54 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     }
 
     /// 查询角色列表
-    async fn select_roles(&self, role_param: RoleParam) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+    async fn select_roles(&self, name: Option<String>, status: Option<i32>, role_key: Option<String>) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_role WHERE 1=1", ROLE_FIELDS);
         let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(name) = role_param.name {
+        if let Some(ref name) = name {
             sql.push_str(" AND name LIKE ?");
             params.push(Box::new(format!("%{}%", name)));
         }
 
-        if let Some(status) = role_param.status {
+        if let Some(status) = status {
             sql.push_str(" AND status = ?");
             params.push(Box::new(status));
+        }
+
+        if let Some(ref role_key) = role_key {
+            sql.push_str(" AND role_key LIKE ?");
+            params.push(Box::new(format!("%{}%", role_key)));
+        }
+
+        sql.push_str(" ORDER BY seq_no");
+
+        let mut query = sqlx::query_as::<_, RoleRow>(&sql);
+        for param in params {
+            query = query.bind(param.as_ref());
+        }
+
+        let result = query.fetch_all(self.pool.as_ref()).await?;
+        Ok(result.into_iter().map(Role::from).collect())
+    }
+
+    /// 根据字段条件查询角色列表（MyBatis风格）
+    async fn select_roles_by_fields(&self, name: Option<String>, status: Option<i32>, role_key: Option<String>) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+        let mut sql = format!("SELECT {} FROM sys_role WHERE 1=1", ROLE_FIELDS);
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        if let Some(ref name) = name {
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
+        }
+
+        if let Some(status) = status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        if let Some(ref role_key) = role_key {
+            sql.push_str(" AND role_key LIKE ?");
+            params.push(Box::new(format!("%{}%", role_key)));
         }
 
         sql.push_str(" ORDER BY seq_no");

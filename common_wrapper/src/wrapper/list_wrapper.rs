@@ -72,11 +72,29 @@ impl<T> ListWrapper<T> {
         self.data = data;
     }
 
-    /// 获取基础响应包装的引用
+    /// 设置为失败状态并附带消息
+    ///
+    /// # 参数
+    ///
+    /// * `msg` - 失败消息
+    pub fn set_fail(&mut self, msg: impl Into<String>) {
+        self.base.set_fail(msg);
+    }
+
+    /// 设置为未知错误状态并附带消息
+    ///
+    /// # 参数
+    ///
+    /// * `msg` - 未知错误消息
+    pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
+        self.base.set_unknown_error(msg);
+    }
+
+    /// 获取基础响应包装器的引用
     ///
     /// # 返回值
     ///
-    /// 基础响应包装的引用
+    /// 基础响应包装器的引用
     pub fn get_base(&self) -> &ResponseWrapper {
         &self.base
     }

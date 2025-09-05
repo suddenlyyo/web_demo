@@ -118,22 +118,47 @@ impl<T> PageWrapper<T> {
         &self.base
     }
 
+    /// 获取数据列表的引用
+    ///
+    /// # 返回值
+    ///
+    /// 数据列表的引用
     pub fn get_data(&self) -> &Vec<T> {
         &self.data
     }
 
+    /// 获取总记录数
+    ///
+    /// # 返回值
+    ///
+    /// 总记录数
     pub fn get_total_count(&self) -> u64 {
         self.total
     }
 
+    /// 获取总页数
+    ///
+    /// # 返回值
+    ///
+    /// 总页数
     pub fn get_total_page_count(&self) -> u64 {
         self.total_page
     }
 
+    /// 获取当前页码
+    ///
+    /// # 返回值
+    ///
+    /// 当前页码
     pub fn get_current_page_num(&self) -> u64 {
         self.current_page
     }
 
+    /// 获取每页大小
+    ///
+    /// # 返回值
+    ///
+    /// 每页大小
     pub fn get_page_size(&self) -> u64 {
         self.page_size
     }

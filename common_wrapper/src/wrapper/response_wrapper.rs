@@ -2,7 +2,7 @@
 //!
 //! 基础响应包装结构体，包含响应码和响应消息
 
-use crate::enums::WrapperErrEnum;
+use crate::enums::wrapper_err::WrapperErrEnum;
 use crate::wrapper::response_trait::ResponseTrait;
 use serde::{Deserialize, Serialize};
 

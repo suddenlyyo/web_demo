@@ -3,10 +3,12 @@
 use rocket::routes;
 use rocket::serde::json::Json;
 use rocket::{delete, get, post, put};
+use serde_json::Value;
 
 use common_wrapper::{ResponseWrapper, SingleWrapper};
 use std::collections::HashSet;
 
+use crate::models::role::Role;
 use crate::params::role_param::RoleParam;
 use crate::services::role::role_service::RoleService;
 use crate::services::role::role_service_impl::RoleServiceImpl;
@@ -22,9 +24,30 @@ use crate::services::role::role_service_impl::RoleServiceImpl;
 /// # 返回值
 /// 返回角色列表，类型: [serde_json::Value]
 #[get("/role/list")]
-pub async fn list_roles(role_param: RoleParam, role_service: &rocket::State<RoleServiceImpl>) -> serde_json::Value {
-    // TODO: 实现获取角色列表的逻辑
-    serde_json::Value::Null
+pub async fn list_roles(role_param: RoleParam, role_service: &rocket::State<RoleServiceImpl>) -> Json<Value> {
+    let result = role_service.select_role_list(role_param).await;
+    // 构造返回的JSON数据
+    let mut response_data = serde_json::Map::new();
+    response_data.insert("code".to_string(), Value::Number(result.get_code().into()));
+    response_data.insert("msg".to_string(), Value::String(result.get_message().to_string()));
+    
+    if let Some(roles) = result.data {
+        let roles_json: Vec<Value> = roles.into_iter().map(|role| {
+            let mut role_map = serde_json::Map::new();
+            role_map.insert("id".to_string(), Value::String(role.id));
+            role_map.insert("name".to_string(), Value::String(role.name));
+            role_map.insert("role_key".to_string(), Value::String(role.role_key));
+            role_map.insert("status".to_string(), Value::Number(role.status.into()));
+            // TODO: 添加statusDesc字段
+            Value::Object(role_map)
+        }).collect();
+        
+        response_data.insert("data".to_string(), Value::Array(roles_json));
+    } else {
+        response_data.insert("data".to_string(), Value::Array(vec![]));
+    }
+    
+    Json(Value::Object(response_data))
 }
 
 /// 新增角色
@@ -110,8 +133,21 @@ pub async fn get_role_menu_id_list(role_id: String, role_service: &rocket::State
 /// 返回响应结果，类型: [ResponseWrapper]
 #[put("/role/roleSetMenu", data = "<json_str>")]
 pub async fn role_set_menu(json_str: String, role_service: &rocket::State<RoleServiceImpl>) -> ResponseWrapper {
-    // TODO: 解析JSON并调用服务方法
-    role_service.role_set_menu("", &[]).await
+    // 解析JSON字符串
+    match serde_json::from_str::<serde_json::Value>(&json_str) {
+        Ok(json_value) => {
+            if let Some(role_id) = json_value.get("roleId").and_then(|v| v.as_str()) {
+                if let Some(menu_ids_array) = json_value.get("menuIds").and_then(|v| v.as_array()) {
+                    let menu_ids: Vec<&str> = menu_ids_array.iter()
+                        .filter_map(|v| v.as_str())
+                        .collect();
+                    return role_service.role_set_menu(role_id, &menu_ids).await;
+                }
+            }
+            ResponseWrapper::new(500, "参数格式错误")
+        },
+        Err(_) => ResponseWrapper::new(500, "JSON解析失败")
+    }
 }
 
 /// 注册角色相关路由

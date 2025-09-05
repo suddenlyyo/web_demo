@@ -59,23 +59,32 @@ impl DeptServiceImpl {
 
 #[rocket::async_trait]
 impl DeptService for DeptServiceImpl {
-    async fn select_dept_list(&self, dept_param: DeptParam) -> ListWrapper<Dept> {
-        match self.repository.select_dept_list(dept_param).await {
-            Ok(dept_list) => {
-                let mut wrapper = ListWrapper::new();
-                wrapper.set_success(dept_list);
-                wrapper
-            },
-            Err(e) => {
-                let mut wrapper = ListWrapper::new();
-                wrapper.set_fail(&format!("查询部门列表失败: {}", e));
-                wrapper
-            },
-        }
-    }
-
     async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTreeVO> {
-        match self.repository.select_dept_list(dept_param).await {
+        // 转换参数类型
+        let param = crate::params::dept_param::DeptParam {
+            id: dept_param.dept_id,
+            parent_id: dept_param.parent_id,
+            name: dept_param.dept_name,
+            email: dept_param.email,
+            telephone: dept_param.telephone,
+            address: dept_param.address,
+            logo: dept_param.logo,
+            dept_level: dept_param.dept_level,
+            seq_no: dept_param.seq_no,
+            status: dept_param.status,
+            create_by: dept_param.create_by,
+            create_time: dept_param.create_time,
+            update_by: dept_param.update_by,
+            update_time: dept_param.update_time,
+            remark: dept_param.remark,
+            page_param: crate::params::page_param::PageParam::default(),
+        };
+
+        match self
+            .repository
+            .select_dept_list(param.name, param.status)
+            .await
+        {
             Ok(dept_list) => {
                 let tree_list = self.build_dept_tree(dept_list);
                 let mut wrapper = ListWrapper::new();
@@ -85,6 +94,30 @@ impl DeptService for DeptServiceImpl {
             Err(e) => {
                 let mut wrapper = ListWrapper::new();
                 wrapper.set_fail(&format!("查询部门树失败: {}", e));
+                wrapper
+            },
+        }
+    }
+
+    async fn get_dept(&self) -> HashMap<String, Dept> {
+        // TODO: 实现获取部门信息Map的逻辑
+        HashMap::new()
+    }
+
+    async fn select_dept_list(&self, dept_param: DeptParam) -> ListWrapper<Dept> {
+        match self
+            .repository
+            .select_dept_list(dept_param.dept_name, dept_param.status)
+            .await
+        {
+            Ok(dept_list) => {
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_success(dept_list);
+                wrapper
+            },
+            Err(e) => {
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_fail(&format!("查询部门列表失败: {}", e));
                 wrapper
             },
         }
@@ -102,11 +135,11 @@ impl DeptService for DeptServiceImpl {
             dept_level: dept_param.dept_level,
             seq_no: dept_param.seq_no,
             status: dept_param.status,
-            create_by: dept_param.create_by.unwrap_or_default(),
+            create_by: Some(dept_param.create_by.unwrap_or_default()),
             create_time: Some(chrono::Utc::now()),
-            update_by: dept_param.update_by.unwrap_or_default(),
+            update_by: Some(dept_param.update_by.unwrap_or_default()),
             update_time: Some(chrono::Utc::now()),
-            remark: dept_param.remark.unwrap_or_default(),
+            remark: Some(dept_param.remark.unwrap_or_default()),
         };
 
         match self.repository.insert_selective(&dept).await {
@@ -132,11 +165,11 @@ impl DeptService for DeptServiceImpl {
                 dept_level: dept_param.dept_level,
                 seq_no: dept_param.seq_no,
                 status: dept_param.status,
-                create_by: dept_param.create_by.unwrap_or_default(),
+                create_by: Some(dept_param.create_by.unwrap_or_default()),
                 create_time: None, // 不更新创建时间
-                update_by: dept_param.update_by.unwrap_or_default(),
+                update_by: Some(dept_param.update_by.unwrap_or_default()),
                 update_time: Some(chrono::Utc::now()),
-                remark: dept_param.remark.unwrap_or_default(),
+                remark: Some(dept_param.remark.unwrap_or_default()),
             };
 
             match self.repository.update_by_id_selective(&dept).await {
@@ -152,6 +185,13 @@ impl DeptService for DeptServiceImpl {
             response.set_fail("部门ID不能为空");
             response
         }
+    }
+
+    async fn edit_dept_status(&self, id: &str, status: i32) -> ResponseWrapper {
+        // TODO: 实现编辑部门状态的逻辑
+        let mut response = ResponseWrapper::fail_default();
+        response.set_fail("未实现");
+        response
     }
 
     async fn delete_dept(&self, dept_id: &str) -> ResponseWrapper {

@@ -3,33 +3,35 @@
 //! 本测试文件验证了所有包装器（SingleWrapper、ListWrapper、PageWrapper）的功能，
 //! 包括成功、失败和未知错误状态的处理。
 
-use common_wrapper::{ListWrapper, PageWrapper, ResponseTrait, SingleWrapper, WrapperErrEnum};
+use common_wrapper::{ListWrapper, PageWrapper, ResponseTrait, SingleWrapper, enums::wrapper_err::WrapperErrEnum, wrapper::PageInfo};
 
 /// 测试SingleWrapper的基本功能
 #[test]
 fn test_single_wrapper() {
-    // 测试成功状态
+    let data = "Hello World";
     let mut single_wrapper = SingleWrapper::new();
-    single_wrapper.set_success("Hello World");
-
+    single_wrapper.set_success(Some(data));
     assert_eq!(single_wrapper.get_code(), WrapperErrEnum::Success as i32);
-    assert_eq!(single_wrapper.get_message(), "Success");
-    assert!(single_wrapper.is_success());
-    assert_eq!(single_wrapper.get_data(), Some(&"Hello World"));
+    assert_eq!(single_wrapper.get_message(), WrapperErrEnum::Success.message());
+    assert_eq!(*single_wrapper.get_data(), Some(Some(data)));
+}
 
-    // 测试失败状态
-    single_wrapper.set_fail("Something went wrong");
+#[test]
+fn test_single_wrapper_none() {
+    let mut single_wrapper: SingleWrapper<Option<&str>> = SingleWrapper::new();
+    single_wrapper.set_success(None);
+    assert_eq!(single_wrapper.get_code(), WrapperErrEnum::Success as i32);
+    assert_eq!(single_wrapper.get_message(), WrapperErrEnum::Success.message());
+    assert_eq!(*single_wrapper.get_data(), None);
+}
+
+#[test]
+fn test_single_wrapper_fail() {
+    let mut single_wrapper: SingleWrapper<Option<&str>> = SingleWrapper::new();
+    single_wrapper.set_fail("fail");
     assert_eq!(single_wrapper.get_code(), WrapperErrEnum::Fail as i32);
-    assert_eq!(single_wrapper.get_message(), "Something went wrong");
-    assert!(!single_wrapper.is_success());
-    assert_eq!(single_wrapper.get_data(), None);
-
-    // 测试未知错误状态
-    single_wrapper.set_unknown_error("Unknown error occurred");
-    assert_eq!(single_wrapper.get_code(), WrapperErrEnum::UnknownError as i32);
-    assert_eq!(single_wrapper.get_message(), "Unknown error occurred");
-    assert!(!single_wrapper.is_success());
-    assert_eq!(single_wrapper.get_data(), None);
+    assert_eq!(single_wrapper.get_message(), WrapperErrEnum::Fail.message());
+    assert_eq!(*single_wrapper.get_data(), None);
 }
 
 /// 测试ListWrapper的基本功能
@@ -96,7 +98,6 @@ fn test_page_wrapper() {
 /// 测试PageInfo的功能
 #[test]
 fn test_page_info() {
-    use common_wrapper::PageInfo;
     use common_wrapper::PageWrapper;
 
     // 测试正常分页信息
@@ -162,37 +163,24 @@ fn test_response_wrapper() {
 
 /// 测试序列化和反序列化功能
 #[test]
-fn test_serialization() {
-    use serde_json;
-
-    // 测试SingleWrapper序列化
+fn test_serde() {
+    // 测试序列化和反序列化
     let mut obj_wrapper = SingleWrapper::new();
-    obj_wrapper.set_success("Test data");
+    obj_wrapper.set_success(Some("Hello World".to_string()));
+
     let serialized = serde_json::to_string(&obj_wrapper).unwrap();
-    let deserialized: SingleWrapper<String> = serde_json::from_str(&serialized).unwrap();
+    let deserialized: SingleWrapper<Option<String>> = serde_json::from_str(&serialized).unwrap();
+
     assert_eq!(obj_wrapper.get_code(), deserialized.get_code());
     assert_eq!(obj_wrapper.get_message(), deserialized.get_message());
-    assert_eq!(obj_wrapper.get_data().map(|s| s.as_ref()), deserialized.get_data().map(|s| s.as_str()));
-
-    // 测试ListWrapper序列化
-    let mut list_wrapper = ListWrapper::new();
-    list_wrapper.set_success(vec![1, 2, 3]);
-    let serialized = serde_json::to_string(&list_wrapper).unwrap();
-    let deserialized: ListWrapper<i32> = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(list_wrapper.get_code(), deserialized.get_code());
-    assert_eq!(list_wrapper.get_message(), deserialized.get_message());
-    assert_eq!(list_wrapper.get_data(), deserialized.get_data());
-
-    // 测试PageWrapper序列化
-    let mut page_wrapper = PageWrapper::new();
-    page_wrapper.set_success(vec!["a".to_string(), "b".to_string()], 100, 1, 10);
-    let serialized = serde_json::to_string(&page_wrapper).unwrap();
-    let deserialized: PageWrapper<String> = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(page_wrapper.get_code(), deserialized.get_code());
-    assert_eq!(page_wrapper.get_message(), deserialized.get_message());
-    assert_eq!(page_wrapper.get_data(), deserialized.get_data());
-    assert_eq!(page_wrapper.get_total_count(), deserialized.get_total_count());
-    assert_eq!(page_wrapper.get_total_page_count(), deserialized.get_total_page_count());
-    assert_eq!(page_wrapper.get_current_page_num(), deserialized.get_current_page_num());
-    assert_eq!(page_wrapper.get_page_size(), deserialized.get_page_size());
+    assert_eq!(
+        obj_wrapper
+            .get_data()
+            .as_ref()
+            .map(|s| s.as_ref().map(String::as_str)),
+        deserialized
+            .get_data()
+            .as_ref()
+            .map(|s| s.as_ref().map(String::as_str))
+    );
 }

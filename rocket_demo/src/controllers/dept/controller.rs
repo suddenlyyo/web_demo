@@ -5,18 +5,43 @@ use rocket::routes;
 use rocket::serde::json::Json;
 use rocket::{delete, get, post, put};
 
-use common_wrapper::{ResponseWrapper, SingleWrapper};
-
+use crate::models::dept::Dept;
+use crate::params::dept_param::DeptParam;
 use crate::services::dept::dept_service::DeptService;
 use crate::services::dept::dept_service_impl::DeptServiceImpl;
+use common_wrapper::ResponseTrait;
+use common_wrapper::{ResponseWrapper, SingleWrapper};
+use serde_json::Value;
 
 /// 部门控制器
 
 /// 查询部门列表
 #[get("/dept/list")]
-pub async fn list_depts(dept_param: DeptParam, dept_service: &rocket::State<DeptServiceImpl>) -> serde_json::Value {
-    // TODO: 实现查询部门列表的逻辑
-    serde_json::Value::Null
+pub async fn list_depts(dept_param: DeptParam, dept_service: &rocket::State<DeptServiceImpl>) -> Json<Value> {
+    let result = dept_service.select_dept_list(dept_param).await;
+    
+    // 构造返回的JSON数据
+    let mut response_data = serde_json::Map::new();
+    response_data.insert("code".to_string(), Value::Number(result.get_code().into()));
+    response_data.insert("msg".to_string(), Value::String(result.get_message().to_string()));
+    
+    if let Some(depts) = result.data {
+        let depts_json: Vec<Value> = depts.into_iter().map(|dept| {
+            let mut dept_map = serde_json::Map::new();
+            dept_map.insert("id".to_string(), Value::String(dept.id));
+            dept_map.insert("name".to_string(), Value::String(dept.name));
+            dept_map.insert("parent_id".to_string(), Value::String(dept.parent_id.unwrap_or_default()));
+            dept_map.insert("status".to_string(), Value::Number(dept.status.into()));
+            // TODO: 添加parentName、statusDesc等字段
+            Value::Object(dept_map)
+        }).collect();
+        
+        response_data.insert("data".to_string(), Value::Array(depts_json));
+    } else {
+        response_data.insert("data".to_string(), Value::Array(vec![]));
+    }
+    
+    Json(Value::Object(response_data))
 }
 
 /// 获取部门树

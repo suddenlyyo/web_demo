@@ -161,7 +161,7 @@ impl UserService for UserServiceImpl {
             login_time: None,
             create_by: None,
             create_time: None,
-            update_by: user_param.update_by.clone(),
+            update_by: None,
             remark: None,
         };
 
@@ -199,11 +199,17 @@ impl UserService for UserServiceImpl {
 
     async fn get_user_list_by_page(&self, mut user_param: UserParam) -> PageWrapper<User> {
         // 设置分页参数
-        let page_param = PageInfo::new(user_param.page_param.page_num, user_param.page_param.page_size);
+        let page_param = PageParam {
+            page_num: Some(user_param.page_param.page_num.unwrap_or(1)),
+            page_size: Some(user_param.page_param.page_size.unwrap_or(10)),
+        };
         user_param.page_param = page_param;
 
         // 获取用户总数
-        let count_result = self.user_repository.get_user_list_count(&user_param).await;
+        let count_result = self
+            .user_repository
+            .get_user_list_count(user_param.name.clone(), user_param.dept_id.clone(), user_param.email.clone(), user_param.phone_number.clone(), user_param.status, user_param.start_date, user_param.end_date)
+            .await;
         let count = match count_result {
             Ok(count) => count,
             Err(e) => {
@@ -216,15 +222,26 @@ impl UserService for UserServiceImpl {
         // 获取用户列表
         let user_list_result = self
             .user_repository
-            .get_user_list_by_page(&user_param)
+            .get_user_list_by_page(
+                user_param.name.clone(),
+                user_param.dept_id.clone(),
+                user_param.email.clone(),
+                user_param.phone_number.clone(),
+                user_param.status,
+                user_param.start_date,
+                user_param.end_date,
+                user_param.page_param.page_num.unwrap_or(1),
+                user_param.page_param.page_size.unwrap_or(10),
+            )
             .await;
         match user_list_result {
             Ok(user_list) => {
                 // 创建分页包装器
                 let mut wrapper = PageWrapper::new();
                 let total = count;
-                let current_page = page_param::get_current_page_num(&user_param.page_param);
-                let page_size = page_param::get_page_size(&user_param.page_param);
+                let page_info = PageInfo::new_with_defaults(Some(user_param.page_param.page_num.unwrap_or(1)), Some(user_param.page_param.page_size.unwrap_or(20)));
+                let current_page = page_info.get_current_page_num();
+                let page_size = page_info.get_page_size();
                 wrapper.set_success(user_list, total, current_page, page_size);
                 wrapper
             },

@@ -5,8 +5,8 @@ use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper};
 use uuid::Uuid;
 
 use crate::{
-    models::Menu,
-    params::menu_param::MenuParam,
+    models::menu::Menu,
+    params::{menu_param::MenuParam, page_param::PageParam},
     repositories::menu::menu_repository::MenuRepository,
     services::menu::menu_service::{MenuService, RouterVO, TreeVO},
 };
@@ -65,7 +65,11 @@ impl MenuService for MenuServiceImpl {
     }
 
     async fn select_menu_list(&self, menu_param: MenuParam) -> ListWrapper<Menu> {
-        match self.repository.select_menu_list(menu_param).await {
+        match self
+            .repository
+            .select_menu_list(menu_param.name, menu_param.status)
+            .await
+        {
             Ok(menu_list) => {
                 let mut wrapper = ListWrapper::new();
                 wrapper.set_success(menu_list);
@@ -210,7 +214,11 @@ impl MenuService for MenuServiceImpl {
     }
 
     async fn get_menu_tree(&self, menu_param: MenuParam) -> ListWrapper<TreeVO> {
-        match self.repository.select_menu_list(menu_param).await {
+        match self
+            .repository
+            .select_menu_list(menu_param.name, menu_param.status)
+            .await
+        {
             Ok(menu_list) => {
                 let mut wrapper = ListWrapper::new();
                 let tree_vo_list: Vec<TreeVO> = menu_list
@@ -259,36 +267,11 @@ impl MenuService for MenuServiceImpl {
     }
 
     async fn select_sys_menu_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Menu> {
-        // 构建查询条件
-        let menu_param = MenuParam {
-            id: None,
-            name: None,
-            parent_id: None,
-            seq_no: None,
-            menu_type: None,
-            url: None,
-            perms: None,
-            status: None,
-            hidden: None,
-            always_show: None,
-            redirect: None,
-            component: None,
-            href: None,
-            icon: None,
-            no_cache: None,
-            affix: None,
-            breadcrumb: None,
-            active_menu: None,
-            create_by: None,
-            create_time: None,
-            update_by: None,
-            update_time: None,
-            remark: None,
-            page_param: PageParam::default(),
-        };
-        // TODO: 根据user_id和user_name构建查询条件
-
-        match self.repository.select_menu_list(menu_param).await {
+        match self
+            .repository
+            .select_menu_list(user_name.map(|s| s.to_string()), user_id.map(|s| s.to_string()))
+            .await
+        {
             Ok(menus) => {
                 let mut wrapper = ListWrapper::new();
                 wrapper.set_success(menus);

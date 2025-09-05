@@ -80,47 +80,122 @@ impl UserRepositorySeaormImpl {
 
 #[rocket::async_trait]
 impl UserRepository for UserRepositorySeaormImpl {
-    async fn select_user_by_id(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let result = Entity::find_by_id(id).one(&self.connection).await?;
-        Ok(result.map(User::from))
-    }
-
-    async fn select_user_list(&self, user_param: crate::params::user_param::UserParam) -> Result<common_wrapper::PageWrapper<Vec<User>>, Box<dyn std::error::Error + Send + Sync>> {
-        let mut query = Entity::find();
-
-        if let Some(username) = user_param.username {
-            query = query.filter(Column::Username.contains(username));
-        }
-
-        if let Some(phone) = user_param.phone {
-            query = query.filter(Column::Phone.contains(phone));
-        }
-
-        if let Some(status) = user_param.status {
-            query = query.filter(Column::Status.eq(status));
-        }
-
-        let total = query.clone().count(&self.connection).await?;
-        let result = query.all(&self.connection).await?;
-        let users: Vec<User> = result.into_iter().map(User::from).collect();
-
-        Ok(common_wrapper::PageWrapper::new(users, common_wrapper::PageInfo::new(user_param.page_num, user_param.page_size, total)))
-    }
-
     async fn insert(&self, row: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let model: ActiveModel = row.into();
         model.insert(&self.connection).await?;
         Ok(())
     }
 
-    async fn update_by_id(&self, row: &User) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
-        let model: ActiveModel = row.into();
-        model.update(&self.connection).await?;
-        Ok(1)
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::find_by_id(id).one(&self.connection).await?;
+        Ok(result.map(User::from))
     }
 
-    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut query = Entity::find();
+
+        if let Some(name) = &user.name {
+            query = query.filter(Column::Name.contains(name));
+        }
+
+        if let Some(phone_number) = &user.phone_number {
+            query = query.filter(Column::PhoneNumber.contains(phone_number));
+        }
+
+        if let Some(status) = user.status {
+            query = query.filter(Column::Status.eq(status));
+        }
+
+        let result = query.all(&self.connection).await?;
+        let users: Vec<User> = result.into_iter().map(User::from).collect();
+        Ok(users)
+    }
+
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let result = Entity::find()
+            .filter(Column::Name.eq(name))
+            .one(&self.connection)
+            .await?;
+        Ok(result.map(User::from))
+    }
+
+    async fn get_user_list_by_page(
+        &self, name: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>, page_num: u64, page_size: u64,
+    ) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现分页查询逻辑
+        let _ = (name, dept_id, email, phone_number, status, start_date, end_date, page_num, page_size);
+        Ok(vec![])
+    }
+
+    async fn get_user_list_count(
+        &self, name: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现查询总数逻辑
+        let _ = (name, dept_id, email, phone_number, status, start_date, end_date);
+        Ok(0)
+    }
+
+    async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let model: ActiveModel = user.into();
+        model.update(&self.connection).await?;
+        Ok(())
+    }
+
+    async fn update_by_primary_key_selective(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut query = Entity::find_by_id(user.id.clone());
+
+        if let Some(name) = &user.name {
+            query = query.filter(Column::Name.eq(name));
+        }
+
+        if let Some(phone_number) = &user.phone_number {
+            query = query.filter(Column::PhoneNumber.eq(phone_number));
+        }
+
+        if let Some(status) = user.status {
+            query = query.filter(Column::Status.eq(status));
+        }
+
+        // TODO: 实现选择性更新逻辑
+        let _ = query;
+        Ok(())
+    }
+
+    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let result = Entity::delete_by_id(id).exec(&self.connection).await?;
-        Ok(result.rows_affected)
+        if result.rows_affected == 0 {
+            return Err(Box::from("用户删除失败"));
+        }
+        Ok(())
+    }
+
+    async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现根据角色ID查询用户角色列表逻辑
+        let _ = role_id;
+        Ok(vec![])
+    }
+
+    async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现根据用户ID查询用户角色列表逻辑
+        let _ = user_id;
+        Ok(vec![])
+    }
+
+    async fn batch_insert_user_role(&self, list: &[UserRole]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现批量插入用户角色逻辑
+        let _ = list;
+        Ok(())
+    }
+
+    async fn batch_delete_user_role_by_user_and_role_ids(&self, user_id: &str, list: &[String]) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现根据用户ID和角色ID列表批量删除用户角色逻辑
+        let _ = (user_id, list);
+        Ok(())
+    }
+
+    async fn delete_user_role_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现根据用户ID删除用户角色逻辑
+        let _ = user_id;
+        Ok(())
     }
 }

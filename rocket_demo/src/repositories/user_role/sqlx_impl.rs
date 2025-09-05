@@ -167,22 +167,20 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
         let mut fields = vec![];
         let mut placeholders = vec![];
 
-        fields.push("id");
         fields.push("user_id");
         fields.push("role_id");
-        fields.push("create_by");
-        fields.push("create_time");
 
         let mut query_params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
         for user_role in list {
-            placeholders.push("(?, ?, ?, ?, ?)".to_string());
-            query_params.push(Box::new(&user_role.id));
+            placeholders.push("(?, ?)".to_string());
             query_params.push(Box::new(&user_role.user_id));
             query_params.push(Box::new(&user_role.role_id));
-            query_params.push(Box::new(&user_role.create_by));
-            query_params.push(Box::new(user_role.create_time.map(|t| t.naive_utc())));
         }
+
+        fields.clear();
+        fields.push("user_id");
+        fields.push("role_id");
 
         let sql = format!("INSERT INTO sys_user_role ({}) VALUES {}", fields.join(", "), placeholders.join(", "));
 

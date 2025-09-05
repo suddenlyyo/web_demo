@@ -4,6 +4,7 @@ use rocket::{State, delete, get, post, put, routes, serde::json::Json};
 
 use common_wrapper::{ListWrapper, PageWrapper, ResponseWrapper, SingleWrapper};
 
+use crate::models::menu::Menu;
 use crate::params::menu_param::MenuParam;
 use crate::services::menu::menu_service::{MenuService, RouterVO};
 use crate::services::menu::menu_service_impl::MenuServiceImpl;
@@ -34,15 +35,30 @@ pub async fn get_menu_tree(menu_service: &State<MenuServiceImpl>) -> SingleWrapp
 
 /// 查询菜单列表
 #[get("/menu/list")]
-pub async fn list_menus(menu_param: MenuParam, menu_service: &State<MenuServiceImpl>) -> PageWrapper<Menu> {
+pub async fn list_menus(menu_param: MenuParam, menu_service: &State<MenuServiceImpl>) -> Json<serde_json::Value> {
     let result = menu_service.select_menu_list(menu_param).await;
-    let mut wrapper = PageWrapper::new();
-    if let Some(data) = result.data {
-        wrapper.set_page(1, 10, data); // TODO: 从参数中获取分页信息
+    
+    // 构造返回的JSON数据
+    let mut response_data = serde_json::Map::new();
+    response_data.insert("code".to_string(), serde_json::Value::Number(result.get_code().into()));
+    response_data.insert("msg".to_string(), serde_json::Value::String(result.get_message().to_string()));
+    
+    if let Some(menus) = result.data {
+        let menus_json: Vec<serde_json::Value> = menus.into_iter().map(|menu| {
+            let mut menu_map = serde_json::Map::new();
+            menu_map.insert("id".to_string(), serde_json::Value::String(menu.id));
+            menu_map.insert("name".to_string(), serde_json::Value::String(menu.name));
+            menu_map.insert("parent_id".to_string(), serde_json::Value::String(menu.parent_id.unwrap_or_default()));
+            // TODO: 添加parentName、menuTypeDesc、statusDesc等字段
+            serde_json::Value::Object(menu_map)
+        }).collect();
+        
+        response_data.insert("data".to_string(), serde_json::Value::Array(menus_json));
+    } else {
+        response_data.insert("data".to_string(), serde_json::Value::Array(vec![]));
     }
-    wrapper.set_code(result.get_code());
-    wrapper.set_message(result.get_message());
-    wrapper
+    
+    Json(serde_json::Value::Object(response_data))
 }
 
 /// 修改菜单状态

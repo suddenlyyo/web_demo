@@ -189,30 +189,40 @@ impl UserRepository for UserRepositoryDieselImpl {
     }
 
     /// 查询用户列表
-    async fn select_user_list(&self, user_param: crate::services::params::user_param::UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
         use crate::repositories::user::diesel_impl::sys_user::dsl::*;
 
         let mut query = sys_user.into_boxed();
 
-        /// 按主键过滤
-        if let Some(id_filter) = &user_param.id {
-            query = query.filter(id.eq(id_filter));
-        }
-
         /// 按用户名模糊匹配
-        if let Some(name_filter) = &user_param.name {
+        if let Some(name_filter) = &user.name {
             query = query.filter(name.like(format!("%{}%", name_filter)));
         }
 
-        /// 按部门ID过滤
-        if let Some(dept_id_filter) = &user_param.dept_id {
-            query = query.filter(dept_id.eq(dept_id_filter));
+        /// 按手机号码模糊匹配
+        if let Some(phone_number_filter) = &user.phone_number {
+            query = query.filter(phone_number.like(format!("%{}%", phone_number_filter)));
+        }
+
+        /// 按状态过滤
+        if let Some(status_filter) = user.status {
+            query = query.filter(status.eq(status_filter));
         }
 
         let result = query
             .order(id.asc())
             .load::<UserRow>(&mut self.connection)?;
         Ok(result.into_iter().map(User::from).collect())
+    }
+
+    async fn find_by_name(&self, name: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let result = sys_user
+            .filter(name.eq(name))
+            .first::<UserRow>(&mut self.connection)
+            .optional()?;
+        Ok(result.map(User::from))
     }
 
     /// 根据主键更新用户
@@ -245,14 +255,73 @@ impl UserRepository for UserRepositoryDieselImpl {
         Ok(result as u64)
     }
 
-    /// 根据用户名查询用户
-    async fn select_user_by_name(&self, username: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
+    /// 根据主键查询用户
+    async fn select_by_primary_key(&self, id: &str) -> Result<Option<User>, Box<dyn std::error::Error + Send + Sync>> {
         use crate::repositories::user::diesel_impl::sys_user::dsl::*;
 
         let result = sys_user
-            .filter(name.eq(username))
+            .filter(id.eq(id))
             .first::<UserRow>(&mut self.connection)
             .optional()?;
         Ok(result.map(User::from))
+    }
+
+    /// 根据字段条件查询用户列表（MyBatis风格）
+    async fn select_user_list_by_fields(&self, username: Option<String>, phone: Option<String>, status: Option<i32>) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        use crate::repositories::user::diesel_impl::sys_user::dsl::*;
+
+        let mut query = sys_user.into_boxed();
+
+        /// 按用户名模糊匹配
+        if let Some(name_filter) = username {
+            query = query.filter(name.like(format!("%{}%", name_filter)));
+        }
+
+        /// 按手机号码模糊匹配
+        if let Some(phone_filter) = phone {
+            query = query.filter(phone_number.like(format!("%{}%", phone_filter)));
+        }
+
+        /// 按状态过滤
+        if let Some(status_filter) = status {
+            query = query.filter(status.eq(status_filter));
+        }
+
+        let result = query
+            .order(id.asc())
+            .load::<UserRow>(&mut self.connection)?;
+        Ok(result.into_iter().map(User::from).collect())
+    }
+
+    /// 根据角色ID查询用户角色列表
+    async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现根据角色ID查询用户角色列表逻辑
+        let _ = role_id;
+        Ok(vec![])
+    }
+
+    /// 根据用户ID查询用户角色列表
+    async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现根据用户ID查询用户角色列表逻辑
+        let _ = user_id;
+        Ok(vec![])
+    }
+
+    /// 分页查询用户列表
+    async fn get_user_list_by_page(
+        &self, name: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>, page_num: u64, page_size: u64,
+    ) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现分页查询逻辑
+        let _ = (name, dept_id, email, phone_number, status, start_date, end_date, page_num, page_size);
+        Ok(vec![])
+    }
+
+    /// 查询用户列表总数
+    async fn get_user_list_count(
+        &self, name: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+        // TODO: 实现查询总数逻辑
+        let _ = (name, dept_id, email, phone_number, status, start_date, end_date);
+        Ok(0)
     }
 }

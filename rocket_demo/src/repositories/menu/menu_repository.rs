@@ -37,7 +37,17 @@ pub trait MenuRepository: Debug + Send + Sync {
     async fn select_menu_tree_by_user_id(&self, user_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>>;
 
     /// 查询菜单列表
-    async fn select_menu_list(&self, menu_param: MenuParam) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>>;
+    async fn select_menu_list(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>>;
+
+    /// 根据字段条件查询菜单列表（MyBatis风格）
+    ///
+    /// # 参数
+    /// * `name` - 菜单名称（模糊查询），类型: [Option<String>]
+    /// * `status` - 菜单状态，类型: [Option<i32>]
+    ///
+    /// # 返回值
+    /// 返回菜单列表，类型: [Result<Vec<Menu>, Box<dyn StdError + Send + Sync>>]
+    async fn select_menu_list_by_fields(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>>;
 
     /// 根据父菜单ID查询子菜单列表
     async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>>;

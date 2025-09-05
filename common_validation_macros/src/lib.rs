@@ -62,7 +62,9 @@ use syn::{Data, DeriveInput, Fields, GenericArgument, LitInt, LitStr, PathArgume
 /// ```
 fn is_type_of(ty: &Type, type_name: &str) -> bool {
     // 若非路径类型则直接返回
-    let Type::Path(type_path) = ty else { return false };
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
 
     // 获取路径最后一段，若无则返回 false
     type_path
@@ -82,8 +84,12 @@ fn is_type_of(ty: &Type, type_name: &str) -> bool {
 ///
 /// 如果是数字类型返回true，否则返回false
 fn is_number_type(ty: &Type) -> bool {
-    let Type::Path(type_path) = ty else { return false };
-    let Some(segment) = type_path.path.segments.last() else { return false };
+    let Type::Path(type_path) = ty else {
+        return false;
+    };
+    let Some(segment) = type_path.path.segments.last() else {
+        return false;
+    };
 
     matches!(segment.ident.to_string().as_str(), "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "u8" | "u16" | "u32" | "u64" | "usize" | "f32" | "f64")
 }
@@ -118,19 +124,27 @@ fn is_number_type(ty: &Type) -> bool {
 fn extract_inner_type(ty: &Type) -> Option<Type> {
     // 第一步：匹配类型是否为路径类型（如 `std::vec::Vec`）
     // 如果不是路径类型（如原始类型 i32），直接返回 None
-    let Type::Path(type_path) = ty else { return None };
+    let Type::Path(type_path) = ty else {
+        return None;
+    };
 
     // 第二步：获取路径的最后一段（如 `std::vec::Vec` 中的 `Vec`）
     // 如果路径为空（理论上不应该发生），返回 None
-    let Some(segment) = type_path.path.segments.last() else { return None };
+    let Some(segment) = type_path.path.segments.last() else {
+        return None;
+    };
 
     // 第三步：检查路径段是否包含尖括号泛型参数（即 `<...>` 部分）
     // 如果不是泛型实例（如单纯的 `Vec` 类型），返回 None
-    let PathArguments::AngleBracketed(args) = &segment.arguments else { return None };
+    let PathArguments::AngleBracketed(args) = &segment.arguments else {
+        return None;
+    };
 
     // 第四步：从泛型参数中提取第一个参数
     // 注意：这里只处理类型参数（GenericArgument::Type），忽略生命周期或常量参数
-    let Some(GenericArgument::Type(inner_ty)) = args.args.first() else { return None };
+    let Some(GenericArgument::Type(inner_ty)) = args.args.first() else {
+        return None;
+    };
 
     // 返回内部类型的克隆（需要克隆因为要转移所有权）
     Some(inner_ty.clone())

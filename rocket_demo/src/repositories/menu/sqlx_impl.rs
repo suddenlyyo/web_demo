@@ -398,16 +398,41 @@ impl MenuRepository for MenuRepositorySqlxImpl {
         Ok(result.into_iter().map(Menu::from).collect())
     }
 
-    async fn select_menu_list(&self, menu_param: MenuParam) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
+    async fn select_menu_list(&self, name: Option<String>, status: Option<i32>) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
         let mut sql = "SELECT id, menu_name, menu_level, menu_type, parent_id, seq_no, icon, route_path, route_params, status, create_by, create_time, update_by, update_time, remark FROM sys_menu WHERE 1=1".to_string();
         let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(menu_name) = menu_param.menu_name {
+        if let Some(ref menu_name) = name {
             sql.push_str(" AND menu_name LIKE ?");
             params.push(Box::new(format!("%{}%", menu_name)));
         }
 
-        if let Some(status) = menu_param.status {
+        if let Some(status) = status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        // 构建查询
+        let mut query = sqlx::query_as::<_, MenuRow>(&sql);
+        for param in &params {
+            query = query.bind(param.as_ref());
+        }
+
+        let result = query.fetch_all(&self.pool).await?;
+        Ok(result.into_iter().map(Menu::from).collect())
+    }
+
+    /// 根据字段条件查询菜单列表（MyBatis风格）
+    async fn select_menu_list_by_fields(&self, menu_name: Option<String>, status: Option<i32>) -> Result<Vec<Menu>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut sql = "SELECT id, menu_name, menu_level, menu_type, parent_id, seq_no, icon, route_path, route_params, status, create_by, create_time, update_by, update_time, remark FROM sys_menu WHERE 1=1".to_string();
+        let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
+
+        if let Some(ref menu_name) = menu_name {
+            sql.push_str(" AND menu_name LIKE ?");
+            params.push(Box::new(format!("%{}%", menu_name)));
+        }
+
+        if let Some(status) = status {
             sql.push_str(" AND status = ?");
             params.push(Box::new(status));
         }

@@ -102,9 +102,22 @@ pub trait RoleRepository: Debug + Send + Sync {
     /// 查询角色列表
     ///
     /// # 参数
-    /// * `role_param` - 角色查询参数，类型: [RoleParam]
+    /// * `name` - 角色名称（模糊查询），类型: [Option<String>]
+    /// * `status` - 角色状态，类型: [Option<i32>]
+    /// * `role_key` - 角色权限字符串，类型: [Option<String>]
     ///
     /// # 返回值
     /// 返回角色列表，类型: [Result<Vec<Role>, Box<dyn StdError + Send + Sync>>]
-    async fn select_roles(&self, role_param: RoleParam) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>>;
+    async fn select_roles(&self, name: Option<String>, status: Option<i32>, role_key: Option<String>) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>>;
+
+    /// 根据字段条件查询角色列表（MyBatis风格）
+    ///
+    /// # 参数
+    /// * `name` - 角色名称（模糊查询），类型: [Option<String>]
+    /// * `status` - 角色状态，类型: [Option<i32>]
+    /// * `role_key` - 角色权限字符串，类型: [Option<String>]
+    ///
+    /// # 返回值
+    /// 返回角色列表，类型: [Result<Vec<Role>, Box<dyn StdError + Send + Sync>>]
+    async fn select_roles_by_fields(&self, name: Option<String>, status: Option<i32>, role_key: Option<String>) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>>;
 }

@@ -260,17 +260,17 @@ impl UserRepository for UserRepositorySqlxImpl {
     }
 
     async fn select_user_list(&self, user: &User) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let mut sql = "SELECT id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
+        let mut sql = "SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
         let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(username) = &user.username {
-            sql.push_str(" AND username LIKE ?");
-            params.push(Box::new(format!("%{}%", username)));
+        if let Some(name) = &user.name {
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
         }
 
-        if let Some(phone) = &user.phone {
-            sql.push_str(" AND phone LIKE ?");
-            params.push(Box::new(format!("%{}%", phone)));
+        if let Some(phone_number) = &user.phone_number {
+            sql.push_str(" AND phone_number LIKE ?");
+            params.push(Box::new(format!("%{}%", phone_number)));
         }
 
         if let Some(status) = user.status {
@@ -308,29 +308,41 @@ impl UserRepository for UserRepositorySqlxImpl {
         Ok(result.into_iter().map(UserRole::from).collect())
     }
 
-    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
-        let mut sql = "SELECT id, username, password, salt, nickname, phone, email, avatar, sex, status, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
+    async fn get_user_list_by_page(
+        &self, username: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>, page_num: u64, page_size: u64,
+    ) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut sql = "SELECT id, dept_id, name, email, phone_number, sex, password, avatar, status, login_ip, login_time, create_by, create_time, update_by, update_time, remark FROM sys_user WHERE 1=1".to_string();
         let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(username) = &query.username {
-            sql.push_str(" AND username LIKE ?");
+        if let Some(ref username) = username {
+            sql.push_str(" AND name LIKE ?");
             params.push(Box::new(format!("%{}%", username)));
         }
 
-        if let Some(phone) = &query.phone {
-            sql.push_str(" AND phone LIKE ?");
-            params.push(Box::new(format!("%{}%", phone)));
+        if let Some(ref dept_id) = dept_id {
+            sql.push_str(" AND dept_id = ?");
+            params.push(Box::new(dept_id));
         }
 
-        if let Some(status) = query.status {
+        if let Some(ref email) = email {
+            sql.push_str(" AND email LIKE ?");
+            params.push(Box::new(format!("%{}%", email)));
+        }
+
+        if let Some(ref phone_number) = phone_number {
+            sql.push_str(" AND phone_number LIKE ?");
+            params.push(Box::new(format!("%{}%", phone_number)));
+        }
+
+        if let Some(status) = status {
             sql.push_str(" AND status = ?");
             params.push(Box::new(status));
         }
 
         // 添加排序和分页
         sql.push_str(" ORDER BY id LIMIT ? OFFSET ?");
-        params.push(Box::new(query.page_size));
-        params.push(Box::new((query.page_num - 1) * query.page_size));
+        params.push(Box::new(page_size));
+        params.push(Box::new((page_num - 1) * page_size));
 
         // 构建查询列表的语句
         let mut query_builder = sqlx::query_as::<_, UserRow>(&sql);
@@ -342,21 +354,33 @@ impl UserRepository for UserRepositorySqlxImpl {
         Ok(result.into_iter().map(User::from).collect())
     }
 
-    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+    async fn get_user_list_count(
+        &self, username: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
         let mut sql = "SELECT COUNT(*) FROM sys_user WHERE 1=1".to_string();
         let mut params: Vec<Box<(dyn sqlx::Encode<'_, sqlx::MySql> + Send + Sync)>> = vec![];
 
-        if let Some(username) = &query.username {
-            sql.push_str(" AND username LIKE ?");
+        if let Some(ref username) = username {
+            sql.push_str(" AND name LIKE ?");
             params.push(Box::new(format!("%{}%", username)));
         }
 
-        if let Some(phone) = &query.phone {
-            sql.push_str(" AND phone LIKE ?");
-            params.push(Box::new(format!("%{}%", phone)));
+        if let Some(ref dept_id) = dept_id {
+            sql.push_str(" AND dept_id = ?");
+            params.push(Box::new(dept_id));
         }
 
-        if let Some(status) = query.status {
+        if let Some(ref email) = email {
+            sql.push_str(" AND email LIKE ?");
+            params.push(Box::new(format!("%{}%", email)));
+        }
+
+        if let Some(ref phone_number) = phone_number {
+            sql.push_str(" AND phone_number LIKE ?");
+            params.push(Box::new(format!("%{}%", phone_number)));
+        }
+
+        if let Some(status) = status {
             sql.push_str(" AND status = ?");
             params.push(Box::new(status));
         }

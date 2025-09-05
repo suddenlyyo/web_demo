@@ -30,10 +30,14 @@ pub trait UserRepository: Debug + Send + Sync {
     async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn std::error::Error + Send + Sync>>;
 
     /// 分页获取用户列表
-    async fn get_user_list_by_page(&self, query: &UserParam) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_user_list_by_page(
+        &self, name: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>, page_num: u64, page_size: u64,
+    ) -> Result<Vec<User>, Box<dyn std::error::Error + Send + Sync>>;
 
     /// 获取用户列表数量
-    async fn get_user_list_count(&self, query: &UserParam) -> Result<u64, Box<dyn std::error::Error + Send + Sync>>;
+    async fn get_user_list_count(
+        &self, name: Option<String>, dept_id: Option<String>, email: Option<String>, phone_number: Option<String>, status: Option<i32>, start_date: Option<chrono::DateTime<chrono::Utc>>, end_date: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>>;
 
     /// 根据ID更新用户信息
     async fn update_by_primary_key(&self, user: &User) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;

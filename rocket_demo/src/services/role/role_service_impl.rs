@@ -46,6 +46,21 @@ impl RoleServiceImpl {
     ///
     /// 返回新的角色服务实例
     pub async fn new(_database_url: &str) -> Self {
+        #[cfg(feature = "sqlx_impl")]
+        let role_repository = RoleRepositorySqlxImpl::new();
+        #[cfg(feature = "sqlx_impl")]
+        let role_menu_repository = RoleMenuRepositorySqlxImpl::new();
+
+        #[cfg(feature = "diesel_impl")]
+        let role_repository = RoleRepositoryDieselImpl::new();
+        #[cfg(feature = "diesel_impl")]
+        let role_menu_repository = RoleMenuRepositoryDieselImpl::new();
+
+        #[cfg(feature = "seaorm_impl")]
+        let role_repository = RoleRepositorySeaormImpl::new().await.unwrap();
+        #[cfg(feature = "seaorm_impl")]
+        let role_menu_repository = RoleMenuRepositorySeaormImpl::new().await.unwrap();
+
         Self {
             role_repository: Arc::new(role_repository),
             role_menu_repository: Arc::new(role_menu_repository),
@@ -103,11 +118,13 @@ impl RoleService for RoleServiceImpl {
     }
 
     async fn select_role_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Role> {
-        // 构建查询条件
-        let role = Role::default();
         // TODO: 根据user_id和user_name构建查询条件
-
-        match self.role_repository.select_roles(role).await {
+        // 这里暂时使用默认的查询参数
+        match self
+            .role_repository
+            .select_roles(user_name.map(|s| s.to_string()), None, None)
+            .await
+        {
             Ok(roles) => {
                 let mut wrapper = ListWrapper::new();
                 wrapper.set_success(roles);

@@ -59,28 +59,46 @@ impl<T> SingleWrapper<T> {
     ///
     /// # 参数
     ///
-    /// * `data` - 要包装的数据
+    /// * `data` - 要包装的数据对象
     pub fn set_success(&mut self, data: T) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
     }
 
-    /// 获取基础响应包装的引用
+    /// 设置为失败状态并附带消息
+    ///
+    /// # 参数
+    ///
+    /// * `msg` - 失败消息
+    pub fn set_fail(&mut self, msg: impl Into<String>) {
+        self.base.set_fail(msg);
+    }
+
+    /// 设置为未知错误状态并附带消息
+    ///
+    /// # 参数
+    ///
+    /// * `msg` - 未知错误消息
+    pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
+        self.base.set_unknown_error(msg);
+    }
+
+    /// 获取基础响应包装器的引用
     ///
     /// # 返回值
     ///
-    /// 基础响应包装的引用
+    /// 基础响应包装器的引用
     pub fn get_base(&self) -> &ResponseWrapper {
         &self.base
     }
 
-    /// 获取数据的引用
+    /// 获取数据对象的引用
     ///
     /// # 返回值
     ///
-    /// 如果存在数据则返回Some(&T)，否则返回None
-    pub fn get_data(&self) -> Option<&T> {
-        self.data.as_ref()
+    /// 数据对象的引用（Option包装）
+    pub fn get_data(&self) -> &Option<T> {
+        &self.data
     }
 }
 
