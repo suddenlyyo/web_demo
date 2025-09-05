@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
+# 使用工作空间管理的依赖
 # 简化自定义错误类型定义
 thiserror = { workspace = true }
 # 时间计算、时区转换、格式化/解析

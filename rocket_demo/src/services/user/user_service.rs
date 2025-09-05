@@ -1,9 +1,7 @@
-//! 用户服务接口定义
-
 use crate::models::User;
-use crate::services::params::page_param::PageParam;
-use crate::services::params::user_param::UserParam;
-use common_wrapper::{ListWrapper, PageWrapper, ResponseWrapper, SingleWrapper};
+use crate::params::user_param::UserParam;
+use common_wrapper::{PageWrapper, ResponseWrapper, SingleWrapper};
+use std::collections::HashSet;
 
 /// 用户服务接口
 #[rocket::async_trait]

@@ -1,6 +1,6 @@
 /// 角色数据访问层接口定义
 use crate::models::Role;
-use crate::services::params::user_param::RoleParam;
+use crate::services::role::role_service::RoleParam;
 use rocket::async_trait;
 use std::error::Error as StdError;
 use std::fmt::Debug;

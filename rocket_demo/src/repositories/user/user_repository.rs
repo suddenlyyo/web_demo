@@ -1,7 +1,7 @@
 //! 用户数据访问层接口定义
 
 use crate::models::{User, UserRole};
-use crate::services::params::user_param::UserParam;
+use crate::params::user_param::UserParam;
 use rocket::async_trait;
 use std::fmt::Debug;
 

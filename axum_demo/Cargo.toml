@@ -4,5 +4,10 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
+# 使用工作空间管理的依赖
 # 公共响应处理
 common_wrapper = { path = "../common_wrapper" }
+# Axum Web框架
+axum = { workspace = true }
+# 异步运行时
+tokio = { workspace = true, features = ["full"] }

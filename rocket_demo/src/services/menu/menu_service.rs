@@ -1,7 +1,7 @@
 //! 菜单服务接口定义
 
-use super::PageParam;
 use crate::models::Menu;
+use crate::params::menu_param::MenuParam;
 use common_wrapper::{ListWrapper, ResponseWrapper};
 use std::collections::HashMap;
 
@@ -36,9 +36,9 @@ pub trait MenuService {
     async fn select_sys_menu_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Menu>;
 }
 
-/// 菜单参数
+/// 路由VO
 #[derive(Debug, Clone)]
-pub struct MenuParam {
+pub struct RouterVO {
     pub id: Option<String>,
     pub name: Option<String>,
     pub parent_id: Option<String>,
@@ -62,16 +62,34 @@ pub struct MenuParam {
     pub update_by: Option<String>,
     pub update_time: Option<chrono::DateTime<chrono::Utc>>,
     pub remark: Option<String>,
-}
-
-/// 路由VO
-#[derive(Debug, Clone)]
-pub struct RouterVO {
-    // 根据实际需要定义字段
+    pub children: Vec<RouterVO>,
 }
 
 /// 树形结构VO
 #[derive(Debug, Clone)]
 pub struct TreeVO {
-    // 根据实际需要定义字段
+    pub id: Option<String>,
+    pub name: Option<String>,
+    pub parent_id: Option<String>,
+    pub seq_no: Option<i32>,
+    pub menu_type: Option<String>,
+    pub url: Option<String>,
+    pub perms: Option<String>,
+    pub status: Option<i32>,
+    pub hidden: Option<i32>,
+    pub always_show: Option<i32>,
+    pub redirect: Option<String>,
+    pub component: Option<String>,
+    pub href: Option<String>,
+    pub icon: Option<String>,
+    pub no_cache: Option<i32>,
+    pub affix: Option<i32>,
+    pub breadcrumb: Option<i32>,
+    pub active_menu: Option<String>,
+    pub create_by: Option<String>,
+    pub create_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub update_by: Option<String>,
+    pub update_time: Option<chrono::DateTime<chrono::Utc>>,
+    pub remark: Option<String>,
+    pub children: Vec<TreeVO>,
 }

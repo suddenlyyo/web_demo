@@ -1,10 +1,12 @@
 //! 用户参数定义
 
-use crate::services::PageParam;
+use serde::{Deserialize, Serialize};
+
+use crate::params::page_param::PageParam;
 use chrono::{DateTime, Utc};
 
 /// 用户参数
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserParam {
     /// 用户ID
     pub id: Option<String>,

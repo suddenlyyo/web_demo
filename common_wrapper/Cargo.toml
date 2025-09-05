@@ -4,12 +4,13 @@ version = "0.0.0"
 edition = "2024"
 
 [dependencies]
+# 使用工作空间管理的依赖
 # 用于有效和通用地序列化和反序列化Rust数据结构的框架
 serde = { workspace = true, features = ["derive"] }
 # 基于serde框架实现，专门用于JSON格式的库
 serde_json = { workspace = true }
 # Rocket Web框架，用于实现响应类型
-rocket = { version = "0.5", optional = true, features = ["json"] }
+rocket = { workspace = true, optional = true, features = ["json"] }
 
 [features]
 default = []

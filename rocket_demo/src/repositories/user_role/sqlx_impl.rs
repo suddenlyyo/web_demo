@@ -3,7 +3,7 @@ use sqlx::mysql::MySqlPool;
 use std::error::Error as StdError;
 use std::sync::Arc;
 
-use crate::models::SysUserRole;
+use crate::models::UserRole;
 use crate::models::constants::USER_ROLE_FIELDS;
 use crate::repositories::user_role::user_role_repository::UserRoleRepository;
 
@@ -21,9 +21,9 @@ struct UserRoleRow {
     role_id: Option<String>,
 }
 
-impl From<UserRoleRow> for SysUserRole {
+impl From<UserRoleRow> for UserRole {
     fn from(row: UserRoleRow) -> Self {
-        SysUserRole { id: row.id, user_id: row.user_id, role_id: row.role_id }
+        UserRole { id: row.id, user_id: row.user_id, role_id: row.role_id }
     }
 }
 
@@ -37,10 +37,11 @@ impl UserRoleRepositorySqlxImpl {
 #[rocket::async_trait]
 impl UserRoleRepository for UserRoleRepositorySqlxImpl {
     /// 根据主键删除用户角色关联
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let sql = "DELETE FROM sys_user_role WHERE id = ?";
+    async fn delete_by_primary_key(&self, user_id: &str, role_id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_user_role WHERE user_id = ? AND role_id = ?";
         sqlx::query(sql)
-            .bind(id)
+            .bind(user_id)
+            .bind(role_id)
             .execute(self.pool.as_ref())
             .await?;
         Ok(())
@@ -88,17 +89,17 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
     }
 
     /// 根据主键查询用户角色关联
-    async fn select_by_id(&self, id: &str) -> Result<Option<SysUserRole>, Box<dyn StdError + Send + Sync>> {
+    async fn select_by_id(&self, id: &str) -> Result<Option<UserRole>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_user_role WHERE id = ?", USER_ROLE_FIELDS);
         let result: Option<UserRoleRow> = sqlx::query_as(&sql)
             .bind(id)
             .fetch_optional(self.pool.as_ref())
             .await?;
-        Ok(result.map(SysUserRole::from))
+        Ok(result.map(UserRole::from))
     }
 
     /// 查询用户角色关联列表
-    async fn select_list(&self, user_role_param: crate::services::params::user_param::UserRoleParam) -> Result<Vec<SysUserRole>, Box<dyn StdError + Send + Sync>> {
+    async fn select_list(&self, user_role_param: crate::services::params::user_param::UserRoleParam) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_user_role WHERE 1=1", USER_ROLE_FIELDS);
         let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
@@ -119,8 +120,8 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
             query = query.bind(param.as_ref());
         }
 
-        let result = query.fetch_all(self.pool.as_ref()).await?;
-        Ok(result.into_iter().map(SysUserRole::from).collect())
+        let result: Vec<UserRoleRow> = query.fetch_all(self.pool.as_ref()).await?;
+        Ok(result.into_iter().map(UserRole::from).collect())
     }
 
     /// 根据主键更新用户角色关联
@@ -176,5 +177,90 @@ impl UserRoleRepository for UserRoleRepositorySqlxImpl {
             .execute(self.pool.as_ref())
             .await?;
         Ok(result.rows_affected())
+    }
+
+    /// 根据角色ID查询用户角色列表
+    async fn select_user_role_by_role_id(&self, role_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
+        let sql = "SELECT user_id, role_id FROM sys_user_role WHERE role_id = ?";
+        let rows = sqlx::query(sql)
+            .bind(role_id)
+            .fetch_all(self.pool.as_ref())
+            .await?;
+
+        let user_roles: Vec<UserRole> = rows
+            .iter()
+            .map(|row| UserRole {
+                user_id: row.get("user_id"),
+                role_id: row.get("role_id"),
+            })
+            .collect();
+
+        Ok(user_roles)
+    }
+
+    /// 根据用户ID查询用户角色列表
+    async fn select_user_role_by_user_id(&self, user_id: &str) -> Result<Vec<UserRole>, Box<dyn StdError + Send + Sync>> {
+        let sql = "SELECT user_id, role_id FROM sys_user_role WHERE user_id = ?";
+        let rows = sqlx::query(sql)
+            .bind(user_id)
+            .fetch_all(self.pool.as_ref())
+            .await?;
+
+        let user_roles: Vec<UserRole> = rows
+            .iter()
+            .map(|row| UserRole {
+                user_id: row.get("user_id"),
+                role_id: row.get("role_id"),
+            })
+            .collect();
+
+        Ok(user_roles)
+    }
+
+    /// 批量插入用户角色
+    async fn batch_insert(&self, list: &[UserRole]) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        if list.is_empty() {
+            return Ok(());
+        }
+
+        let mut sql = "INSERT INTO sys_user_role (user_id, role_id) VALUES ".to_string();
+        let placeholders: Vec<String> = (0..list.len()).map(|_| "(?, ?)".to_string()).collect();
+        sql.push_str(&placeholders.join(", "));
+
+        let mut query = sqlx::query(&sql);
+        for user_role in list {
+            query = query.bind(&user_role.user_id).bind(&user_role.role_id);
+        }
+
+        query.execute(self.pool.as_ref()).await?;
+        Ok(())
+    }
+
+    /// 根据用户ID和角色ID列表批量删除用户角色
+    async fn batch_delete_by_user_and_role_ids(&self, user_id: &str, list: &[String]) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        if list.is_empty() {
+            return Ok(());
+        }
+
+        let placeholders: Vec<String> = (0..list.len()).map(|_| "?".to_string()).collect();
+        let sql = format!("DELETE FROM sys_user_role WHERE user_id = ? AND role_id IN ({})", placeholders.join(", "));
+
+        let mut query = sqlx::query(&sql).bind(user_id);
+        for role_id in list {
+            query = query.bind(role_id);
+        }
+
+        query.execute(self.pool.as_ref()).await?;
+        Ok(())
+    }
+
+    /// 根据用户ID删除用户角色
+    async fn delete_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_user_role WHERE user_id = ?";
+        sqlx::query(sql)
+            .bind(user_id)
+            .execute(self.pool.as_ref())
+            .await?;
+        Ok(())
     }
 }

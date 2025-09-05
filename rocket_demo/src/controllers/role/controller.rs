@@ -1,9 +1,17 @@
 //! 角色控制器层
 
-use common_wrapper::{ResponseWrapper, SingleWrapper};
-use rocket::{delete, get, post, put, routes, serde::json::Json};
+use rocket::routes;
+use rocket::serde::json::Json;
+use rocket::{delete, get, post, put};
 
-use crate::services::role::role_service::{RoleService, RoleServiceImpl};
+use common_wrapper::{ResponseWrapper, SingleWrapper};
+use std::collections::HashSet;
+
+use crate::params::role_param::RoleParam;
+use crate::services::role::role_service::RoleService;
+use crate::services::role::role_service_impl::RoleServiceImpl;
+
+/// 角色控制器
 
 /// 获取角色列表
 ///

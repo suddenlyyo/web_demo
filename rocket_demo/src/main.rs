@@ -11,6 +11,7 @@ use rocket::figment::Figment;
 
 mod controllers;
 mod models;
+mod params;
 mod repositories;
 mod services;
 

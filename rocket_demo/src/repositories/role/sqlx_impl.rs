@@ -62,23 +62,44 @@ impl RoleRepositorySqlxImpl {
 #[rocket::async_trait]
 impl RoleRepository for RoleRepositorySqlxImpl {
     /// 根据主键查询角色
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Role>, Box<dyn StdError + Send + Sync>> {
+    async fn select_role_by_id(&self, id: &str) -> Result<Option<Role>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_role WHERE id = ?", ROLE_FIELDS);
         let result: Option<RoleRow> = sqlx::query_as(&sql)
             .bind(id)
             .fetch_optional(self.pool.as_ref())
             .await?;
+
         Ok(result.map(Role::from))
     }
 
     /// 根据主键删除角色
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
+    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let sql = "DELETE FROM sys_role WHERE id = ?";
         let result = sqlx::query(sql)
             .bind(id)
             .execute(self.pool.as_ref())
             .await?;
-        Ok(())
+
+        Ok(result.rows_affected())
+    }
+
+    /// 根据主键更新角色
+    async fn update_by_id(&self, row: &Role) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let sql = "UPDATE sys_role SET name = ?, role_key = ?, status = ?, seq_no = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
+        let result = sqlx::query(sql)
+            .bind(&row.name)
+            .bind(&row.role_key)
+            .bind(row.status)
+            .bind(row.seq_no)
+            .bind(&row.create_by)
+            .bind(row.create_time.map(|t| t.naive_utc()))
+            .bind(&row.update_by)
+            .bind(row.update_time.map(|t| t.naive_utc()))
+            .bind(&row.remark)
+            .bind(&row.id)
+            .execute(self.pool.as_ref())
+            .await?;
+        Ok(result.rows_affected())
     }
 
     /// 插入角色记录
@@ -111,7 +132,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
         // 构建动态SQL
         let mut fields = vec![];
         let mut placeholders = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
 
         fields.push("id");
         placeholders.push("?");
@@ -178,7 +199,7 @@ impl RoleRepository for RoleRepositorySqlxImpl {
             query = query.bind(param);
         }
 
-        let result = query.execute(&self.pool).await?;
+        let result = query.execute(self.pool.as_ref()).await?;
         if result.rows_affected() == 0 {
             return Err(Box::from("角色插入失败"));
         }
@@ -187,108 +208,152 @@ impl RoleRepository for RoleRepositorySqlxImpl {
     }
 
     /// 根据主键选择性更新角色
-    async fn update_by_primary_key_selective(&self, row: &Role) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let mut sets = vec![];
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
+    async fn update_by_id_selective(&self, row: &Role) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        // 构建动态SQL
+        let mut updates = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
 
         if row.name.is_some() {
-            sets.push("name = ?");
-            params.push(Box::new(&row.name));
+            updates.push("name = ?");
+            params.push(&row.name);
         }
 
         if row.role_key.is_some() {
-            sets.push("role_key = ?");
-            params.push(Box::new(&row.role_key));
-        }
-
-        if row.status.is_some() {
-            sets.push("status = ?");
-            params.push(Box::new(&row.status));
+            updates.push("role_key = ?");
+            params.push(&row.role_key);
         }
 
         if row.seq_no.is_some() {
-            sets.push("seq_no = ?");
-            params.push(Box::new(&row.seq_no));
+            updates.push("seq_no = ?");
+            params.push(&row.seq_no);
+        }
+
+        if row.status.is_some() {
+            updates.push("status = ?");
+            params.push(&row.status);
         }
 
         if row.create_by.is_some() {
-            sets.push("create_by = ?");
-            params.push(Box::new(&row.create_by));
+            updates.push("create_by = ?");
+            params.push(&row.create_by);
         }
 
         if row.create_time.is_some() {
-            sets.push("create_time = ?");
-            params.push(Box::new(&row.create_time.map(|t| t.naive_utc())));
+            updates.push("create_time = ?");
+            params.push(&row.create_time.map(|t| t.naive_utc()));
         }
 
         if row.update_by.is_some() {
-            sets.push("update_by = ?");
-            params.push(Box::new(&row.update_by));
+            updates.push("update_by = ?");
+            params.push(&row.update_by);
         }
 
         if row.update_time.is_some() {
-            sets.push("update_time = ?");
-            params.push(Box::new(&row.update_time.map(|t| t.naive_utc())));
+            updates.push("update_time = ?");
+            params.push(&row.update_time.map(|t| t.naive_utc()));
         }
 
         if row.remark.is_some() {
-            sets.push("remark = ?");
-            params.push(Box::new(&row.remark));
+            updates.push("remark = ?");
+            params.push(&row.remark);
         }
 
-        if sets.is_empty() {
-            return Ok(());
+        if updates.is_empty() {
+            return Ok(0);
         }
 
-        let mut sql = format!("UPDATE sys_role SET {}", sets.join(", "));
-        sql.push_str(" WHERE id = ?");
-        params.push(Box::new(&row.id));
+        let sql = format!("UPDATE sys_role SET {} WHERE id = ?", updates.join(", "));
 
         let mut query = sqlx::query(&sql);
-        for param in &params {
-            query = query.bind(param.as_ref());
+        for param in params {
+            query = query.bind(param);
         }
+        query = query.bind(&row.id);
 
         let result = query.execute(self.pool.as_ref()).await?;
-        if result.rows_affected() == 0 {
-            return Err(Box::from("角色更新失败"));
-        }
-
-        Ok(())
-    }
-
-    /// 根据主键更新角色
-    async fn update_by_primary_key(&self, row: &Role) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let sql = "UPDATE sys_role SET name = ?, role_key = ?, status = ?, seq_no = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
-        let result = sqlx::query(sql)
-            .bind(&row.name)
-            .bind(&row.role_key)
-            .bind(row.status)
-            .bind(row.seq_no)
-            .bind(&row.create_by)
-            .bind(row.create_time.map(|t| t.naive_utc()))
-            .bind(&row.update_by)
-            .bind(row.update_time.map(|t| t.naive_utc()))
-            .bind(&row.remark)
-            .bind(&row.id)
-            .execute(self.pool.as_ref())
-            .await?;
-        Ok(())
+        Ok(result.rows_affected())
     }
 
     /// 查询角色列表
-    async fn select_role_list(&self, role_param: crate::services::params::user_param::RoleParam) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+    async fn select_role_list(&self, role: &Role) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_role WHERE 1=1", ROLE_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
-        if let Some(name) = &role_param.name {
+        if let Some(name) = &role.name {
             sql.push_str(" AND name LIKE ?");
             params.push(Box::new(format!("%{}%", name)));
         }
 
-        if let Some(role_key) = &role_param.role_key {
-            sql.push_str(" AND role_key LIKE ?");
-            params.push(Box::new(format!("%{}%", role_key)));
+        if let Some(status) = role.status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        sql.push_str(" ORDER BY seq_no");
+
+        let mut query = sqlx::query_as::<_, RoleRow>(&sql);
+        for param in params {
+            query = query.bind(param.as_ref());
+        }
+
+        let result = query.fetch_all(self.pool.as_ref()).await?;
+        Ok(result.into_iter().map(Role::from).collect())
+    }
+
+    /// 查询所有角色列表
+    /*async fn select_role_list_all(&self) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_role ORDER BY seq_no", ROLE_FIELDS);
+        let result: Vec<RoleRow> = sqlx::query_as(&sql).fetch_all(self.pool.as_ref()).await?;
+        Ok(result.into_iter().map(Role::from).collect())
+    }*/
+
+    /// 根据用户ID查询角色列表
+    async fn select_roles_by_user_id(&self, user_id: &str) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+        let sql = format!("SELECT {} FROM sys_role r LEFT JOIN sys_user_role ur ON r.id = ur.role_id WHERE ur.user_id = ?", ROLE_FIELDS);
+        let result: Vec<RoleRow> = sqlx::query_as(&sql)
+            .bind(user_id)
+            .fetch_all(self.pool.as_ref())
+            .await?;
+        Ok(result.into_iter().map(Role::from).collect())
+    }
+
+    /// 根据角色ID列表批量删除角色
+    async fn batch_delete_by_ids(&self, ids: &[&str]) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let placeholders: Vec<String> = ids.iter().map(|_| "?".to_string()).collect();
+        let sql = format!("DELETE FROM sys_role WHERE id IN ({})", placeholders.join(","));
+
+        let mut query = sqlx::query(&sql);
+        for id in ids {
+            query = query.bind(id);
+        }
+
+        let result = query.execute(self.pool.as_ref()).await?;
+        Ok(result.rows_affected())
+    }
+
+    /// 根据角色ID更新角色状态
+    async fn update_role_status(&self, id: &str, status: i32) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let sql = "UPDATE sys_role SET status = ? WHERE id = ?";
+        let result = sqlx::query(sql)
+            .bind(status)
+            .bind(id)
+            .execute(self.pool.as_ref())
+            .await?;
+        Ok(result.rows_affected())
+    }
+
+    /// 查询角色列表
+    async fn select_roles(&self, role_param: crate::services::role::role_service::RoleParam) -> Result<Vec<Role>, Box<dyn StdError + Send + Sync>> {
+        let mut sql = format!("SELECT {} FROM sys_role WHERE 1=1", ROLE_FIELDS);
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
+
+        if let Some(name) = &role_param.name {
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
         }
 
         if let Some(status) = role_param.status {
@@ -296,10 +361,10 @@ impl RoleRepository for RoleRepositorySqlxImpl {
             params.push(Box::new(status));
         }
 
-        sql.push_str(" ORDER BY id");
+        sql.push_str(" ORDER BY seq_no");
 
         let mut query = sqlx::query_as::<_, RoleRow>(&sql);
-        for param in &params {
+        for param in params {
             query = query.bind(param.as_ref());
         }
 

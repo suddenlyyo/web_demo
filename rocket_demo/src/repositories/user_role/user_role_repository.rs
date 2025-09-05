@@ -80,4 +80,13 @@ pub trait UserRoleRepository: Debug + Send + Sync {
     /// # 返回值
     /// 返回操作结果，类型: [Result<(), Box<dyn std::error::Error + Send + Sync>>]
     async fn delete_by_user_id(&self, user_id: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    /// 根据用户ID查询角色ID集合
+    ///
+    /// # 参数
+    /// * `user_id` - 用户ID，类型: [&str]
+    ///
+    /// # 返回值
+    /// 返回角色ID集合，类型: [Result<std::collections::HashSet<String>, Box<dyn std::error::Error + Send + Sync>>]
+    async fn select_role_ids_by_user_id(&self, user_id: &str) -> Result<std::collections::HashSet<String>, Box<dyn std::error::Error + Send + Sync>>;
 }

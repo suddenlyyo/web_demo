@@ -9,6 +9,7 @@ proc-macro = true
 [dependencies]
 # 引入为宏定义的类型
 common_validation = { path = "../common_validation" }
+# 使用工作空间管理的依赖
 # 时间计算、时区转换、格式化/解析
 chrono = { workspace = true }
 # syn 是一个用于解析 Rust 代码的库。它将 Rust 代码解析成抽象语法树（AST），使得你可以方便地操作和分析代码结构

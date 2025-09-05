@@ -1,5 +1,5 @@
 [workspace]
-resolver = "3"   
+resolver = "2"   
 members = [
     "actix_web_demo",
     "axum_demo",
@@ -10,6 +10,11 @@ members = [
 ]
 
 # 统一依赖版本管理
+# 使用工作空间依赖管理有以下好处：
+# 1. 确保所有成员包使用相同版本的依赖，避免版本冲突
+# 2. 简化依赖管理，只需在一个地方维护依赖版本
+# 3. 减少编译时间，相同依赖只编译一次
+# 4. 降低磁盘空间占用，避免多个版本的相同依赖
 [workspace.dependencies]
 # Rocket Web 框架 ,官网地址:https://rocket.rs/
 # 特点: 简单易用、类型安全、强大的路由系统
@@ -47,3 +52,11 @@ quote = "1.0.40"
 proc-macro2 = "1.0.95"
 # 测试框架
 tokio = { version = "1.45.0" }
+# UUID库
+uuid = { version = "1.10.0", features = ["v4"] }
+# Axum Web框架
+axum = "0.7"
+# Actix Web框架
+actix-web = "4"
+# 懒初始化静态变量
+lazy_static = "1.5.0"

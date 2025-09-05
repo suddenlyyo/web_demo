@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use common_wrapper::{ListWrapper, ResponseWrapper, SingleWrapper};
+use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper};
 use uuid::Uuid;
 
 use crate::{
-    models::{Menu, MenuParam},
+    models::Menu,
+    params::menu_param::MenuParam,
     repositories::menu::menu_repository::MenuRepository,
     services::menu::menu_service::{MenuService, RouterVO, TreeVO},
 };
@@ -18,8 +19,6 @@ use crate::repositories::menu::diesel_impl::MenuRepositoryDieselImpl;
 
 #[cfg(feature = "seaorm_impl")]
 use crate::repositories::menu::seaorm_impl::MenuRepositorySeaormImpl;
-
-use super::MENU_REPO;
 
 /// 菜单服务实现
 pub struct MenuServiceImpl {
@@ -48,6 +47,12 @@ impl MenuServiceImpl {
 
         Self { repository: Arc::new(repository) }
     }
+
+    /// 构建菜单树
+    fn build_menu_tree(&self, menu_list: Vec<Menu>) -> Vec<RouterVO> {
+        // TODO: 实现构建菜单树的逻辑
+        Vec::new()
+    }
 }
 
 #[rocket::async_trait]
@@ -74,43 +79,32 @@ impl MenuService for MenuServiceImpl {
         }
     }
 
-    async fn get_menu_by_id(&self, menu_id: &str) -> SingleWrapper<Menu> {
-        match self.repository.select_menu_by_id(menu_id).await {
-            Ok(Some(menu)) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_success(menu);
-                wrapper
-            },
-            Ok(None) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail("未找到指定菜单");
-                wrapper
-            },
-            Err(e) => {
-                let mut wrapper = SingleWrapper::new();
-                wrapper.set_fail(&format!("查询菜单失败: {}", e));
-                wrapper
-            },
-        }
-    }
-
     async fn add_menu(&self, menu_param: MenuParam) -> ResponseWrapper {
-        let mut menu = Menu::default();
-        // 从参数构建菜单对象
-        menu.parent_id = menu_param.parent_id.unwrap_or_default();
-        menu.name = menu_param.menu_name.unwrap_or_default();
-        menu.url = menu_param.url.unwrap_or_default();
-        menu.menu_type = menu_param.menu_type.unwrap_or('0');
-        menu.icon = menu_param.icon.unwrap_or_default();
-        menu.seq_no = menu_param.seq_no.unwrap_or(0);
-        menu.status = menu_param.status.unwrap_or(0);
-        menu.create_by = menu_param.create_by.unwrap_or_default();
-        menu.remark = menu_param.remark.unwrap_or_default();
-
-        // 生成唯一ID
-        menu.id = Uuid::new_v4().to_string();
-        // 设置创建时间
-        menu.create_time = chrono::Utc::now().naive_utc();
+        let menu = Menu {
+            id: Uuid::new_v4().to_string(),
+            name: menu_param.name,
+            parent_id: menu_param.parent_id,
+            seq_no: menu_param.seq_no,
+            menu_type: menu_param.menu_type,
+            url: menu_param.url,
+            perms: menu_param.perms,
+            status: menu_param.status,
+            hidden: menu_param.hidden,
+            always_show: menu_param.always_show,
+            redirect: menu_param.redirect,
+            component: menu_param.component,
+            href: menu_param.href,
+            icon: menu_param.icon,
+            no_cache: menu_param.no_cache,
+            affix: menu_param.affix,
+            breadcrumb: menu_param.breadcrumb,
+            active_menu: menu_param.active_menu,
+            create_by: menu_param.create_by,
+            create_time: Some(chrono::Utc::now()),
+            update_by: menu_param.update_by,
+            update_time: Some(chrono::Utc::now()),
+            remark: menu_param.remark,
+        };
 
         match self.repository.insert_selective(&menu).await {
             Ok(_) => ResponseWrapper::success_default(),
@@ -122,27 +116,36 @@ impl MenuService for MenuServiceImpl {
         }
     }
 
-    async fn update_menu(&self, menu_param: MenuParam) -> ResponseWrapper {
-        if let Some(menu_id) = menu_param.menu_id {
-            let mut menu = Menu::default();
-            menu.id = menu_id;
-            menu.parent_id = menu_param.parent_id.unwrap_or_default();
-            menu.name = menu_param.menu_name.unwrap_or_default();
-            menu.url = menu_param.url.unwrap_or_default();
-            menu.menu_type = menu_param.menu_type.unwrap_or('0');
-            menu.icon = menu_param.icon.unwrap_or_default();
-            menu.seq_no = menu_param.seq_no.unwrap_or(0);
-            menu.status = menu_param.status.unwrap_or(0);
-            menu.update_by = menu_param.update_by.unwrap_or_default();
-            menu.remark = menu_param.remark.unwrap_or_default();
+    async fn edit_menu(&self, menu_param: MenuParam) -> ResponseWrapper {
+        if let Some(menu_id) = &menu_param.id {
+            let menu = Menu {
+                id: menu_id.clone(),
+                name: menu_param.name,
+                parent_id: menu_param.parent_id,
+                seq_no: menu_param.seq_no,
+                menu_type: menu_param.menu_type,
+                url: menu_param.url,
+                perms: menu_param.perms,
+                status: menu_param.status,
+                hidden: menu_param.hidden,
+                always_show: menu_param.always_show,
+                redirect: menu_param.redirect,
+                component: menu_param.component,
+                href: menu_param.href,
+                icon: menu_param.icon,
+                no_cache: menu_param.no_cache,
+                affix: menu_param.affix,
+                breadcrumb: menu_param.breadcrumb,
+                active_menu: menu_param.active_menu,
+                create_by: menu_param.create_by,
+                create_time: None, // 不更新创建时间
+                update_by: menu_param.update_by,
+                update_time: Some(chrono::Utc::now()),
+                remark: menu_param.remark,
+            };
 
             match self.repository.update_by_id_selective(&menu).await {
-                Ok(1) => ResponseWrapper::success_default(),
-                Ok(_) => {
-                    let mut response = ResponseWrapper::fail_default();
-                    response.set_fail("未找到要更新的菜单");
-                    response
-                },
+                Ok(_) => ResponseWrapper::success_default(),
                 Err(e) => {
                     let mut response = ResponseWrapper::fail_default();
                     response.set_fail(&format!("更新菜单失败: {}", e));
@@ -156,14 +159,48 @@ impl MenuService for MenuServiceImpl {
         }
     }
 
-    async fn remove_menu(&self, menu_id: &str) -> ResponseWrapper {
-        match self.repository.delete_by_id(menu_id).await {
-            Ok(1) => ResponseWrapper::success_default(),
-            Ok(_) => {
+    async fn edit_menu_status(&self, id: &str, status: i32) -> ResponseWrapper {
+        // 构造只更新状态的菜单对象
+        let menu = Menu {
+            id: id.to_string(),
+            status: Some(status),
+            update_time: Some(chrono::Utc::now()),
+            // 其他字段设置为None或默认值，因为是选择性更新
+            name: None,
+            parent_id: None,
+            seq_no: None,
+            menu_type: None,
+            url: None,
+            perms: None,
+            hidden: None,
+            always_show: None,
+            redirect: None,
+            component: None,
+            href: None,
+            icon: None,
+            no_cache: None,
+            affix: None,
+            breadcrumb: None,
+            active_menu: None,
+            create_by: None,
+            create_time: None,
+            update_by: None,
+            remark: None,
+        };
+
+        match self.repository.update_by_id_selective(&menu).await {
+            Ok(_) => ResponseWrapper::success_default(),
+            Err(e) => {
                 let mut response = ResponseWrapper::fail_default();
-                response.set_fail("未找到要删除的菜单");
+                response.set_fail(&format!("修改菜单状态失败: {}", e));
                 response
             },
+        }
+    }
+
+    async fn delete_menu(&self, menu_id: &str) -> ResponseWrapper {
+        match self.repository.delete_by_id(menu_id).await {
+            Ok(_) => ResponseWrapper::success_default(),
             Err(e) => {
                 let mut response = ResponseWrapper::fail_default();
                 response.set_fail(&format!("删除菜单失败: {}", e));
@@ -172,138 +209,94 @@ impl MenuService for MenuServiceImpl {
         }
     }
 
-    fn build_menu_tree(&self, menus: Vec<Menu>) -> Vec<RouterVO> {
-        // 创建一个HashMap来存储所有节点，key为id，value为对应的Menu
-        let mut menu_map: HashMap<String, Menu> = HashMap::new();
-        // 存储根节点的id
-        let mut root_ids: Vec<String> = Vec::new();
-
-        // 第一次遍历，创建所有节点
-        for menu in &menus {
-            menu_map.insert(menu.id.clone(), menu.clone());
-            if menu.parent_id.is_empty() || menu.parent_id == "0" {
-                // 根节点
-                root_ids.push(menu.id.clone());
-            }
-        }
-
-        // 递归构建菜单树
-        fn build_children(parent_id: &str, menu_map: &HashMap<String, Menu>) -> Vec<RouterVO> {
-            let mut children = Vec::new();
-            for menu in menu_map.values() {
-                if menu.parent_id == parent_id {
-                    let child = RouterVO {
-                        id: menu.id.clone(),
-                        parent_id: menu.parent_id.clone(),
-                        name: menu.name.clone(),
-                        url: menu.url.clone(),
-                        menu_type: menu.menu_type,
-                        icon: menu.icon.clone(),
-                        seq_no: menu.seq_no,
-                        status: menu.status,
-                        create_by: menu.create_by.clone(),
-                        create_time: menu.create_time,
-                        update_by: menu.update_by.clone(),
-                        update_time: menu.update_time,
-                        remark: menu.remark.clone(),
-                        children: build_children(&menu.id, menu_map),
-                    };
-                    children.push(child);
-                }
-            }
-            children.sort_by_key(|c| c.seq_no);
-            children
-        }
-
-        // 构建结果
-        let mut result: Vec<RouterVO> = Vec::new();
-        for id in root_ids {
-            if let Some(menu) = menu_map.get(&id) {
-                let router_vo = RouterVO {
-                    id: menu.id.clone(),
-                    parent_id: menu.parent_id.clone(),
-                    name: menu.name.clone(),
-                    url: menu.url.clone(),
-                    menu_type: menu.menu_type,
-                    icon: menu.icon.clone(),
-                    seq_no: menu.seq_no,
-                    status: menu.status,
-                    create_by: menu.create_by.clone(),
-                    create_time: menu.create_time,
-                    update_by: menu.update_by.clone(),
-                    update_time: menu.update_time,
-                    remark: menu.remark.clone(),
-                    children: build_children(&menu.id, &menu_map),
-                };
-                result.push(router_vo);
-            }
-        }
-
-        result.sort_by_key(|r| r.seq_no);
-        result
-    }
-
-    async fn select_menu_tree(&self, menu_param: MenuParam) -> ListWrapper<TreeVO> {
-        match self.repository.select_menu_tree(menu_param).await {
+    async fn get_menu_tree(&self, menu_param: MenuParam) -> ListWrapper<TreeVO> {
+        match self.repository.select_menu_list(menu_param).await {
             Ok(menu_list) => {
-                // 构建菜单树
-                let mut menu_map: HashMap<String, TreeVO> = HashMap::new();
-                let mut root_ids: Vec<String> = Vec::new();
-
-                // 第一次遍历，创建所有节点
-                for menu in &menu_list {
-                    let tree_vo = TreeVO {
-                        id: menu.id.clone(),
-                        parent_id: menu.parent_id.clone(),
-                        name: menu.name.clone(),
-                        url: menu.url.clone(),
-                        menu_type: menu.menu_type,
-                        icon: menu.icon.clone(),
-                        seq_no: menu.seq_no,
-                        status: menu.status,
-                        create_by: menu.create_by.clone(),
-                        create_time: menu.create_time,
-                        update_by: menu.update_by.clone(),
-                        update_time: menu.update_time,
-                        remark: menu.remark.clone(),
-                        children: Vec::new(),
-                    };
-                    menu_map.insert(menu.id.clone(), tree_vo);
-                    if menu.parent_id.is_empty() || menu.parent_id == "0" {
-                        // 根节点
-                        root_ids.push(menu.id.clone());
-                    }
-                }
-
-                // 第二次遍历，建立父子关系
-                for menu in &menu_list {
-                    if menu.parent_id.is_empty() || menu.parent_id == "0" {
-                        continue;
-                    } else {
-                        // 非根节点，将其添加到父节点的children中
-                        if let Some(parent) = menu_map.get_mut(&menu.parent_id) {
-                            if let Some(child) = menu_map.get(&menu.id) {
-                                parent.children.push(child.clone());
-                            }
-                        }
-                    }
-                }
-
-                // 构建结果
-                let mut result: Vec<TreeVO> = Vec::new();
-                for id in root_ids {
-                    if let Some(node) = menu_map.get(&id) {
-                        result.push(node.clone());
-                    }
-                }
-
                 let mut wrapper = ListWrapper::new();
-                wrapper.set_success(result);
+                let tree_vo_list: Vec<TreeVO> = menu_list
+                    .into_iter()
+                    .map(|menu| TreeVO {
+                        id: Some(menu.id),
+                        name: menu.name,
+                        parent_id: menu.parent_id,
+                        seq_no: menu.seq_no,
+                        menu_type: menu.menu_type,
+                        url: menu.url,
+                        perms: menu.perms,
+                        status: menu.status,
+                        hidden: menu.hidden,
+                        always_show: menu.always_show,
+                        redirect: menu.redirect,
+                        component: menu.component,
+                        href: menu.href,
+                        icon: menu.icon,
+                        no_cache: menu.no_cache,
+                        affix: menu.affix,
+                        breadcrumb: menu.breadcrumb,
+                        active_menu: menu.active_menu,
+                        create_by: menu.create_by,
+                        create_time: menu.create_time,
+                        update_by: menu.update_by,
+                        update_time: menu.update_time,
+                        remark: menu.remark,
+                        children: vec![],
+                    })
+                    .collect();
+                wrapper.set_success(tree_vo_list);
                 wrapper
             },
             Err(e) => {
                 let mut wrapper = ListWrapper::new();
                 wrapper.set_fail(&format!("查询菜单树失败: {}", e));
+                wrapper
+            },
+        }
+    }
+
+    async fn get_menu(&self) -> HashMap<String, Menu> {
+        // TODO: 实现获取所有菜单并构建成HashMap的逻辑
+        HashMap::new()
+    }
+
+    async fn select_sys_menu_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Menu> {
+        // 构建查询条件
+        let menu_param = MenuParam {
+            id: None,
+            name: None,
+            parent_id: None,
+            seq_no: None,
+            menu_type: None,
+            url: None,
+            perms: None,
+            status: None,
+            hidden: None,
+            always_show: None,
+            redirect: None,
+            component: None,
+            href: None,
+            icon: None,
+            no_cache: None,
+            affix: None,
+            breadcrumb: None,
+            active_menu: None,
+            create_by: None,
+            create_time: None,
+            update_by: None,
+            update_time: None,
+            remark: None,
+            page_param: PageParam::default(),
+        };
+        // TODO: 根据user_id和user_name构建查询条件
+
+        match self.repository.select_menu_list(menu_param).await {
+            Ok(menus) => {
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_success(menus);
+                wrapper
+            },
+            Err(e) => {
+                let mut wrapper = ListWrapper::new();
+                wrapper.set_fail(&format!("查询菜单信息失败: {}", e));
                 wrapper
             },
         }

@@ -1,21 +1,16 @@
-//! 用户服务实现
+use std::sync::Arc;
 
-use std::collections::HashSet;
-
-use common_wrapper::{PageWrapper, ResponseWrapper, SingleWrapper};
-use rocket::futures::StreamExt;
-use sqlx::types::Uuid;
+use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper, SingleWrapper};
+use uuid::Uuid;
 
 use crate::{
     models::{User, UserRole},
-    repositories::{role::role_repository::RoleRepository, user::user_repository::UserRepository, user_role::user_role_repository::UserRoleRepository},
+    params::{page_param::PageParam, user_param::UserParam},
+    repositories::{user::user_repository::UserRepository, user_role::user_role_repository::UserRoleRepository},
+    services::user::user_service::UserService,
 };
 
-use super::{ROLE_REPO, USER_REPO, USER_ROLE_REPO, UserService};
-use crate::services::params::user_param::UserParam;
-
-// 根据启用的feature导入对应的实现
-#[cfg(feature = "sqlx_impl")]
+#[cfg(any(feature = "sqlx_impl", feature = "seaorm_impl"))]
 use crate::repositories::user::sqlx_impl::UserRepositorySqlxImpl;
 
 #[cfg(feature = "diesel_impl")]
@@ -24,7 +19,7 @@ use crate::repositories::user::diesel_impl::UserRepositoryDieselImpl;
 #[cfg(feature = "seaorm_impl")]
 use crate::repositories::user::seaorm_impl::UserRepositorySeaormImpl;
 
-#[cfg(feature = "sqlx_impl")]
+#[cfg(any(feature = "sqlx_impl", feature = "seaorm_impl"))]
 use crate::repositories::user_role::sqlx_impl::UserRoleRepositorySqlxImpl;
 
 #[cfg(feature = "diesel_impl")]
@@ -35,12 +30,12 @@ use crate::repositories::user_role::seaorm_impl::UserRoleRepositorySeaormImpl;
 
 /// 用户服务实现
 pub struct UserServiceImpl {
-    repository: Box<dyn UserRepository>,
-    user_role_repository: Box<dyn UserRoleRepository>,
+    user_repository: Arc<dyn UserRepository>,
+    user_role_repository: Arc<dyn UserRoleRepository>,
 }
 
 impl UserServiceImpl {
-    /// 创建新的用户服务实例
+    /// 创建用户服务实例
     ///
     /// # 参数
     ///
@@ -49,267 +44,291 @@ impl UserServiceImpl {
     /// # 返回值
     ///
     /// 返回新的用户服务实例
-    pub async fn new(database_url: &str) -> Self {
+    pub async fn new(_database_url: &str) -> Self {
         #[cfg(feature = "sqlx_impl")]
-        let repository = UserRepositorySqlxImpl::from_database_url(database_url).await;
+        let user_repository = UserRepositorySqlxImpl::new(_database_url).await.unwrap();
+        #[cfg(feature = "sqlx_impl")]
+        let user_role_repository = UserRoleRepositorySqlxImpl::new(_database_url)
+            .await
+            .unwrap();
 
         #[cfg(feature = "diesel_impl")]
-        let repository = UserRepositoryDieselImpl::new(); // Diesel不需要数据库URL
-
-        #[cfg(feature = "seaorm_impl")]
-        let repository = UserRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
-
-        #[cfg(feature = "sqlx_impl")]
-        let user_role_repository = UserRoleRepositorySqlxImpl::new(
-            sqlx::PgPool::connect("postgresql://localhost/test") // TODO: 使用正确的数据库连接
-                .await
-                .expect("Failed to create PgPool"),
-        );
-
+        let user_repository = UserRepositoryDieselImpl::new(); // Diesel不需要数据库URL
         #[cfg(feature = "diesel_impl")]
-        let user_role_repository = UserRoleRepositoryDieselImpl::new(); // Diesel实现
+        let user_role_repository = UserRoleRepositoryDieselImpl::new();
 
         #[cfg(feature = "seaorm_impl")]
-        let user_role_repository = UserRoleRepositorySeaormImpl::new(); // SeaORM实现
+        let user_repository = UserRepositorySeaormImpl::new().await.unwrap(); // SeaORM实现
+        #[cfg(feature = "seaorm_impl")]
+        let user_role_repository = UserRoleRepositorySeaormImpl::new().await.unwrap();
 
         Self {
-            repository: Box::new(repository),
-            user_role_repository: Box::new(user_role_repository),
+            user_repository: Arc::new(user_repository),
+            user_role_repository: Arc::new(user_role_repository),
         }
     }
 }
 
 #[rocket::async_trait]
 impl UserService for UserServiceImpl {
-    /// 根据用户名查询用户信息
+    async fn add_user(&self, user_param: UserParam) -> ResponseWrapper {
+        // 构造用户对象
+        let user = User {
+            id: Uuid::new_v4().to_string(),
+            dept_id: user_param.dept_id.clone(),
+            name: user_param.name.clone(),
+            email: user_param.email.clone(),
+            phone_number: user_param.phone_number.clone(),
+            sex: user_param.sex.clone(),
+            password: user_param.password.clone(),
+            avatar: user_param.avatar.clone(),
+            status: user_param.status,
+            login_ip: user_param.login_ip.clone(),
+            login_time: user_param.login_time,
+            create_by: user_param.create_by.clone(),
+            create_time: Some(chrono::Utc::now()),
+            update_by: user_param.update_by.clone(),
+            update_time: user_param.update_time,
+            remark: user_param.remark.clone(),
+        };
+
+        match self.user_repository.insert_selective(&user).await {
+            Ok(_) => ResponseWrapper::success_default(),
+            Err(e) => {
+                let mut response = ResponseWrapper::fail_default();
+                response.set_fail(&format!("添加用户失败: {}", e));
+                response
+            },
+        }
+    }
+
+    async fn edit_user(&self, user_param: UserParam) -> ResponseWrapper {
+        if let Some(user_id) = &user_param.id {
+            // 构造用户对象
+            let user = User {
+                id: user_id.clone(),
+                dept_id: user_param.dept_id.clone(),
+                name: user_param.name.clone(),
+                email: user_param.email.clone(),
+                phone_number: user_param.phone_number.clone(),
+                sex: user_param.sex.clone(),
+                password: user_param.password.clone(),
+                avatar: user_param.avatar.clone(),
+                status: user_param.status,
+                login_ip: user_param.login_ip.clone(),
+                login_time: user_param.login_time,
+                create_by: user_param.create_by.clone(),
+                create_time: None, // 不更新创建时间
+                update_by: user_param.update_by.clone(),
+                update_time: Some(chrono::Utc::now()),
+                remark: user_param.remark.clone(),
+            };
+
+            match self
+                .user_repository
+                .update_by_primary_key_selective(&user)
+                .await
+            {
+                Ok(_) => ResponseWrapper::success_default(),
+                Err(e) => {
+                    let mut response = ResponseWrapper::fail_default();
+                    response.set_fail(&format!("更新用户失败: {}", e));
+                    response
+                },
+            }
+        } else {
+            let mut response = ResponseWrapper::fail_default();
+            response.set_fail("用户ID不能为空");
+            response
+        }
+    }
+
+    async fn edit_user_status(&self, id: &str, status: i32) -> ResponseWrapper {
+        // 构造只更新状态的用户对象
+        let user = User {
+            id: id.to_string(),
+            status: Some(status),
+            update_time: Some(chrono::Utc::now()),
+            // 其他字段设置为None或默认值，因为是选择性更新
+            dept_id: None,
+            name: None,
+            email: None,
+            phone_number: None,
+            sex: None,
+            password: None,
+            avatar: None,
+            login_ip: None,
+            login_time: None,
+            create_by: None,
+            create_time: None,
+            update_by: None,
+            remark: None,
+        };
+
+        match self
+            .user_repository
+            .update_by_primary_key_selective(&user)
+            .await
+        {
+            Ok(_) => ResponseWrapper::success_default(),
+            Err(e) => {
+                let mut response = ResponseWrapper::fail_default();
+                response.set_fail(&format!("修改用户状态失败: {}", e));
+                response
+            },
+        }
+    }
+
+    async fn delete_user(&self, user_id: &str) -> ResponseWrapper {
+        match self.user_repository.delete_by_primary_key(user_id).await {
+            Ok(_) => ResponseWrapper::success_default(),
+            Err(e) => {
+                let mut response = ResponseWrapper::fail_default();
+                response.set_fail(&format!("删除用户失败: {}", e));
+                response
+            },
+        }
+    }
+
     async fn select_user_by_user_name(&self, user_name: &str) -> Option<User> {
-        match self.repository.find_by_name(user_name).await {
+        match self.user_repository.find_by_name(user_name).await {
             Ok(user) => user,
             Err(_) => None,
         }
     }
 
-    /// 分页查询用户列表
     async fn get_user_list_by_page(&self, user_param: UserParam) -> PageWrapper<User> {
-        let mut page_wrapper = PageWrapper::new();
-        // 直接使用传入的 user_param 进行查询
-        let user_query = user_param;
-
-        match self
-            .repository
-            .select_user_list_with_page(&user_query)
-            .await
-        {
-            Ok(users) => match self.repository.get_user_list_count(&user_query).await {
-                Ok(total) => {
-                    page_wrapper.set_success(users, total, user_query.page_param.page_num.unwrap_or(1), user_query.page_param.page_size.unwrap_or(10));
-                },
-                Err(_) => {
-                    page_wrapper.set_fail("获取用户总数失败");
-                },
-            },
-            Err(_) => {
-                page_wrapper.set_fail("获取用户列表失败");
-            },
-        }
-
-        page_wrapper
-    }
-
-    /// 新增用户
-    async fn add_user(&self, user_param: UserParam) -> ResponseWrapper {
-        let mut response = ResponseWrapper::success_default();
+        let page_param = user_param.page_param.clone().unwrap_or_default();
+        // 构建查询条件
         let user = User {
-            id: Uuid::new_v4().to_string(),
-            name: user_param.user_name,
-            password: user_param.password,
-            email: user_param.email,
-            phone_number: user_param.phone_number,
-            sex: user_param.sex,
-            avatar: user_param.avatar,
+            id: String::new(),
+            dept_id: user_param.dept_id.clone(),
+            name: user_param.name.clone(),
+            email: user_param.email.clone(),
+            phone_number: user_param.phone_number.clone(),
+            sex: user_param.sex.clone(),
+            password: user_param.password.clone(),
+            avatar: user_param.avatar.clone(),
             status: user_param.status,
-            login_ip: user_param.login_ip,
+            login_ip: user_param.login_ip.clone(),
             login_time: user_param.login_time,
-            dept_id: user_param.dept_id,
-            create_by: user_param.create_by,
-            create_time: Some(chrono::Utc::now()),
-            update_by: user_param.update_by,
-            update_time: Some(chrono::Utc::now()),
-            remark: user_param.remark,
+            create_by: user_param.create_by.clone(),
+            create_time: user_param.create_time,
+            update_by: user_param.update_by.clone(),
+            update_time: user_param.update_time,
+            remark: user_param.remark.clone(),
         };
 
-        if let Err(_) = self.repository.insert(&user).await {
-            response.set_fail("新增用户失败");
-        }
-
-        response
-    }
-
-    /// 编辑用户
-    async fn edit_user(&self, user_param: UserParam) -> ResponseWrapper {
-        let mut response = ResponseWrapper::success_default();
-
-        if let Some(id) = user_param.id.clone() {
-            match self.repository.select_by_primary_key(&id).await {
-                Ok(Some(mut user)) => {
-                    // 更新用户信息
-                    if let Some(user_name) = user_param.user_name {
-                        user.name = user_name;
-                    }
-                    if let Some(email) = user_param.email {
-                        user.email = email;
-                    }
-                    if let Some(phone_number) = user_param.phone_number {
-                        user.phone_number = phone_number;
-                    }
-                    if let Some(sex) = user_param.sex {
-                        user.sex = sex;
-                    }
-                    if let Some(avatar) = user_param.avatar {
-                        user.avatar = avatar;
-                    }
-                    if let Some(status) = user_param.status {
-                        user.status = status;
-                    }
-                    if let Some(login_ip) = user_param.login_ip {
-                        user.login_ip = login_ip;
-                    }
-                    if let Some(login_time) = user_param.login_time {
-                        user.login_time = Some(login_time);
-                    }
-                    if let Some(update_by) = user_param.update_by {
-                        user.update_by = update_by;
-                    }
-                    user.update_time = Some(chrono::Utc::now());
-                    if let Some(remark) = user_param.remark {
-                        user.remark = remark;
-                    }
-
-                    if let Err(_) = self.repository.update_by_primary_key_selective(&user).await {
-                        response.set_fail("编辑用户失败");
-                    }
-                },
-                Ok(None) => {
-                    response.set_fail("用户不存在");
-                },
-                Err(_) => {
-                    response.set_fail("查询用户失败");
-                },
-            }
-        } else {
-            response.set_fail("用户ID不能为空");
-        }
-
-        response
-    }
-
-    /// 编辑用户状态
-    async fn edit_user_status(&self, id: &str, status: i32) -> ResponseWrapper {
-        let mut response = ResponseWrapper::success_default();
-
-        match self.repository.select_by_primary_key(id).await {
-            Ok(Some(mut user)) => {
-                user.status = Some(status);
-                user.update_time = Some(chrono::Utc::now());
-                if let Err(_) = self.repository.update_by_primary_key_selective(&user).await {
-                    response.set_fail("编辑用户状态失败");
-                }
-            },
-            Ok(None) => {
-                response.set_fail("用户不存在");
-            },
-            Err(_) => {
-                response.set_fail("查询用户失败");
-            },
-        }
-
-        response
-    }
-
-    /// 删除用户
-    async fn delete_user(&self, user_id: &str) -> ResponseWrapper {
-        let mut response = ResponseWrapper::success_default();
-
-        match self.repository.delete_by_primary_key(user_id).await {
-            Ok(_) => {},
-            Err(_) => {
-                response.set_fail("删除用户失败");
-            },
-        }
-
-        response
-    }
-
-    /// 重置密码
-    async fn reset_user_pwd(&self, user_param: UserParam) -> ResponseWrapper {
-        let mut response = ResponseWrapper::success_default();
-
-        if let Some(id) = user_param.id {
-            match self.repository.select_by_primary_key(&id).await {
-                Ok(Some(mut user)) => {
-                    // 重置密码为默认密码
-                    user.password = Some("123456".to_string());
-                    user.update_time = Some(chrono::Utc::now());
-                    if let Err(_) = self.repository.update_by_primary_key_selective(&user).await {
-                        response.set_fail("重置密码失败");
-                    }
-                },
-                Ok(None) => {
-                    response.set_fail("用户不存在");
-                },
-                Err(_) => {
-                    response.set_fail("查询用户失败");
-                },
-            }
-        } else {
-            response.set_fail("用户ID不能为空");
-        }
-
-        response
-    }
-
-    /// 分配角色
-    async fn set_user_role(&self, user_id: &str, role_ids: &[String]) -> ResponseWrapper {
-        let mut response = ResponseWrapper::success_default();
-
-        // 先删除用户的所有角色
-        if let Err(e) = self.user_role_repository.delete_by_user_id(user_id).await {
-            response.set_fail(&format!("删除用户角色失败: {}", e));
-            return response;
-        }
-
-        // 然后添加新的角色
-        let user_roles: Vec<UserRole> = role_ids
-            .iter()
-            .map(|role_id| UserRole { user_id: user_id.to_string(), role_id: role_id.clone() })
-            .collect();
-
-        if let Err(e) = self.user_role_repository.batch_insert(&user_roles).await {
-            response.set_fail(&format!("分配角色失败: {}", e));
-            return response;
-        }
-
-        response
-    }
-
-    /// 查询用户的角色id列表
-    async fn select_role_ids_by_user_id(&self, user_id: &str) -> SingleWrapper<HashSet<String>> {
-        let mut wrapper = SingleWrapper::new();
-
-        match self
-            .user_role_repository
-            .select_user_role_by_user_id(user_id)
-            .await
-        {
-            Ok(user_roles) => {
-                let role_ids: HashSet<String> = user_roles.into_iter().map(|ur| ur.role_id).collect();
-                wrapper.set_success(role_ids);
+        match self.user_repository.select_user_list(&user).await {
+            Ok(user_list) => {
+                // 创建分页包装器
+                let mut wrapper = PageWrapper::new();
+                // 这里需要根据实际的分页逻辑进行调整，暂时使用固定值
+                let total = user_list.len() as u64;
+                let current_page = page_param.page_num.unwrap_or(1) as u64;
+                let page_size = page_param.page_size.unwrap_or(10) as u64;
+                wrapper.set_success(user_list, total, current_page, page_size);
+                wrapper
             },
             Err(e) => {
-                wrapper.set_fail(&format!("查询用户角色失败: {}", e));
+                let mut wrapper = PageWrapper::new();
+                wrapper.set_fail(&format!("查询用户列表失败: {}", e));
+                wrapper
             },
         }
+    }
 
-        wrapper
+    async fn reset_user_pwd(&self, user_param: UserParam) -> ResponseWrapper {
+        if let Some(user_id) = &user_param.id {
+            if let Some(password) = &user_param.password {
+                // 构造只更新密码的用户对象
+                let user = User {
+                    id: user_id.to_string(),
+                    password: Some(password.to_string()),
+                    update_time: Some(chrono::Utc::now()),
+                    // 其他字段设置为None或默认值，因为是选择性更新
+                    dept_id: None,
+                    name: None,
+                    email: None,
+                    phone_number: None,
+                    sex: None,
+                    avatar: None,
+                    status: None,
+                    login_ip: None,
+                    login_time: None,
+                    create_by: None,
+                    create_time: None,
+                    update_by: None,
+                    remark: None,
+                };
+
+                match self
+                    .user_repository
+                    .update_by_primary_key_selective(&user)
+                    .await
+                {
+                    Ok(_) => ResponseWrapper::success_default(),
+                    Err(e) => {
+                        let mut response = ResponseWrapper::fail_default();
+                        response.set_fail(&format!("重置用户密码失败: {}", e));
+                        response
+                    },
+                }
+            } else {
+                let mut response = ResponseWrapper::fail_default();
+                response.set_fail("密码不能为空");
+                response
+            }
+        } else {
+            let mut response = ResponseWrapper::fail_default();
+            response.set_fail("用户ID不能为空");
+            response
+        }
+    }
+
+    async fn set_user_role(&self, user_id: &str, role_ids: &[String]) -> ResponseWrapper {
+        // 先删除用户的所有角色
+        match self.user_role_repository.delete_by_user_id(user_id).await {
+            Ok(_) => {
+                // 添加新角色
+                for role_id in role_ids {
+                    let user_role = UserRole {
+                        user_id: user_id.to_string(),
+                        role_id: role_id.to_string(),
+                    };
+
+                    if let Err(e) = self.user_role_repository.insert(&user_role).await {
+                        let mut response = ResponseWrapper::fail_default();
+                        response.set_fail(&format!("分配用户角色失败: {}", e));
+                        return response;
+                    }
+                }
+                ResponseWrapper::success_default()
+            },
+            Err(e) => {
+                let mut response = ResponseWrapper::fail_default();
+                response.set_fail(&format!("删除用户原有角色失败: {}", e));
+                response
+            },
+        }
+    }
+
+    async fn select_role_ids_by_user_id(&self, user_id: &str) -> SingleWrapper<std::collections::HashSet<String>> {
+        match self
+            .user_role_repository
+            .select_role_ids_by_user_id(user_id)
+            .await
+        {
+            Ok(role_ids) => {
+                let mut wrapper = SingleWrapper::new();
+                wrapper.set_success(role_ids);
+                wrapper
+            },
+            Err(e) => {
+                let mut wrapper = SingleWrapper::new();
+                wrapper.set_fail(&format!("查询用户角色失败: {}", e));
+                wrapper
+            },
+        }
     }
 }

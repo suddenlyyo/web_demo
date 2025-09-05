@@ -1,7 +1,7 @@
 //! 部门数据访问层接口定义
 
 use crate::models::Dept;
-use crate::services::params::user_param::DeptParam;
+use crate::services::dept::dept_service::DeptParam;
 use rocket::async_trait;
 use std::error::Error as StdError;
 use std::fmt::Debug;

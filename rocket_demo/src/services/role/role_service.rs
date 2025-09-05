@@ -1,10 +1,11 @@
 //! 角色服务接口定义
 
-use super::PageParam;
 use crate::models::Role;
+use crate::params::role_param::RoleParam;
 use common_wrapper::{ListWrapper, ResponseWrapper, SingleWrapper};
+use std::collections::HashSet;
 
-/// 角色服务接口
+/// 角色服务trait
 #[rocket::async_trait]
 pub trait RoleService {
     /// 角色设置权限
@@ -35,32 +36,4 @@ pub trait RoleService {
     /// # 返回值
     /// 返回角色列表，类型: [ListWrapper<Role>]
     async fn select_role_infos(&self, user_id: Option<&str>, user_name: Option<&str>) -> ListWrapper<Role>;
-}
-
-/// 角色参数
-#[derive(Debug, Clone)]
-pub struct RoleParam {
-    /// 角色ID
-    pub id: Option<String>,
-    /// 角色名称
-    pub name: Option<String>,
-    /// 角色权限字符串
-    pub role_key: Option<String>,
-    /// 显示顺序
-    pub seq_no: Option<i32>,
-    /// 角色状态（0正常 1停用）
-    pub status: Option<i32>,
-    /// 创建者
-    pub create_by: Option<String>,
-    /// 创建时间
-    pub create_time: Option<chrono::DateTime<chrono::Utc>>,
-    /// 更新者
-    pub update_by: Option<String>,
-    /// 更新时间
-    pub update_time: Option<chrono::DateTime<chrono::Utc>>,
-    /// 备注
-    pub remark: Option<String>,
-    /// 分页参数
-    #[serde(flatten)]
-    pub page_param: PageParam,
 }

@@ -89,28 +89,6 @@ impl MenuRepositorySqlxImpl {
 
 #[rocket::async_trait]
 impl MenuRepository for MenuRepositorySqlxImpl {
-    /// 根据主键查询菜单
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn StdError + Send + Sync>> {
-        let sql = format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS);
-        let result: Option<MenuRow> = sqlx::query_as(&sql)
-            .bind(id)
-            .fetch_optional(self.pool.as_ref())
-            .await?;
-        Ok(result.map(Menu::from))
-    }
-
-    /// 根据主键删除菜单
-    async fn delete_by_primary_key(&self, id: &str) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let sql = "DELETE FROM sys_menu WHERE id = ?";
-        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
-
-        if result.rows_affected() == 0 {
-            return Err(Box::from("菜单删除失败"));
-        }
-
-        Ok(())
-    }
-
     /// 插入菜单记录
     async fn insert(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
         let sql = "INSERT INTO sys_menu (id, name, parent_id, seq_no, menu_type, url, perms, status, hidden, always_show, redirect, component, href, icon, no_cache, affix, breadcrumb, active_menu, create_by, create_time, update_by, update_time, remark) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -154,7 +132,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
         // 构建动态SQL
         let mut fields = vec![];
         let mut placeholders = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
 
         fields.push("id");
         placeholders.push("?");
@@ -308,27 +286,32 @@ impl MenuRepository for MenuRepositorySqlxImpl {
     }
 
     /// 根据主键查询菜单
-    async fn select_by_primary_key(&self, id: &str) -> Result<Option<Menu>, Box<dyn StdError + Send + Sync>> {
+    async fn select_menu_by_id(&self, id: &str) -> Result<Option<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu WHERE id = ?", MENU_FIELDS);
-        let result = sqlx::query(&sql)
+        let result = sqlx::query_as::<_, MenuRow>(&sql)
             .bind(id)
             .fetch_optional(&self.pool)
             .await?;
 
         match result {
-            Some(row) => {
-                let menu = DbMapper::map_to_menu(&row)?;
-                Ok(Some(menu))
-            },
+            Some(row) => Ok(Some(Menu::from(row))),
             None => Ok(None),
         }
     }
 
+    /// 根据主键删除菜单
+    async fn delete_by_id(&self, id: &str) -> Result<u64, Box<dyn StdError + Send + Sync>> {
+        let sql = "DELETE FROM sys_menu WHERE id = ?";
+        let result = sqlx::query(sql).bind(id).execute(&self.pool).await?;
+
+        Ok(result.rows_affected())
+    }
+
     /// 根据主键选择性更新菜单
-    async fn update_by_primary_key_selective(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
+    async fn update_by_id_selective(&self, row: &Menu) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         // 构建动态SQL
         let mut updates = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
 
         if row.name.is_some() {
             updates.push("name = ?");
@@ -441,7 +424,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
         }
 
         if updates.is_empty() {
-            return Ok(());
+            return Ok(0);
         }
 
         let sql = format!("UPDATE sys_menu SET {} WHERE id = ?", updates.join(", "));
@@ -453,15 +436,11 @@ impl MenuRepository for MenuRepositorySqlxImpl {
         query = query.bind(&row.id);
 
         let result = query.execute(&self.pool).await?;
-        if result.rows_affected() == 0 {
-            return Err(Box::from("菜单更新失败"));
-        }
-
-        Ok(())
+        Ok(result.rows_affected())
     }
 
     /// 根据主键更新菜单
-    async fn update_by_primary_key(&self, row: &Menu) -> Result<(), Box<dyn StdError + Send + Sync>> {
+    async fn update_by_id(&self, row: &Menu) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let sql = "UPDATE sys_menu SET name = ?, parent_id = ?, seq_no = ?, menu_type = ?, url = ?, perms = ?, status = ?, hidden = ?, always_show = ?, redirect = ?, component = ?, href = ?, icon = ?, no_cache = ?, affix = ?, breadcrumb = ?, active_menu = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?";
 
         let result = sqlx::query(sql)
@@ -491,11 +470,7 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             .execute(&self.pool)
             .await?;
 
-        if result.rows_affected() == 0 {
-            return Err(Box::from("菜单更新失败"));
-        }
-
-        Ok(())
+        Ok(result.rows_affected())
     }
 
     /// 根据用户ID查询菜单列表
@@ -505,12 +480,12 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             MENU_FIELDS
         );
 
-        let rows = sqlx::query(&sql)
+        let rows = sqlx::query_as::<_, MenuRow>(&sql)
             .bind(user_id)
             .fetch_all(&self.pool)
             .await?;
 
-        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| DbMapper::map_to_menu(row)).collect();
+        let menus: Result<Vec<Menu>, _> = rows.iter().map(|row| Ok(Menu::from(row.clone()))).collect();
 
         Ok(menus?)
     }
@@ -535,32 +510,6 @@ impl MenuRepository for MenuRepositorySqlxImpl {
         Ok(result.into_iter().map(Menu::from).collect())
     }
 
-    /// 查询菜单列表
-    async fn select_sys_menu_list(&self, menu_param: &Menu) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
-        let mut sql = format!("SELECT {} FROM sys_menu WHERE 1=1", MENU_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
-
-        if let Some(name) = &menu_param.name {
-            sql.push_str(" AND name LIKE ?");
-            params.push(Box::new(format!("%{}%", name)));
-        }
-
-        if let Some(status) = menu_param.status {
-            sql.push_str(" AND status = ?");
-            params.push(Box::new(status));
-        }
-
-        sql.push_str(" ORDER BY seq_no");
-
-        let mut query = sqlx::query_as::<_, MenuRow>(&sql);
-        for param in &params {
-            query = query.bind(param.as_ref());
-        }
-
-        let result = query.fetch_all(self.pool.as_ref()).await?;
-        Ok(result.into_iter().map(Menu::from).collect())
-    }
-
     /// 根据父菜单ID查询子菜单列表
     async fn select_sys_menu_by_parent_id(&self, parent_id: &str) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
         let sql = format!("SELECT {} FROM sys_menu WHERE parent_id = ? ORDER BY seq_no", MENU_FIELDS);
@@ -578,6 +527,32 @@ impl MenuRepository for MenuRepositorySqlxImpl {
             .bind(role_id)
             .fetch_all(self.pool.as_ref())
             .await?;
+        Ok(result.into_iter().map(Menu::from).collect())
+    }
+
+    /// 查询菜单列表
+    async fn select_menu_list(&self, menu_param: crate::services::menu::menu_service::MenuParam) -> Result<Vec<Menu>, Box<dyn StdError + Send + Sync>> {
+        let mut sql = format!("SELECT {} FROM sys_menu WHERE 1=1", MENU_FIELDS);
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
+
+        if let Some(name) = &menu_param.menu_name {
+            sql.push_str(" AND name LIKE ?");
+            params.push(Box::new(format!("%{}%", name)));
+        }
+
+        if let Some(status) = menu_param.status {
+            sql.push_str(" AND status = ?");
+            params.push(Box::new(status));
+        }
+
+        sql.push_str(" ORDER BY seq_no");
+
+        let mut query = sqlx::query_as::<_, MenuRow>(&sql);
+        for param in params {
+            query = query.bind(param.as_ref());
+        }
+
+        let result = query.fetch_all(self.pool.as_ref()).await?;
         Ok(result.into_iter().map(Menu::from).collect())
     }
 }

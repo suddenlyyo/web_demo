@@ -1,5 +1,3 @@
-/// 部门表的所有字段，用于SQL查询
-pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
 use chrono::{DateTime, NaiveDateTime, Utc};
 use sqlx::FromRow;
 use sqlx::mysql::MySqlPool;
@@ -128,7 +126,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
         // 构建动态SQL
         let mut fields = vec![];
         let mut placeholders = vec![];
-        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)> = vec![];
+        let mut params: Vec<&(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)> = vec![];
 
         fields.push("id");
         placeholders.push("?");
@@ -242,9 +240,9 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     }
 
     /// 查询部门列表
-    async fn select_dept_list(&self, dept_param: crate::services::params::user_param::DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+    async fn select_dept_list(&self, dept_param: crate::params::dept_param::DeptParam) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
         let mut sql = format!("SELECT {} FROM sys_dept WHERE 1=1", DEPT_FIELDS);
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
         if let Some(name) = dept_param.name {
             sql.push_str(" AND name LIKE ?");
@@ -297,7 +295,7 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     /// 根据主键选择性更新部门
     async fn update_by_id_selective(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let mut sets = vec![];
-        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::types::database::MySqlTypeInfo> + Send + Sync)>> = vec![];
+        let mut params: Vec<Box<(dyn sqlx::Encode<sqlx::MySql, sqlx::MySqlTypeInfo> + Send + Sync)>> = vec![];
 
         if row.parent_id.is_some() {
             sets.push("parent_id = ?");

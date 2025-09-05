@@ -2,7 +2,6 @@
 
 pub mod dept;
 pub mod menu;
-pub mod params;
 pub mod role;
 pub mod user;
 

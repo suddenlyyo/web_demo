@@ -1,10 +1,17 @@
 //! 用户控制器
 
-use common_wrapper::{PageWrapper, ResponseWrapper, SingleWrapper};
-use rocket::{delete, get, post, put, routes, serde::json::Json};
+use rocket::{State, routes, serde::json::Json};
+use rocket::{delete, get, post, put};
 
-use crate::services::params::user_param::UserParam;
-use crate::services::user::user_service::{UserService, UserServiceImpl};
+use std::collections::{HashMap, HashSet};
+
+use crate::models::user::User;
+use crate::params::user_param::UserParam;
+use crate::services::user::user_service::UserService;
+use crate::services::user::user_service_impl::UserServiceImpl;
+use common_wrapper::{ListWrapper, PageWrapper, ResponseWrapper, SingleWrapper};
+
+/// 用户控制器
 
 /// 获取用户信息
 #[get("/user/getInfo")]
@@ -166,5 +173,5 @@ pub async fn update_user_status(id: String, status: i32, user_service: &rocket::
 /// # 返回值
 /// 返回路由列表，类型: [Vec<rocket::Route>]
 pub fn routes() -> Vec<rocket::Route> {
-    routes![get_info, get_user_info, list_users, add_user, edit_user, edit_user_status, delete_user, reset_user_pwd, get_user_role_id_list, set_user_role]
+    routes![get_info, get_user_info, list_users, add_user, edit_user, edit_user_status, delete_user, reset_user_pwd, get_user_role_id_list, set_user_role, update_user_status]
 }

@@ -1,11 +1,16 @@
 //! 部门控制器
 
-use rocket::{delete, get, post, put, serde::json::Json};
+use rocket::State;
+use rocket::routes;
+use rocket::serde::json::Json;
+use rocket::{delete, get, post, put};
 
 use common_wrapper::{ResponseWrapper, SingleWrapper};
 
-use crate::models::Dept;
-use crate::services::dept::dept_service::{DeptService, DeptServiceImpl};
+use crate::services::dept::dept_service::DeptService;
+use crate::services::dept::dept_service_impl::DeptServiceImpl;
+
+/// 部门控制器
 
 /// 查询部门列表
 #[get("/dept/list")]
@@ -16,10 +21,10 @@ pub async fn list_depts(dept_param: DeptParam, dept_service: &rocket::State<Dept
 
 /// 获取部门树
 #[get("/dept/getDeptTree")]
-pub async fn get_dept_tree(dept_service: &rocket::State<DeptServiceImpl>) -> SingleWrapper<Vec<Dept>> {
-    let depts = dept_service.select_dept_list().await;
+pub async fn get_dept_tree(dept_service: &State<DeptServiceImpl>) -> SingleWrapper<Vec<Dept>> {
+    let depts = dept_service.select_dept_list(DeptParam::default()).await;
     let mut wrapper = SingleWrapper::new();
-    wrapper.set_data(depts);
+    wrapper.set_data(depts.data.unwrap_or_default());
     wrapper
 }
 
@@ -53,5 +58,5 @@ pub async fn edit_dept_status(dept_param: Json<DeptParam>, dept_service: &rocket
 
 /// 注册部门相关路由
 pub fn routes() -> Vec<rocket::Route> {
-    routes![list_depts, get_dept_tree, add_dept, edit_dept, delete_dept]
+    routes![list_depts, get_dept_tree, add_dept, edit_dept, delete_dept, edit_dept_status]
 }
