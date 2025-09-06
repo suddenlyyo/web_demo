@@ -1,8 +1,15 @@
 //! 系统数据访问层模块
+//!
+//! 该模块包含了系统中所有实体的数据访问接口定义和实现。
+//! 每个子模块对应一个实体，提供对该实体的增删改查等操作。
+//!
+//! # 模块组织
+//! - [dept] - 部门相关的数据访问接口和实现
+//!
+//! # 使用方式
+//! ```rust
+//! // 在实际使用中，需要引入具体的实现类
+//! // 例如使用SQLx、Diesel或SeaORM的具体实现
+//! ```
 
 pub mod dept;
-pub mod menu;
-pub mod role;
-pub mod role_menu;
-pub mod user;
-pub mod user_role;

@@ -1,48 +1,15 @@
-//! 部门服务接口定义/// 部门树形结构VO
-#[derive(Debug, Clone)]
-pub struct DeptTreeVO {
-    pub id: Option<String>,
-    pub parent_id: Option<String>,
-    pub name: String,
-    pub seq_no: Option<i32>,
-    pub status: Option<i32>,
-    pub create_by: String,
-    pub create_time: Option<chrono::NaiveDateTime>,
-    pub update_by: String,
-    pub update_time: Option<chrono::NaiveDateTime>,
-    pub remark: String,
-    pub children: Vec<DeptTreeVO>,
-}
+//! 部门服务接口定义
 
 use crate::models::Dept;
+use crate::params::dept_param::DeptParam;
 use common_wrapper::{ListWrapper, ResponseWrapper};
 use std::collections::HashMap;
-
-/// 部门参数
-#[derive(Debug, Clone, Default)]
-pub struct DeptParam {
-    pub dept_id: Option<String>,
-    pub dept_name: Option<String>,
-    pub email: Option<String>,
-    pub telephone: Option<String>,
-    pub address: Option<String>,
-    pub logo: Option<String>,
-    pub parent_id: Option<String>,
-    pub dept_level: Option<String>,
-    pub seq_no: Option<i32>,
-    pub status: Option<i32>,
-    pub create_by: Option<String>,
-    pub create_time: Option<chrono::NaiveDateTime>,
-    pub update_by: Option<String>,
-    pub update_time: Option<chrono::NaiveDateTime>,
-    pub remark: Option<String>,
-}
 
 /// 部门服务trait
 #[rocket::async_trait]
 pub trait DeptService {
     /// 获取部门树
-    async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTreeVO>;
+    async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTree>;
 
     /// 获取部门信息Map 用于部门信息匹配
     async fn get_dept(&self) -> HashMap<String, Dept>;

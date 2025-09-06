@@ -1,9 +1,0 @@
-//! 用户数据访问层模块
-
-#[cfg(feature = "diesel_impl")]
-pub mod diesel_impl;
-#[cfg(feature = "seaorm_impl")]
-pub mod seaorm_impl;
-#[cfg(feature = "sqlx_impl")]
-pub mod sqlx_impl;
-pub mod user_repository;

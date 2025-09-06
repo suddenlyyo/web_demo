@@ -1,9 +1,9 @@
-//! 部门数据访问层模块
+//! 部门仓储模块
+//!
+//! 该模块定义了部门相关的数据访问接口和实现。
+//! 提供了对部门信息的增删改查等基本操作。
+//!
+//! # 主要组件
+//! - [dept_repository] - 部门数据访问接口定义
 
 pub mod dept_repository;
-#[cfg(feature = "diesel_impl")]
-pub mod diesel_impl;
-#[cfg(feature = "seaorm_impl")]
-pub mod seaorm_impl;
-#[cfg(feature = "sqlx_impl")]
-pub mod sqlx_impl;
