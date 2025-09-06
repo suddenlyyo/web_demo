@@ -13,6 +13,7 @@ use crate::wrapper::response_wrapper::ResponseWrapper;
 ///
 /// 参见: [ResponseTrait], [ResponseWrapper]
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct SingleWrapper<T> {
     /// 基础响应包装器
     ///

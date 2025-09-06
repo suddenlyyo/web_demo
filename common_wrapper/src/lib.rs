@@ -35,6 +35,7 @@ pub mod wrapper;
 
 // 重新导出常用的类型，方便外部使用
 pub use wrapper::list_wrapper::ListWrapper;
+pub use wrapper::page_info::PageInfo;
 pub use wrapper::page_wrapper::PageWrapper;
 pub use wrapper::response_trait::ResponseTrait;
 pub use wrapper::response_wrapper::ResponseWrapper;

@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 /// # 示例
 ///
 /// ```rust
-/// use common_wrapper::{ResponseWrapper,ResponseTrait, WrapperErrEnum};
+/// use common_wrapper::{ResponseWrapper,ResponseTrait};
+/// use common_wrapper::enums::wrapper_err::WrapperErrEnum;
 ///
 /// let success_response = ResponseWrapper::success_default();
 /// assert_eq!(success_response.get_code(), WrapperErrEnum::Success as i32);
@@ -26,6 +27,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// 参见: [ResponseTrait], [WrapperErrEnum]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
 pub struct ResponseWrapper {
     /// 响应码，通常用于标识请求结果（如成功、失败等）
     ///

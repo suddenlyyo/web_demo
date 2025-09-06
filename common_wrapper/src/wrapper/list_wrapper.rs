@@ -13,6 +13,7 @@ use crate::wrapper::response_wrapper::ResponseWrapper;
 ///
 /// 参见: [ResponseTrait], [ResponseWrapper]
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ListWrapper<T> {
     /// 基础响应包装器
     ///
@@ -21,8 +22,8 @@ pub struct ListWrapper<T> {
     base: ResponseWrapper,
     /// 数据列表
     ///
-    /// 类型: [Vec]<T>
-    data: Vec<T>,
+    /// 类型: [Option]<[Vec]<T>>
+    data: Option<Vec<T>>,
 }
 
 impl<T> ListWrapper<T> {
@@ -34,7 +35,7 @@ impl<T> ListWrapper<T> {
     pub fn new() -> Self {
         Self {
             base: ResponseWrapper::success_default(),
-            data: Vec::new(),
+            data: Some(Vec::new()),
         }
     }
 
@@ -43,11 +44,8 @@ impl<T> ListWrapper<T> {
     /// # 返回值
     ///
     /// 新的ListWrapper实例（失败状态）
-    pub fn fail_default(&mut self) -> Self {
-        Self {
-            base: ResponseWrapper::fail_default(),
-            data: Vec::new(),
-        }
+    pub fn fail_default() -> Self {
+        Self { base: ResponseWrapper::fail_default(), data: None }
     }
 
     /// 创建一个默认未知错误的 ListWrapper，数据为空
@@ -55,10 +53,10 @@ impl<T> ListWrapper<T> {
     /// # 返回值
     ///
     /// 新的ListWrapper实例（未知错误状态）
-    pub fn unknown_error_default(&mut self) -> Self {
+    pub fn unknown_error_default() -> Self {
         Self {
             base: ResponseWrapper::unknown_error_default(),
-            data: Vec::new(),
+            data: None,
         }
     }
 
@@ -69,7 +67,7 @@ impl<T> ListWrapper<T> {
     /// * `data` - 要包装的数据列表
     pub fn set_success(&mut self, data: Vec<T>) {
         self.base = ResponseWrapper::success_default();
-        self.data = data;
+        self.data = Some(data);
     }
 
     /// 设置为失败状态并附带消息
@@ -79,6 +77,7 @@ impl<T> ListWrapper<T> {
     /// * `msg` - 失败消息
     pub fn set_fail(&mut self, msg: impl Into<String>) {
         self.base.set_fail(msg);
+        self.data = None;
     }
 
     /// 设置为未知错误状态并附带消息
@@ -88,6 +87,7 @@ impl<T> ListWrapper<T> {
     /// * `msg` - 未知错误消息
     pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
         self.base.set_unknown_error(msg);
+        self.data = None;
     }
 
     /// 获取基础响应包装器的引用
@@ -104,7 +104,7 @@ impl<T> ListWrapper<T> {
     /// # 返回值
     ///
     /// 数据列表的引用
-    pub fn get_data(&self) -> &Vec<T> {
+    pub fn get_data(&self) -> &Option<Vec<T>> {
         &self.data
     }
 }
@@ -151,7 +151,7 @@ impl<T> ResponseTrait for ListWrapper<T> {
     /// * `msg` - 自定义的失败消息
     fn set_fail(&mut self, msg: impl Into<String>) {
         self.base.set_fail(msg);
-        self.data = Vec::new();
+        self.data = None;
     }
 
     /// 设置为未知错误响应，并自定义消息，数据清空
@@ -161,6 +161,6 @@ impl<T> ResponseTrait for ListWrapper<T> {
     /// * `msg` - 自定义的未知错误消息
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
         self.base.set_unknown_error(msg);
-        self.data = Vec::new();
+        self.data = None;
     }
 }

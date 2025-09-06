@@ -79,9 +79,26 @@ response.set_success(users);
 ```rust
 use common_wrapper::PageWrapper;
 
-let page_data = PageWrapper::new();
-page_data.set_success(users, total, total_page, page, size);
+let mut page_data = PageWrapper::new();
+page_data.set_success(users, total, page, size);
 ```
+
+### PageInfo
+分页参数工具类，用于处理分页相关的参数验证和计算：
+
+```rust
+use common_wrapper::PageInfo;
+
+let page_info = PageInfo::new(Some(1), Some(10));
+let offset = page_info.get_page_offset();
+let page_size = page_info.get_page_size();
+```
+
+PageInfo 提供了以下功能：
+- 分页参数的默认值处理（默认页码为1，默认页面大小为20）
+- 页面大小限制（最大1000条记录）
+- 分页偏移量计算（用于数据库查询）
+- 参数验证（处理无效的页码和页面大小）
 
 ### ResponseWrapper
 通用响应包装器，支持自定义响应结构：
@@ -136,7 +153,7 @@ let error = WrapperErrEnum::UnknownError;
 ## 使用示例
 
 ```rust
-use common_wrapper::{SingleWrapper, ListWrapper, PageWrapper};
+use common_wrapper::{SingleWrapper, ListWrapper, PageWrapper, PageInfo};
 
 // 单个数据响应
 let user = User::new("张三");
@@ -145,8 +162,15 @@ response.set_success(user);
 
 // 列表响应
 let users = vec![user1, user2];
-let list_response = ListWrapper::success(users);
+let mut list_response = ListWrapper::new();
+list_response.set_success(users);
 
 // 分页响应
-let page_response = PageWrapper::success(users, 100, 10, 1, 10);
+let mut page_response = PageWrapper::new();
+page_response.set_success(users, 100, 1, 10);
+
+// 分页参数处理
+let page_info = PageInfo::new(Some(2), Some(20));
+let offset = page_info.get_page_offset(); // 20
+let size = page_info.get_page_size(); // 20
 ```
