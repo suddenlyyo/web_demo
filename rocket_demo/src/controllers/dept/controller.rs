@@ -19,7 +19,7 @@ use serde_json::Value;
 
 /// 查询部门列表
 #[get("/dept/list")]
-pub async fn list(dept_param: DeptParam, dept_service: &rocket::State<Box<dyn DeptService>>) -> Json<Value> {
+pub async fn list_depts(dept_param: DeptParam, dept_service: &rocket::State<Box<dyn DeptService>>) -> Json<Value> {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param).await;
 
     // 如果没有数据直接返回
@@ -92,9 +92,4 @@ pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptServi
 #[put("/dept/editStatus/<id>/<status>")]
 pub async fn edit_dept_status(id: String, status: i32, dept_service: &State<Box<dyn DeptService>>) -> ResponseWrapper {
     dept_service.edit_dept_status(&id, status).await
-}
-
-/// 注册部门相关路由
-pub fn routes() -> Vec<rocket::Route> {
-    routes![list, get_dept_tree, add_dept, edit_dept, delete_dept, edit_dept_status]
 }

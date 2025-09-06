@@ -4,17 +4,10 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use chrono::Utc;
-use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper, SingleWrapper, StatusEnum};
+use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper, SingleWrapper};
 use uuid::Uuid;
 
-use crate::{
-    models::Dept,
-    params::dept_param::DeptParam,
-    repositories::dept::dept_repository::DeptRepository,
-    repositories::dept::dept_repository::DeptRepositoryImpl,
-    services::dept::dept_service::{DeptService, DeptTreeVO},
-    views::dept_tree::DeptTree,
-};
+use crate::{models::Dept, params::dept_param::DeptParam, repositories::dept::dept_repository::DeptRepository, services::dept::dept_service::DeptService, views::dept_tree::DeptTree};
 
 /// 部门服务实现
 pub struct DeptServiceImpl {
@@ -23,10 +16,14 @@ pub struct DeptServiceImpl {
 
 impl DeptServiceImpl {
     /// 创建新的部门服务实例
-    pub async fn new() -> Self {
-        let repository = DeptRepositoryImpl::new(); // 使用默认实现
-
-        Self { repository: Arc::new(repository) }
+    ///
+    /// # 参数
+    /// * `repository` - 部门仓库trait的实现
+    ///
+    /// # 返回值
+    /// 返回新的部门服务实例
+    pub fn new(repository: Arc<dyn DeptRepository>) -> Self {
+        Self { repository }
     }
 
     /// 构建部门树
@@ -37,25 +34,27 @@ impl DeptServiceImpl {
         }
 
         // 先将所有部门转换为树节点并构建HashMap以便快速查找
-        let mut dept_map: HashMap<String, DeptTree> = HashMap::with_capacity(dept_list.len());
-        for dept in dept_list {
-            let tree_node = DeptTree {
-                id: dept.id.clone(),
-                parent_id: dept.parent_id.clone(),
-                name: dept.name.clone(),
-                children: Vec::new(), // 默认为空的子节点列表
-            };
-            dept_map.insert(dept.id, tree_node);
-        }
+        let mut dept_map: HashMap<String, DeptTree> = dept_list
+            .into_iter()
+            .map(|dept| {
+                let tree_node = DeptTree {
+                    id: dept.id.clone(),
+                    parent_id: dept.parent_id.clone(),
+                    name: dept.name.clone(),
+                    children: Vec::new(), // 默认为空的子节点列表
+                };
+                (dept.id, tree_node)
+            })
+            .collect();
 
         // 记录所有子节点的ID，这些节点不应该作为根节点出现
-        let mut child_ids = HashSet::with_capacity(dept_map.len());
+        let mut child_ids = std::collections::HashSet::new();
 
         // 构建父子关系
-        for (id, tree_node) in &mut dept_map {
+        for (_, tree_node) in dept_map.iter_mut() {
             if let Some(ref parent_id) = tree_node.parent_id {
                 // 记录子节点ID
-                child_ids.insert(id.clone());
+                child_ids.insert(tree_node.id.clone());
 
                 // 如果父节点存在，则将当前节点添加到父节点的子节点列表中
                 if let Some(parent_node) = dept_map.get_mut(parent_id) {
@@ -199,10 +198,10 @@ impl DeptServiceImpl {
 
 #[rocket::async_trait]
 impl DeptService for DeptServiceImpl {
-    async fn get_dept_tree(&self, dept_param: crate::services::dept::dept_service::DeptParam) -> ListWrapper<DeptTree> {
+    async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTree> {
         // 转换参数类型
         let param = DeptParam::from(dept_param);
-        match self.repository.select_dept_list(&param).await {
+        match self.repository.select_dept_list(&Dept::from(param)).await {
             Ok(dept_list) => {
                 let tree_list = self.build_dept_tree(dept_list);
                 let mut wrapper = ListWrapper::new();
@@ -232,7 +231,7 @@ impl DeptService for DeptServiceImpl {
         }
     }
 
-    async fn select_dept_list(&self, dept_param: crate::services::dept::dept_service::DeptParam) -> ListWrapper<Dept> {
+    async fn select_dept_list(&self, dept_param: DeptParam) -> ListWrapper<Dept> {
         match self
             .repository
             .select_dept_list(&Dept::from(dept_param))
@@ -251,7 +250,7 @@ impl DeptService for DeptServiceImpl {
         }
     }
 
-    async fn add_dept(&self, dept_param: crate::services::dept::dept_service::DeptParam) -> ResponseWrapper {
+    async fn add_dept(&self, dept_param: DeptParam) -> ResponseWrapper {
         // 验证部门状态
         let status = match self.validate_dept_status(dept_param.status) {
             Ok(s) => s,
@@ -291,7 +290,7 @@ impl DeptService for DeptServiceImpl {
         }
     }
 
-    async fn edit_dept(&self, dept_param: crate::services::dept::dept_service::DeptParam) -> ResponseWrapper {
+    async fn edit_dept(&self, dept_param: DeptParam) -> ResponseWrapper {
         // 验证部门ID
         let dept_id = match &dept_param.id {
             Some(id) => id,
