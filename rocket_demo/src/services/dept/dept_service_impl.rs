@@ -34,49 +34,65 @@ impl DeptServiceImpl {
             return Vec::new();
         }
 
-        // 先将所有部门转换为树节点并构建HashMap以便快速查找
-        let mut dept_map: HashMap<String, DeptTree> = dept_list
+        // 转换为树节点列表
+        let tree_list: Vec<DeptTree> = dept_list
             .into_iter()
-            .map(|dept| {
-                let tree_node = DeptTree {
-                    id: dept.id.clone(),
-                    parent_id: dept.parent_id.clone(),
-                    name: dept.name.clone(),
-                    children: Vec::new(), // 默认为空的子节点列表
-                };
-                (dept.id, tree_node)
+            .map(|dept| DeptTree {
+                id: dept.id,
+                parent_id: dept.parent_id,
+                name: dept.name,
+                children: Vec::new(),
             })
             .collect();
 
-        // 记录所有子节点的ID，这些节点不应该作为根节点出现
-        let mut child_ids = std::collections::HashSet::new();
+        // 创建一个映射，便于通过ID查找节点
+        let mut tree_map: HashMap<String, DeptTree> = tree_list
+            .into_iter()
+            .map(|node| (node.id.clone(), node))
+            .collect();
 
-        // 构建父子关系（使用单独的循环避免同时借用的问题）
-        for (id, tree_node) in &dept_map {
-            if let Some(ref _parent_id) = tree_node.parent_id {
-                // 记录子节点ID
-                child_ids.insert(id.clone());
-            }
-        }
+        // 收集所有父子关系
+        let mut parent_child_map: HashMap<String, Vec<String>> = HashMap::new();
 
-        // 克隆一份用于遍历，避免借用冲突
-        let mut result: Vec<DeptTree> = Vec::new();
-        let dept_map_clone = dept_map.clone();
-        for (id, tree_node) in &dept_map_clone {
-            // 如果有父节点且父节点存在，则添加到父节点的子节点列表中
-            if let Some(ref parent_id) = tree_node.parent_id {
-                if let Some(parent_node) = dept_map.get_mut(parent_id) {
-                    parent_node.children.push(tree_node.clone());
+        for (id, node) in &tree_map {
+            if let Some(ref parent_id) = node.parent_id {
+                if !parent_id.is_empty() && tree_map.contains_key(parent_id) {
+                    parent_child_map
+                        .entry(parent_id.clone())
+                        .or_insert_with(Vec::new)
+                        .push(id.clone());
                 }
             }
+        }
 
-            // 如果节点没有父节点或者父节点不存在，则为根节点
-            if tree_node.parent_id.is_none() || !child_ids.contains(id) {
-                result.push(tree_node.clone());
+        // 收集所有需要设置子节点的父节点ID
+        let parent_ids: Vec<String> = parent_child_map.keys().cloned().collect();
+
+        // 为每个节点设置子节点
+        for parent_id in parent_ids {
+            if let Some(child_ids) = parent_child_map.get(&parent_id) {
+                let children: Vec<DeptTree> = child_ids
+                    .iter()
+                    .filter_map(|child_id| tree_map.get(child_id).cloned())
+                    .collect();
+
+                if let Some(parent_node) = tree_map.get_mut(&parent_id) {
+                    if !children.is_empty() {
+                        parent_node.children = children;
+                    }
+                }
             }
         }
 
-        result
+        // 只返回根节点（parent_id为None或空字符串的节点）
+        tree_map
+            .into_iter()
+            .map(|(_, node)| node)
+            .filter(|node| match &node.parent_id {
+                None => true,
+                Some(parent_id) => parent_id.is_empty(),
+            })
+            .collect()
     }
 
     /// 验证父级部门是否存在且状态正常
