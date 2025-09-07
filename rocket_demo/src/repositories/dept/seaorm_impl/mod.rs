@@ -3,6 +3,7 @@
 //! 该模块提供了基于SeaORM的部门数据访问实现，支持异步数据库操作。
 //! 实现了DeptRepository trait定义的所有方法。
 
+use crate::config::Config;
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use rocket::async_trait;
@@ -17,25 +18,16 @@ pub struct DeptRepositorySeaormImpl {
 }
 
 impl DeptRepositorySeaormImpl {
-    /// 从数据库连接创建新的SeaORM部门仓储实例
-    ///
-    /// # 参数
-    /// * `connection` - 数据库连接
-    ///
-    /// # 返回值
-    /// 返回新的部门仓储实例
-    pub fn from_connection(connection: DatabaseConnection) -> Self {
-        Self { connection }
-    }
-
     /// 创建新的SeaORM部门仓储实例
     ///
     /// # 返回值
     /// 返回新的部门仓储实例
     pub async fn new() -> Result<Self, Box<dyn StdError + Send + Sync>> {
-        // 示例数据库URL，实际使用时应该从配置文件中读取
-        let database_url = "mysql://user:password@localhost/database";
-        let connection = Database::connect(database_url).await
+        // 从配置文件中读取数据库URL
+        let config = Config::from_default_file().expect("无法加载配置文件");
+        let database_url = config.database.url;
+        let connection = Database::connect(&database_url)
+            .await
             .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
         Ok(Self { connection })
     }

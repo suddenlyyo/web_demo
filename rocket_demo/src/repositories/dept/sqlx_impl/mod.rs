@@ -3,6 +3,7 @@
 //! 该模块提供了基于SQLx的部门数据访问实现，支持异步数据库操作。
 //! 实现了DeptRepository trait定义的所有方法。
 
+use crate::config::Config;
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use rocket::async_trait;
@@ -19,13 +20,16 @@ pub struct DeptRepositorySqlxImpl {
 impl DeptRepositorySqlxImpl {
     /// 创建新的SQLx部门仓储实例
     ///
-    /// # 参数
-    /// * `pool` - MySQL连接池
-    ///
     /// # 返回值
     /// 返回新的部门仓储实例
-    pub fn new(pool: MySqlPool) -> Self {
-        Self { pool }
+    pub async fn new() -> Result<Self, Box<dyn StdError + Send + Sync>> {
+        // 从配置文件中读取数据库URL
+        let config = Config::from_default_file().expect("无法加载配置文件");
+        let database_url = config.database.url;
+        let pool = MySqlPool::connect(&database_url)
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
+        Ok(Self { pool })
     }
 }
 
@@ -213,79 +217,106 @@ impl DeptRepository for DeptRepositorySqlxImpl {
     /// 根据主键选择性更新部门
     async fn update_by_primary_key_selective(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>> {
         let mut sql = "UPDATE sys_dept SET ".to_string();
-        let mut params: Vec<Box<dyn sqlx::Encode<sqlx::MySql> + Send + Sync>> = Vec::new();
+        let mut setters = Vec::new();
 
         // 构建动态更新语句
-        if let Some(ref name) = row.name {
-            sql.push_str("name = ?, ");
-            params.push(Box::new(name.clone()));
+        if row.name.is_some() {
+            setters.push("name = ?");
         }
-        if let Some(ref email) = row.email {
-            sql.push_str("email = ?, ");
-            params.push(Box::new(email.clone()));
+        if row.email.is_some() {
+            setters.push("email = ?");
         }
-        if let Some(ref telephone) = row.telephone {
-            sql.push_str("telephone = ?, ");
-            params.push(Box::new(telephone.clone()));
+        if row.telephone.is_some() {
+            setters.push("telephone = ?");
         }
-        if let Some(ref address) = row.address {
-            sql.push_str("address = ?, ");
-            params.push(Box::new(address.clone()));
+        if row.address.is_some() {
+            setters.push("address = ?");
         }
-        if let Some(ref logo) = row.logo {
-            sql.push_str("logo = ?, ");
-            params.push(Box::new(logo.clone()));
+        if row.logo.is_some() {
+            setters.push("logo = ?");
         }
-        if let Some(ref parent_id) = row.parent_id {
-            sql.push_str("parent_id = ?, ");
-            params.push(Box::new(parent_id.clone()));
+        if row.parent_id.is_some() {
+            setters.push("parent_id = ?");
         }
-        if let Some(ref dept_level) = row.dept_level {
-            sql.push_str("dept_level = ?, ");
-            params.push(Box::new(dept_level.clone()));
+        if row.dept_level.is_some() {
+            setters.push("dept_level = ?");
         }
-        if let Some(seq_no) = row.seq_no {
-            sql.push_str("seq_no = ?, ");
-            params.push(Box::new(seq_no));
+        if row.seq_no.is_some() {
+            setters.push("seq_no = ?");
         }
-        if let Some(status) = row.status {
-            sql.push_str("status = ?, ");
-            params.push(Box::new(status));
+        if row.status.is_some() {
+            setters.push("status = ?");
         }
-        if let Some(ref create_by) = row.create_by {
-            sql.push_str("create_by = ?, ");
-            params.push(Box::new(create_by.clone()));
+        if row.create_by.is_some() {
+            setters.push("create_by = ?");
         }
-        if let Some(create_time) = row.create_time {
-            sql.push_str("create_time = ?, ");
-            params.push(Box::new(create_time));
+        if row.create_time.is_some() {
+            setters.push("create_time = ?");
         }
-        if let Some(ref update_by) = row.update_by {
-            sql.push_str("update_by = ?, ");
-            params.push(Box::new(update_by.clone()));
+        if row.update_by.is_some() {
+            setters.push("update_by = ?");
         }
-        if let Some(update_time) = row.update_time {
-            sql.push_str("update_time = ?, ");
-            params.push(Box::new(update_time));
+        if row.update_time.is_some() {
+            setters.push("update_time = ?");
         }
-        if let Some(ref remark) = row.remark {
-            sql.push_str("remark = ?, ");
-            params.push(Box::new(remark.clone()));
+        if row.remark.is_some() {
+            setters.push("remark = ?");
         }
 
-        // 移除最后的逗号和空格
-        if sql.ends_with(", ") {
-            sql.pop();
-            sql.pop();
+        if setters.is_empty() {
+            return Ok(0);
         }
 
+        sql.push_str(&setters.join(", "));
         sql.push_str(" WHERE id = ?");
-        params.push(Box::new(row.id.clone()));
 
         let mut query = sqlx::query(&sql);
-        for param in params {
-            query = query.bind(param);
+
+        // 绑定参数
+        if let Some(ref name) = row.name {
+            query = query.bind(name);
         }
+        if let Some(ref email) = row.email {
+            query = query.bind(email);
+        }
+        if let Some(ref telephone) = row.telephone {
+            query = query.bind(telephone);
+        }
+        if let Some(ref address) = row.address {
+            query = query.bind(address);
+        }
+        if let Some(ref logo) = row.logo {
+            query = query.bind(logo);
+        }
+        if let Some(ref parent_id) = row.parent_id {
+            query = query.bind(parent_id);
+        }
+        if let Some(ref dept_level) = row.dept_level {
+            query = query.bind(dept_level);
+        }
+        if let Some(seq_no) = row.seq_no {
+            query = query.bind(seq_no);
+        }
+        if let Some(status) = row.status {
+            query = query.bind(status);
+        }
+        if let Some(ref create_by) = row.create_by {
+            query = query.bind(create_by);
+        }
+        if let Some(create_time) = row.create_time {
+            query = query.bind(create_time);
+        }
+        if let Some(ref update_by) = row.update_by {
+            query = query.bind(update_by);
+        }
+        if let Some(update_time) = row.update_time {
+            query = query.bind(update_time);
+        }
+        if let Some(ref remark) = row.remark {
+            query = query.bind(remark);
+        }
+
+        query = query.bind(&row.id);
 
         let result = query
             .execute(&self.pool)

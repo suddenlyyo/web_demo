@@ -1,10 +1,11 @@
 //! 部门服务实现
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use chrono::Utc;
-use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper, SingleWrapper};
+use common_wrapper::enums::status_enum::StatusEnum;
+use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper};
 use uuid::Uuid;
 
 use crate::{models::Dept, params::dept_param::DeptParam, repositories::dept::dept_repository::DeptRepository, services::dept::dept_service::DeptService, views::dept_tree::DeptTree};
@@ -50,29 +51,28 @@ impl DeptServiceImpl {
         // 记录所有子节点的ID，这些节点不应该作为根节点出现
         let mut child_ids = std::collections::HashSet::new();
 
-        // 构建父子关系
-        for (_, tree_node) in dept_map.iter_mut() {
-            if let Some(ref parent_id) = tree_node.parent_id {
+        // 构建父子关系（使用单独的循环避免同时借用的问题）
+        for (id, tree_node) in &dept_map {
+            if let Some(ref _parent_id) = tree_node.parent_id {
                 // 记录子节点ID
-                child_ids.insert(tree_node.id.clone());
+                child_ids.insert(id.clone());
+            }
+        }
 
-                // 如果父节点存在，则将当前节点添加到父节点的子节点列表中
+        // 克隆一份用于遍历，避免借用冲突
+        let mut result: Vec<DeptTree> = Vec::new();
+        let dept_map_clone = dept_map.clone();
+        for (id, tree_node) in &dept_map_clone {
+            // 如果有父节点且父节点存在，则添加到父节点的子节点列表中
+            if let Some(ref parent_id) = tree_node.parent_id {
                 if let Some(parent_node) = dept_map.get_mut(parent_id) {
                     parent_node.children.push(tree_node.clone());
                 }
             }
-        }
 
-        // 收集根节点（parent_id为None且未作为子节点出现的节点）
-        let mut result: Vec<DeptTree> = Vec::new();
-        for (id, tree_node) in dept_map.into_iter() {
-            // 如果节点没有父节点且未作为子节点出现，则为根节点
-            if tree_node.parent_id.is_none() && !child_ids.contains(&id) {
-                result.push(tree_node);
-            }
-            // 如果节点有父节点但父节点不存在，也将其作为根节点处理
-            else if tree_node.parent_id.is_some() && !child_ids.contains(&id) {
-                result.push(tree_node);
+            // 如果节点没有父节点或者父节点不存在，则为根节点
+            if tree_node.parent_id.is_none() || !child_ids.contains(id) {
+                result.push(tree_node.clone());
             }
         }
 
@@ -387,7 +387,7 @@ impl DeptService for DeptServiceImpl {
             .select_dept_by_parent_id(trimmed_dept_id)
             .await
         {
-            Ok(Some(_)) => Self::create_error_response("该部门下存在子部门，无法删除!"),
+            Ok(Some(_)) => return Self::create_error_response("该部门下存在子部门，无法删除!"),
             Ok(None) => (), // 没有子部门，可以删除
             Err(e) => return Self::create_error_response(&format!("查询子部门时发生错误: {}", e)),
         }

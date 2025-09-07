@@ -9,52 +9,43 @@ mod repositories;
 mod services;
 mod views;
 
-use rocket::State;
-use std::sync::Arc;
+use {
+    controllers::{dept::controller as dept_controller, index::controller as index_controller},
+    repositories::dept::{dept_repository::DeptRepository, diesel_impl::DeptRepositoryDieselImpl, seaorm_impl::DeptRepositorySeaormImpl, sqlx_impl::DeptRepositorySqlxImpl},
+    services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl},
+    std::sync::Arc,
+};
 
-use repositories::dept::dept_repository::DeptRepository;
-use services::dept::dept_service::DeptService;
-use services::dept::dept_service_impl::DeptServiceImpl;
-
-#[cfg(feature = "sqlx_impl")]
-use repositories::dept::sqlx_impl::DeptRepositorySqlxImpl;
-
-#[cfg(feature = "diesel_impl")]
-use repositories::dept::diesel_impl::DeptRepositoryDieselImpl;
-
-#[cfg(feature = "seaorm_impl")]
-use repositories::dept::seaorm_impl::DeptRepositorySeaormImpl;
-
-#[launch]
+#[rocket::launch]
 async fn rocket() -> _ {
-    // 初始化部门仓库
+    // 根据启用的特性初始化对应的数据访问层实现
     #[cfg(feature = "sqlx_impl")]
-    let repository: Arc<dyn DeptRepository> = Arc::new(DeptRepositorySqlxImpl::new());
+    let _repository: Arc<dyn DeptRepository> = {
+        Arc::new(
+            DeptRepositorySqlxImpl::new()
+                .await
+                .expect("无法创建SQLx数据库连接"),
+        )
+    };
 
     #[cfg(feature = "diesel_impl")]
-    let repository: Arc<dyn DeptRepository> = Arc::new(DeptRepositoryDieselImpl::new());
+    let _repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryDieselImpl::new()) };
 
     #[cfg(feature = "seaorm_impl")]
-    let repository: Arc<dyn DeptRepository> = Arc::new(DeptRepositorySeaormImpl::new().await.unwrap());
+    let _repository: Arc<dyn DeptRepository> = {
+        Arc::new(
+            DeptRepositorySeaormImpl::new()
+                .await
+                .expect("无法创建SeaORM数据库连接"),
+        )
+    };
 
     // 初始化部门服务
-    let dept_service: Arc<dyn DeptService> = Arc::new(DeptServiceImpl::new(repository));
+    let dept_service: Arc<dyn DeptService> = Arc::new(DeptServiceImpl::new(_repository));
 
     // 构建Rocket实例
     rocket::build()
-        // 注册服务
         .manage(dept_service)
-        // 注册控制器
-        .mount(
-            "/",
-            routes![
-                controllers::index::controller::index,
-                controllers::dept::controller::list_depts,
-                controllers::dept::controller::get_dept_tree,
-                controllers::dept::controller::add_dept,
-                controllers::dept::controller::edit_dept,
-                controllers::dept::controller::delete_dept,
-                controllers::dept::controller::edit_dept_status,
-            ],
-        )
+        .mount("/", index_controller::routes())
+        .mount("/dept", dept_controller::routes())
 }
