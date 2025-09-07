@@ -13,7 +13,7 @@
 //!
 use common_wrapper::enums::status_enum::StatusEnum;
 use rocket::serde::json::Json;
-use rocket::{State, delete, get, post, put, routes};
+use rocket::{State, delete, post, put, routes};
 
 use crate::models::dept::Dept;
 use crate::params::dept_param::DeptParam;
@@ -30,12 +30,13 @@ use serde_json::Value;
 ///
 /// # 参数
 ///
+/// - `dept_param`: 部门查询参数，类型: [Json]<[DeptParam]>，通过请求体传入
 /// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
 ///
 /// # 返回值
 ///
 /// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
-#[get("/dept/list")]
+#[post("/dept/list", data = "<dept_param>")]
 pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
@@ -50,7 +51,7 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
 
     // 在json中添加额外信息
     if let Some(data_array) = json_value.get_mut("data").and_then(|d| d.as_array_mut()) {
-        let all_depts = dept_service.get_dept().await;
+        let all_depts = dept_service.get_dept(DeptParam::default()).await;
         for dept_json in data_array.iter_mut() {
             let mut new_map = serde_json::Map::new();
             let dept_obj = dept_json.as_object_mut().unwrap_or_else(|| &mut new_map);
@@ -86,12 +87,13 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
 ///
 /// # 参数
 ///
+/// - `dept_param`: 部门查询参数，类型: [Json]<[DeptParam]>，通过请求体传入
 /// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
 ///
 /// # 返回值
 ///
 /// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>，参见: [ListWrapper]<[DeptTree]>
-#[get("/dept/getDeptTree")]
+#[post("/dept/getDeptTree", data = "<dept_param>")]
 pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
     let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
     Json(result)
