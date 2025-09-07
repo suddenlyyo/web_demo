@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate rocket;
-
 mod config;
 mod controllers;
 mod models;
@@ -9,12 +6,22 @@ mod repositories;
 mod services;
 mod views;
 
-use {
-    controllers::{dept::controller as dept_controller, index::controller as index_controller},
-    repositories::dept::{dept_repository::DeptRepository, diesel_impl::DeptRepositoryDieselImpl, seaorm_impl::DeptRepositorySeaormImpl, sqlx_impl::DeptRepositorySqlxImpl},
-    services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl},
-    std::sync::Arc,
-};
+use controllers::{dept::controller as dept_controller, index::controller as index_controller};
+use services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl};
+use std::sync::Arc;
+
+// 为每种实现定义类型别名，简化条件编译代码
+#[cfg(feature = "sqlx_impl")]
+use repositories::dept::sqlx_impl::DeptRepositorySqlxImpl as DeptRepositoryImpl;
+
+#[cfg(feature = "diesel_impl")]
+use repositories::dept::diesel_impl::DeptRepositoryDieselImpl as DeptRepositoryImpl;
+
+#[cfg(feature = "seaorm_impl")]
+use repositories::dept::seaorm_impl::DeptRepositorySeaormImpl as DeptRepositoryImpl;
+
+// 统一导入trait
+use repositories::dept::dept_repository::DeptRepository;
 
 #[rocket::launch]
 async fn rocket() -> _ {
@@ -22,19 +29,19 @@ async fn rocket() -> _ {
     #[cfg(feature = "sqlx_impl")]
     let _repository: Arc<dyn DeptRepository> = {
         Arc::new(
-            DeptRepositorySqlxImpl::new()
+            DeptRepositoryImpl::new()
                 .await
                 .expect("无法创建SQLx数据库连接"),
         )
     };
 
     #[cfg(feature = "diesel_impl")]
-    let _repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryDieselImpl::new()) };
+    let _repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryImpl::new()) };
 
     #[cfg(feature = "seaorm_impl")]
     let _repository: Arc<dyn DeptRepository> = {
         Arc::new(
-            DeptRepositorySeaormImpl::new()
+            DeptRepositoryImpl::new()
                 .await
                 .expect("无法创建SeaORM数据库连接"),
         )

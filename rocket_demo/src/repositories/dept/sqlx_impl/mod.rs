@@ -5,6 +5,7 @@
 
 use crate::config::Config;
 use crate::models::Dept;
+use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use rocket::async_trait;
 use sqlx::mysql::MySqlPool;
@@ -48,15 +49,14 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
     /// 插入部门记录
     async fn insert(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let sql = r#"
-            INSERT INTO sys_dept (
-                id, name, email, telephone, address, logo, parent_id, 
-                dept_level, seq_no, status, create_by, create_time, 
-                update_by, update_time, remark
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#;
+        let sql = format!(
+            r#"
+            INSERT INTO sys_dept ({DEPT_FIELDS})
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#
+        );
 
-        sqlx::query(sql)
+        sqlx::query(&sql)
             .bind(&row.id)
             .bind(&row.name)
             .bind(&row.email)
@@ -80,15 +80,14 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
     /// 选择性插入部门记录
     async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>> {
-        let sql = r#"
-            INSERT INTO sys_dept (
-                id, name, email, telephone, address, logo, parent_id, 
-                dept_level, seq_no, status, create_by, create_time, 
-                update_by, update_time, remark
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        "#;
+        let sql = format!(
+            r#"
+            INSERT INTO sys_dept ({DEPT_FIELDS})
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        "#
+        );
 
-        sqlx::query(sql)
+        sqlx::query(&sql)
             .bind(&row.id)
             .bind(&row.name)
             .bind(&row.email)
@@ -112,15 +111,15 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
     /// 根据主键查询部门
     async fn select_by_primary_key(&self, id: &str) -> Result<Option<Dept>, Box<dyn StdError + Send + Sync>> {
-        let sql = r#"
-            SELECT id, name, email, telephone, address, logo, parent_id, 
-                    dept_level, seq_no, status, create_by, create_time, 
-                    update_by, update_time, remark
+        let sql = format!(
+            r#"
+            SELECT {DEPT_FIELDS}
             FROM sys_dept 
             WHERE id = ?
-        "#;
+        "#
+        );
 
-        sqlx::query_as::<_, Dept>(sql)
+        sqlx::query_as::<_, Dept>(&sql)
             .bind(id)
             .fetch_optional(&self.pool)
             .await
@@ -129,16 +128,16 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
     /// 根据父部门ID查询部门
     async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Option<Dept>, Box<dyn StdError + Send + Sync>> {
-        let sql = r#"
-            SELECT id, name, email, telephone, address, logo, parent_id, 
-                   dept_level, seq_no, status, create_by, create_time, 
-                   update_by, update_time, remark
+        let sql = format!(
+            r#"
+            SELECT {DEPT_FIELDS}
             FROM sys_dept 
             WHERE parent_id = ?
             LIMIT 1
-        "#;
+        "#
+        );
 
-        sqlx::query_as::<_, Dept>(sql)
+        sqlx::query_as::<_, Dept>(&sql)
             .bind(parent_id)
             .fetch_optional(&self.pool)
             .await
@@ -147,24 +146,25 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
     /// 查询部门列表
     async fn select_dept_list(&self, row: &Dept) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
-        let mut sql = r#"
-            SELECT id, name, email, telephone, address, logo, parent_id, 
-                   dept_level, seq_no, status, create_by, create_time, 
-                   update_by, update_time, remark
+        let sql = format!(
+            r#"
+            SELECT {DEPT_FIELDS}
             FROM sys_dept 
             WHERE 1=1
         "#
-        .to_string();
+        );
 
         // 构建动态查询条件
-        if let Some(ref _name) = row.name {
-            sql.push_str(" AND name LIKE ?");
+        let mut conditions = String::new();
+        if row.name.is_some() {
+            conditions.push_str(" AND name LIKE ?");
         }
-        if let Some(_status) = row.status {
-            sql.push_str(" AND status = ?");
+        if row.status.is_some() {
+            conditions.push_str(" AND status = ?");
         }
 
-        let mut query = sqlx::query_as::<_, Dept>(&sql);
+        let final_sql = sql + &conditions;
+        let mut query = sqlx::query_as::<_, Dept>(&final_sql);
 
         // 绑定参数
         if let Some(ref name) = row.name {

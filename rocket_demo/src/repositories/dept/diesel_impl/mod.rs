@@ -5,6 +5,7 @@
 
 use crate::config::Config;
 use crate::models::Dept;
+use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
@@ -50,6 +51,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let sql = format!("DELETE FROM sys_dept WHERE id = '{}'", id);
             // 这里应该获取数据库连接并执行删除操作
             // 由于Diesel是同步的，实际实现需要使用连接池
             // 示例代码：
@@ -71,6 +75,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let sql = format!("INSERT INTO sys_dept ({DEPT_FIELDS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             // 这里应该获取数据库连接并执行插入操作
             // 示例代码：
             // diesel::insert_into(dept).values(row).execute(&mut conn)
@@ -91,6 +98,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let sql = format!("INSERT INTO sys_dept ({DEPT_FIELDS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
             // 这里应该获取数据库连接并执行选择性插入操作
             // Diesel通常通过Option字段来实现选择性插入
             Ok::<(), Box<dyn StdError + Send + Sync>>(())
@@ -110,6 +120,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let sql = format!("SELECT {DEPT_FIELDS} FROM sys_dept WHERE id = '{id}'");
             // 这里应该获取数据库连接并执行查询操作
             // 示例代码：
             // dept.filter(id.eq(id_value)).first::<Dept>(&mut conn).optional()
@@ -130,6 +143,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let sql = format!("SELECT {DEPT_FIELDS} FROM sys_dept WHERE parent_id = '{parent_id}' LIMIT 1");
             // 这里应该获取数据库连接并执行查询操作
             // 示例代码：
             // dept.filter(parent_id.eq(parent_id_value)).first::<Dept>(&mut conn).optional()
@@ -150,6 +166,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let mut sql = format!("SELECT {DEPT_FIELDS} FROM sys_dept WHERE 1=1");
             // 这里应该获取数据库连接并执行查询操作
             // 需要根据row中的字段构建查询条件
             Ok::<Vec<Dept>, Box<dyn StdError + Send + Sync>>(Vec::new())
@@ -169,6 +188,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let sql = "UPDATE sys_dept SET name = ?, email = ?, telephone = ?, address = ?, logo = ?, parent_id = ?, dept_level = ?, seq_no = ?, status = ?, create_by = ?, create_time = ?, update_by = ?, update_time = ?, remark = ? WHERE id = ?".to_string();
             // 这里应该获取数据库连接并执行更新操作
             // 示例代码：
             // diesel::update(dept.filter(id.eq(row.id))).set(row).execute(&mut conn)
@@ -189,6 +211,9 @@ impl DeptRepository for DeptRepositoryDieselImpl {
                 .get()
                 .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
+            use diesel::prelude::*;
+            // 使用DEPT_FIELDS常量构建SQL查询
+            let mut sql = "UPDATE sys_dept SET ".to_string();
             // 这里应该获取数据库连接并执行选择性更新操作
             // Diesel通常通过Option字段来实现选择性更新
             Ok::<u64, Box<dyn StdError + Send + Sync>>(0)

@@ -1,6 +1,6 @@
 //! 首页控制器层
 
-use rocket::*;
+use rocket::{get, routes};
 
 /// 根路径处理函数
 ///
