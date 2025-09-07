@@ -13,7 +13,7 @@ pub trait DeptService: Send + Sync {
     async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTree>;
 
     /// 获取部门信息Map 用于部门信息匹配
-    async fn get_dept(&self) -> HashMap<String, Dept>;
+    async fn get_dept(&self, dept_param: DeptParam) -> HashMap<String, Dept>;
 
     /// 查询部门列表
     async fn select_dept_list(&self, dept_param: DeptParam) -> ListWrapper<Dept>;

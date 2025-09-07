@@ -216,8 +216,8 @@ impl DeptServiceImpl {
 impl DeptService for DeptServiceImpl {
     async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTree> {
         // 转换参数类型
-        let param = DeptParam::from(dept_param);
-        match self.repository.select_dept_list(&Dept::from(param)).await {
+        let dept = Dept::from(dept_param);
+        match self.repository.select_dept_list(&dept).await {
             Ok(dept_list) => {
                 let tree_list = self.build_dept_tree(dept_list);
                 let mut wrapper = ListWrapper::new();
@@ -232,10 +232,10 @@ impl DeptService for DeptServiceImpl {
         }
     }
 
-    async fn get_dept(&self) -> HashMap<String, Dept> {
-        // 创建一个特殊的Dept对象用于查询所有部门
-        // 将id设置为空字符串，数据库查询层需要特殊处理这种情况
-        match self.repository.select_dept_list(&Dept::default()).await {
+    async fn get_dept(&self, dept_param: DeptParam) -> HashMap<String, Dept> {
+        // 转换参数类型
+        let dept = Dept::from(dept_param);
+        match self.repository.select_dept_list(&dept).await {
             Ok(dept_list) => {
                 let mut dept_map = HashMap::with_capacity(dept_list.len());
                 for dept in dept_list {

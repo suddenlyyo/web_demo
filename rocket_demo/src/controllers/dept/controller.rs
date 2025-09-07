@@ -36,8 +36,8 @@ use serde_json::Value;
 ///
 /// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
 #[get("/dept/list")]
-pub async fn list_depts(dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
-    let result: ListWrapper<Dept> = dept_service.select_dept_list(DeptParam::default()).await;
+pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
+    let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
     // 如果没有数据直接返回
     let depts = result.get_data();
@@ -92,8 +92,8 @@ pub async fn list_depts(dept_service: &State<Box<dyn DeptService + Send + Sync>>
 ///
 /// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>，参见: [ListWrapper]<[DeptTree]>
 #[get("/dept/getDeptTree")]
-pub async fn get_dept_tree(dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
-    let result = dept_service.get_dept_tree(DeptParam::default()).await;
+pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
+    let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
     Json(result)
 }
 
