@@ -9,6 +9,12 @@
 //! - 可自定义响应码和消息
 //! - 与serde集成，支持序列化和反序列化
 //!
+//! ## 模块组织
+//!
+//! 该库分为两个主要模块：
+//! - [enums]: 包含各种枚举类型，如错误码枚举等
+//! - [wrapper]: 包含各种响应包装器实现
+//!
 //! ## 使用示例
 //!
 //! ```rust
@@ -28,9 +34,22 @@
 //! ```
 
 /// 枚举类型模块
+///
+/// 包含项目中使用的各种枚举类型，如：
+/// - [enums::wrapper_err::WrapperErrEnum]: 响应包装器错误枚举
+/// - [enums::gender_enum::GenderEnum]: 性别枚举
+/// - [enums::status_enum::StatusEnum]: 状态枚举
 pub mod enums;
 
 /// 包装器模块
+///
+/// 包含各种响应包装器实现，如：
+/// - [wrapper::single_wrapper::SingleWrapper]: 单对象包装器
+/// - [wrapper::list_wrapper::ListWrapper]: 列表包装器
+/// - [wrapper::page_wrapper::PageWrapper]: 分页包装器
+/// - [wrapper::page_info::PageInfo]: 分页信息结构体
+/// - [wrapper::response_wrapper::ResponseWrapper]: 基础响应包装器
+/// - [wrapper::response_trait::ResponseTrait]: 响应trait接口
 pub mod wrapper;
 
 // 重新导出常用的类型，方便外部使用

@@ -1,15 +1,27 @@
 //! # 包装器错误枚举
 //!
 //! 定义统一的响应状态码和消息
+//!
+//! 该枚举定义了系统中常用的响应状态码及其对应的消息，
+//! 用于统一API响应格式。
 
 /// 错误枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WrapperErrEnum {
     /// 成功
+    ///
+    /// 状态码: 1
+    /// 消息: "Success"
     Success = 1,
     /// 失败
+    ///
+    /// 状态码: -1
+    /// 消息: "Fail"
     Fail = -1,
     /// 未知错误
+    ///
+    /// 状态码: -2
+    /// 消息: "Unknown Error"
     UnknownError = -2,
 }
 
@@ -21,9 +33,11 @@ impl WrapperErrEnum {
     // 获取固定错误信息（直接返回静态字符串）
     /// 获取错误信息
     ///
+    /// 获取与枚举值对应的默认错误消息
+    ///
     /// # 返回值
     ///
-    /// 返回与枚举值对应的错误消息
+    /// [&'static str] - 与枚举值对应的错误消息
     pub const fn message(&self) -> &'static str {
         match self {
             Self::Success => "Success",
@@ -39,11 +53,11 @@ impl From<i32> for WrapperErrEnum {
     ///
     /// # 参数
     ///
-    /// * `code` - 错误码
+    /// * `code` - 错误码，类型: [i32]
     ///
     /// # 返回值
     ///
-    /// 对应的WrapperErrEnum枚举值，如果找不到则返回UnknownError
+    /// [WrapperErrEnum] - 对应的WrapperErrEnum枚举值，如果找不到则返回UnknownError
     fn from(code: i32) -> Self {
         match code {
             1 => Self::Success,

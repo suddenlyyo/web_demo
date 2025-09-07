@@ -1,6 +1,10 @@
 //! # 单个对象包装器
 //!
 //! 用于包装单个对象查询结果的结构体
+//!
+//! 该结构体实现了 [ResponseTrait] trait，提供统一的响应处理接口。
+//! 数据部分使用 [Option]<T> 类型存储，当操作成功时包含数据，
+//! 失败时为 [None]。
 
 use serde::{Deserialize, Serialize};
 
@@ -18,38 +22,60 @@ pub struct SingleWrapper<T> {
     /// 基础响应包装器
     ///
     /// 类型: [ResponseWrapper]
+    ///
+    /// 包含响应的状态码和消息，用于表示操作结果
     base: ResponseWrapper,
     /// 数据对象
     ///
     /// 类型: [Option]<T> (泛型)
+    ///
+    /// 当操作成功时包含数据对象，失败时为 [None]
     data: Option<T>,
 }
 
 impl<T> SingleWrapper<T> {
     /// 创建一个新的 SingleWrapper，数据为空
     ///
+    /// 创建一个默认成功的 SingleWrapper 实例，数据部分初始化为 [None]
+    ///
     /// # 返回值
     ///
-    /// 新的SingleWrapper实例
+    /// [SingleWrapper]<T> - 新的SingleWrapper实例
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 数据对象的类型
     pub fn new() -> Self {
         Self { base: ResponseWrapper::success_default(), data: None }
     }
 
     /// 创建一个默认失败的 SingleWrapper，数据为空
     ///
+    /// 创建一个默认失败状态的 SingleWrapper 实例，数据部分为 [None]
+    ///
     /// # 返回值
     ///
-    /// 新的SingleWrapper实例（失败状态）
-    pub fn fail_default(&mut self) -> Self {
+    /// [SingleWrapper]<T> - 新的SingleWrapper实例（失败状态）
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 数据对象的类型
+    pub fn fail_default() -> Self {
         Self { base: ResponseWrapper::fail_default(), data: None }
     }
 
     /// 创建一个默认未知错误的 SingleWrapper，数据为空
     ///
+    /// 创建一个默认未知错误状态的 SingleWrapper 实例，数据部分为 [None]
+    ///
     /// # 返回值
     ///
-    /// 新的SingleWrapper实例（未知错误状态）
-    pub fn unknown_error_default(&mut self) -> Self {
+    /// [SingleWrapper]<T> - 新的SingleWrapper实例（未知错误状态）
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 数据对象的类型
+    pub fn unknown_error_default() -> Self {
         Self {
             base: ResponseWrapper::unknown_error_default(),
             data: None,
@@ -58,9 +84,15 @@ impl<T> SingleWrapper<T> {
 
     /// 设置为成功状态并附带数据
     ///
+    /// 将当前实例设置为成功状态，并用指定的数据对象填充数据部分
+    ///
     /// # 参数
     ///
-    /// * `data` - 要包装的数据对象
+    /// * `data` - 要包装的数据对象，类型: T
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 数据对象的类型
     pub fn set_success(&mut self, data: T) {
         self.base = ResponseWrapper::success_default();
         self.data = Some(data);
@@ -68,27 +100,33 @@ impl<T> SingleWrapper<T> {
 
     /// 设置为失败状态并附带消息
     ///
+    /// 将当前实例设置为失败状态，并用指定的消息更新响应消息
+    ///
     /// # 参数
     ///
-    /// * `msg` - 失败消息
+    /// * `msg` - 失败消息，类型: impl [Into]<[String]>，可以接受 &str 或 String
     pub fn set_fail(&mut self, msg: impl Into<String>) {
         self.base.set_fail(msg);
+        self.data = None;
     }
 
     /// 设置为未知错误状态并附带消息
     ///
+    /// 将当前实例设置为未知错误状态，并用指定的消息更新响应消息
+    ///
     /// # 参数
     ///
-    /// * `msg` - 未知错误消息
+    /// * `msg` - 未知错误消息，类型: impl [Into]<[String]>，可以接受 &str 或 String
     pub fn set_unknown_error(&mut self, msg: impl Into<String>) {
         self.base.set_unknown_error(msg);
+        self.data = None;
     }
 
     /// 获取基础响应包装器的引用
     ///
     /// # 返回值
     ///
-    /// 基础响应包装器的引用
+    /// &[ResponseWrapper] - 基础响应包装器的引用
     pub fn get_base(&self) -> &ResponseWrapper {
         &self.base
     }
@@ -97,7 +135,11 @@ impl<T> SingleWrapper<T> {
     ///
     /// # 返回值
     ///
-    /// 数据对象的引用（Option包装）
+    /// &[Option]<T> - 数据对象的引用（Option包装）
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 数据对象的类型
     pub fn get_data(&self) -> &Option<T> {
         &self.data
     }
@@ -113,27 +155,33 @@ impl<T> Default for SingleWrapper<T> {
 impl<T> ResponseTrait for SingleWrapper<T> {
     /// 获取响应码
     ///
+    /// 从基础响应包装器中获取响应码
+    ///
     /// # 返回值
     ///
-    /// 响应码
+    /// [i32] - 响应码
     fn get_code(&self) -> i32 {
         self.base.get_code()
     }
 
     /// 获取响应消息
     ///
+    /// 从基础响应包装器中获取响应消息
+    ///
     /// # 返回值
     ///
-    /// 响应消息的引用
+    /// &[str] - 响应消息的引用
     fn get_message(&self) -> &str {
         self.base.get_message()
     }
 
     /// 判断是否为成功响应
     ///
+    /// 根据基础响应包装器判断是否为成功响应
+    ///
     /// # 返回值
     ///
-    /// 如果响应成功返回true，否则返回false
+    /// [bool] - 如果响应成功返回true，否则返回false
     fn is_success(&self) -> bool {
         self.base.is_success()
     }
@@ -142,7 +190,7 @@ impl<T> ResponseTrait for SingleWrapper<T> {
     ///
     /// # 参数
     ///
-    /// * `msg` - 自定义的失败消息
+    /// * `msg` - 自定义的失败消息，类型: impl [Into]<[String]>
     fn set_fail(&mut self, msg: impl Into<String>) {
         self.base.set_fail(msg);
         self.data = None;
@@ -152,7 +200,7 @@ impl<T> ResponseTrait for SingleWrapper<T> {
     ///
     /// # 参数
     ///
-    /// * `msg` - 自定义的未知错误消息
+    /// * `msg` - 自定义的未知错误消息，类型: impl [Into]<[String]>
     fn set_unknown_error(&mut self, msg: impl Into<String>) {
         self.base.set_unknown_error(msg);
         self.data = None;

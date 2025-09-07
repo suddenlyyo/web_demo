@@ -1,6 +1,9 @@
 //! # 分页信息结构体
 //!
 //! 用于描述分页请求参数
+//!
+//! 该结构体封装了分页查询所需的参数信息，包括当前页码和每页大小。
+//! 提供了默认值处理和边界条件检查，确保分页参数的有效性。
 
 use serde::Serialize;
 
@@ -18,8 +21,12 @@ use serde::Serialize;
 #[derive(Debug, Serialize, PartialEq, Eq, Hash)]
 pub struct PageInfo {
     /// 当前页数
+    ///
+    /// 从1开始计数，None表示使用默认值
     current_page_num: Option<u64>,
     /// 页面大小
+    ///
+    /// 每页显示的记录数，None表示使用默认值
     page_size: Option<u64>,
 }
 
@@ -37,12 +44,12 @@ impl PageInfo {
     ///
     /// # 参数
     ///
-    /// * `current_page_num` - 当前页数
-    /// * `page_size` - 页面大小
+    /// * `current_page_num` - 当前页数，类型: [Option]<[u64]>
+    /// * `page_size` - 页面大小，类型: [Option]<[u64]>
     ///
     /// # 返回值
     ///
-    /// 新的PageInfo实例
+    /// [PageInfo] - 新的PageInfo实例
     pub fn new(current_page_num: Option<u64>, page_size: Option<u64>) -> Self {
         Self { current_page_num, page_size }
     }
@@ -53,12 +60,12 @@ impl PageInfo {
     ///
     /// # 参数
     ///
-    /// * `current_page_num` - 当前页数
-    /// * `page_size` - 页面大小
+    /// * `current_page_num` - 当前页数，类型: [Option]<[u64]>
+    /// * `page_size` - 页面大小，类型: [Option]<[u64]>
     ///
     /// # 返回值
     ///
-    /// 新的PageInfo实例
+    /// [PageInfo] - 新的PageInfo实例
     pub fn new_with_defaults(page_num: Option<u64>, page_size: Option<u64>) -> Self {
         Self::new(page_num, page_size)
     }
@@ -66,11 +73,11 @@ impl PageInfo {
     /// 获取页面大小（带默认值逻辑）
     ///
     /// 如果页面大小为 None 或 0，则返回默认值 20
-    /// 最大页面大小限制为100
+    /// 最大页面大小限制为 [MAX_PAGE_SIZE]
     ///
     /// # 返回值
     ///
-    /// 页面大小（带默认值和最大值限制）
+    /// [u64] - 页面大小（带默认值和最大值限制）
     pub fn get_page_size(&self) -> u64 {
         self.page_size
             .filter(|&size| size > 0)
@@ -84,7 +91,7 @@ impl PageInfo {
     ///
     /// # 返回值
     ///
-    /// 当前页码（带默认值）
+    /// [u64] - 当前页码（带默认值）
     pub fn get_current_page_num(&self) -> u64 {
         self.current_page_num
             .filter(|&num| num > 0)
@@ -100,7 +107,7 @@ impl PageInfo {
     ///
     /// # 返回值
     ///
-    /// 分页偏移量
+    /// [u64] - 分页偏移量
     pub fn get_page_offset(&self) -> u64 {
         let current_page_num = self.get_current_page_num();
         let page_size = self.get_page_size();
@@ -114,7 +121,7 @@ impl PageInfo {
     ///
     /// # 返回值
     ///
-    /// 分页偏移量
+    /// [u64] - 分页偏移量
     pub fn calculate_offset(&self) -> u64 {
         self.get_page_offset()
     }
