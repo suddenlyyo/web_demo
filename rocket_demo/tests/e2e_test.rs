@@ -57,7 +57,7 @@ async fn test_add_dept_api() {
 async fn test_dept_list_api() {
     // 确保服务器已启动
     let client = reqwest::Client::new();
-    
+
     // 准备测试数据 - 使用扁平化的分页参数
     let dept_data = serde_json::json!({
         "id": null,
@@ -110,7 +110,7 @@ async fn test_dept_list_api() {
 async fn test_dept_tree_api() {
     // 确保服务器已启动
     let client = reqwest::Client::new();
-    
+
     // 准备测试数据 - 使用扁平化的分页参数
     let dept_data = serde_json::json!({
         "id": null,

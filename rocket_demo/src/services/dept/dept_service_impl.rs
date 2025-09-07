@@ -403,8 +403,8 @@ impl DeptService for DeptServiceImpl {
             .select_dept_by_parent_id(trimmed_dept_id)
             .await
         {
-            Ok(Some(_)) => return Self::create_error_response("该部门下存在子部门，无法删除!"),
-            Ok(None) => (), // 没有子部门，可以删除
+            Ok(depts) if !depts.is_empty() => return Self::create_error_response("该部门下存在子部门，无法删除!"),
+            Ok(_) => (), // 没有子部门，可以删除
             Err(e) => return Self::create_error_response(&format!("查询子部门时发生错误: {}", e)),
         }
 

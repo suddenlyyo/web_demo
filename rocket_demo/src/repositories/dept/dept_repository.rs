@@ -117,14 +117,14 @@ pub trait DeptRepository: Debug + Send + Sync {
 
     /// 根据父部门ID查询部门
     ///
-    /// 根据父部门ID查询子部门信息，如果存在则返回Some(Dept)，否则返回None。
+    /// 根据父部门ID查询子部门信息，返回所有匹配的部门列表。
     ///
     /// # 参数
     /// * `parent_id` - 父部门ID，类型: [&str]
     ///
     /// # 返回值
-    /// 返回部门信息，类型: [Result<Option<Dept>, Box<dyn StdError + Send + Sync>>]
-    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Option<Dept>, Box<dyn StdError + Send + Sync>>;
+    /// 返回部门信息，类型: [Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>]
+    async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>>;
 
     /// 查询部门列表
     ///
