@@ -58,7 +58,7 @@ async fn test_dept_list_api() {
     // 确保服务器已启动
     let client = reqwest::Client::new();
     
-    // 准备测试数据
+    // 准备测试数据 - 使用扁平化的分页参数
     let dept_data = serde_json::json!({
         "id": null,
         "parentId": null,
@@ -75,10 +75,8 @@ async fn test_dept_list_api() {
         "updateBy": null,
         "updateTime": null,
         "remark": null,
-        "pageParam": {
-            "pageNum": null,
-            "pageSize": null
-        }
+        "pageNum": null,
+        "pageSize": null
     });
 
     // 发送POST请求到部门列表接口
@@ -113,7 +111,7 @@ async fn test_dept_tree_api() {
     // 确保服务器已启动
     let client = reqwest::Client::new();
     
-    // 准备测试数据
+    // 准备测试数据 - 使用扁平化的分页参数
     let dept_data = serde_json::json!({
         "id": null,
         "parentId": null,
@@ -130,10 +128,8 @@ async fn test_dept_tree_api() {
         "updateBy": null,
         "updateTime": null,
         "remark": null,
-        "pageParam": {
-            "pageNum": null,
-            "pageSize": null
-        }
+        "pageNum": null,
+        "pageSize": null
     });
 
     // 发送POST请求到部门树接口

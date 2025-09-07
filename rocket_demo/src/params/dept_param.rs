@@ -94,7 +94,8 @@ pub struct DeptParam {
 
     /// 分页参数
     ///
-    /// 类型: [PageParam]，参见: [PageParam]
+    /// 类型: [PageParam]
+    #[serde(flatten)]
     pub page_param: PageParam,
 }
 
