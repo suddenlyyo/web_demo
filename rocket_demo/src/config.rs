@@ -27,6 +27,12 @@ impl Config {
 
     /// 从默认位置加载配置
     pub fn from_default_file() -> Result<Self, Box<dyn std::error::Error>> {
-        Self::from_file("config.toml")
+        // 首先尝试在当前目录查找配置文件
+        if let Ok(config) = Self::from_file("config.toml") {
+            return Ok(config);
+        }
+
+        // 如果当前目录没有找到，则尝试在上级目录查找
+        Self::from_file("../config.toml")
     }
 }

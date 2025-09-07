@@ -8,7 +8,6 @@ mod views;
 
 use controllers::{dept::controller as dept_controller, index::controller as index_controller};
 use services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl};
-use std::sync::Arc;
 
 // 为每种实现定义类型别名，简化条件编译代码
 #[cfg(feature = "sqlx_impl")]
@@ -22,12 +21,13 @@ use repositories::dept::seaorm_impl::DeptRepositorySeaormImpl as DeptRepositoryI
 
 // 统一导入trait
 use repositories::dept::dept_repository::DeptRepository;
+use std::sync::Arc;
 
 #[rocket::launch]
 async fn rocket() -> _ {
     // 根据启用的特性初始化对应的数据访问层实现
     #[cfg(feature = "sqlx_impl")]
-    let _repository: Arc<dyn DeptRepository> = {
+    let repository: Arc<dyn DeptRepository> = {
         Arc::new(
             DeptRepositoryImpl::new()
                 .await
@@ -36,10 +36,10 @@ async fn rocket() -> _ {
     };
 
     #[cfg(feature = "diesel_impl")]
-    let _repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryImpl::new()) };
+    let repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryImpl::new()) };
 
     #[cfg(feature = "seaorm_impl")]
-    let _repository: Arc<dyn DeptRepository> = {
+    let repository: Arc<dyn DeptRepository> = {
         Arc::new(
             DeptRepositoryImpl::new()
                 .await
@@ -48,7 +48,7 @@ async fn rocket() -> _ {
     };
 
     // 初始化部门服务
-    let dept_service: Arc<dyn DeptService> = Arc::new(DeptServiceImpl::new(_repository));
+    let dept_service = Box::new(DeptServiceImpl::new(repository)) as Box<dyn DeptService + Send + Sync>;
 
     // 构建Rocket实例
     rocket::build()

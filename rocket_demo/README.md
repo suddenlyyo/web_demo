@@ -52,6 +52,59 @@ export DATABASE_URL=mysql://user:password@localhost/database
 cargo run
 ```
 
+## 测试
+
+项目包含两种类型的测试：
+
+### 集成测试
+
+集成测试位于 `tests/integration_test.rs` 文件中，主要测试各个组件的功能，包括：
+- Rocket框架基本功能
+- 各种数据库实现（SQLx、Diesel、SeaORM）的集成测试
+- 控制器、服务层和数据访问层的单元测试
+
+运行集成测试：
+```bash
+# 运行所有集成测试
+cargo test --test integration_test
+
+# 运行特定实现的测试（需要相应配置数据库）
+cargo test --test integration_test --features sqlx_impl
+cargo test --test integration_test --no-default-features --features diesel_impl
+cargo test --test integration_test --no-default-features --features seaorm_impl
+```
+
+### 端到端测试
+
+端到端测试位于 `tests/e2e_test.rs` 文件中，用于模拟真实用户请求，测试完整的HTTP请求处理流程。
+
+运行端到端测试需要先启动服务器：
+```bash
+# 在一个终端中启动服务器
+cargo run
+
+# 在另一个终端中运行端到端测试
+cargo test --test e2e_test
+```
+
+端到端测试会向运行中的服务器发送真实的HTTP请求，验证以下接口：
+- 添加部门接口 (`POST /dept/dept/add`)
+- 部门列表接口 (`GET /dept/dept/list`)
+- 部门树接口 (`GET /dept/dept/getDeptTree`)
+- 编辑部门接口 (`PUT /dept/dept/edit`)
+- 修改部门状态接口 (`PUT /dept/dept/editStatus/{id}/{status}`)
+- 删除部门接口 (`DELETE /dept/dept/delete/{id}`)
+
+#### 测试执行顺序
+
+端到端测试按照CRUD操作顺序执行，以确保测试数据的一致性和可预测性：
+1. Create (创建) - 首先测试添加新部门功能
+2. Read (读取) - 然后测试查询部门列表和树结构
+3. Update (更新) - 接着测试编辑部门和修改部门状态功能
+4. Delete (删除) - 最后测试删除部门功能
+
+这种执行顺序确保了测试数据在测试过程中被正确创建、使用和清理，避免了测试数据在数据库中的长期累积。
+
 ## API 响应格式
 
 本项目使用 `common_wrapper` crate 提供的统一响应格式，所有 API 响应都遵循以下格式：
@@ -98,17 +151,6 @@ cargo run
 
 ## API 接口
 
-### 用户管理
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/user/<id>` | 根据ID获取用户信息 |
-| GET | `/user/list` | 获取用户列表 |
-| POST | `/user/query` | 分页查询用户列表 |
-| POST | `/user` | 新增用户 |
-| PUT | `/user/<id>` | 修改用户 |
-| DELETE | `/user/<id>` | 删除用户 |
-
 ### 部门管理
 
 | 方法 | 路径 | 描述 |
@@ -121,29 +163,6 @@ cargo run
 | POST | `/dept` | 新增部门 |
 | PUT | `/dept/<id>` | 修改部门 |
 | DELETE | `/dept/<id>` | 删除部门 |
-
-### 角色管理
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/role/<id>` | 根据ID获取角色信息 |
-| GET | `/role/list` | 获取角色列表 |
-| GET | `/role/page?<page_num>&<page_size>` | 分页查询角色列表 |
-| POST | `/role` | 新增角色 |
-| PUT | `/role/<id>` | 修改角色 |
-| DELETE | `/role/<id>` | 删除角色 |
-| PUT | `/role/<id>/status/<status>` | 修改角色状态 |
-
-### 菜单管理
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/menu/<id>` | 根据ID获取菜单信息 |
-| GET | `/menu/list` | 获取菜单列表 |
-| GET | `/menu/page?<page_num>&<page_size>` | 分页查询菜单列表 |
-| POST | `/menu` | 新增菜单 |
-| PUT | `/menu/<id>` | 修改菜单 |
-| DELETE | `/menu/<id>` | 删除菜单 |
 
 ## 数据库表结构
 
@@ -169,30 +188,4 @@ cargo run
 | update_time | datetime | 更新时间 |
 | remark | varchar(200) | 备注 |
 
-### 菜单表 (sys_menu)
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| id | char(32) | 菜单ID |
-| name | varchar(30) | 菜单名称 |
-| parent_id | char(32) | 父菜单ID |
-| seq_no | int | 显示顺序 |
-| menu_type | char(1) | 菜单类型（D目录 M菜单 B按钮） |
-| url | varchar(200) | 请求地址 |
-| perms | varchar(100) | 权限标识 |
-| status | int | 菜单状态(0停用 1正常) |
-| hidden | int | 是否在侧边栏隐藏(0显示 1隐藏) |
-| always_show | int | 是否始终显示根菜单(0隐藏 1显示) |
-| redirect | varchar(200) | 重定向地址 |
-| component | varchar(200) | 当前路由外层包裹的组件信息 |
-| href | varchar(200) | 外部链接地址 |
-| icon | varchar(200) | 侧边栏中显示的图标 |
-| no_cache | int | 不缓存页面(0缓存 1不缓存) |
-| affix | int | 页面附加在标签视图中(0不附加 1附加) |
-| breadcrumb | int | 该项目将隐藏在breadcrumb中(0隐藏 1显示) |
-| active_menu | varchar(200) | 侧边栏会突出显示的路径 |
-| create_by | varchar(30) | 创建者 |
-| create_time | datetime | 创建时间 |
-| update_by | varchar(30) | 更新者 |
-| update_time | datetime | 更新时间 |
-| remark | varchar(200) | 备注 |
+<!-- 最后一行保持空白 -->

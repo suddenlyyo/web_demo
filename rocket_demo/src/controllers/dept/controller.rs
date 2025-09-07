@@ -82,7 +82,7 @@ pub async fn list_depts(dept_service: &State<Box<dyn DeptService + Send + Sync>>
 
 /// 获取部门树
 ///
-/// 获取完整的部门树结构
+/// 获取所有部门的树形结构数据
 ///
 /// # 参数
 ///
@@ -139,7 +139,7 @@ pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn
 ///
 /// # 参数
 ///
-/// - `dept_id`: 部门ID，类型: [String]，通过URL路径参数传入
+/// - `dept_id`: 部门ID，类型: [String]，通过URL路径传入
 /// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
 ///
 /// # 返回值
@@ -157,8 +157,8 @@ pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptServi
 ///
 /// # 参数
 ///
-/// - `id`: 部门ID，类型: [String]，通过URL路径参数传入
-/// - `status`: 部门状态，类型: [i32]，通过URL路径参数传入
+/// - `id`: 部门ID，类型: [String]，通过URL路径传入
+/// - `status`: 部门状态，类型: [i32]，通过URL路径传入
 /// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
 ///
 /// # 返回值

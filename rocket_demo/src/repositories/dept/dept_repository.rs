@@ -88,6 +88,7 @@ pub trait DeptRepository: Debug + Send + Sync {
     ///
     /// # 返回值
     /// 返回操作结果，类型: [Result<(), Box<dyn StdError + Send + Sync>>]
+    #[allow(unused)]
     async fn insert_selective(&self, row: &Dept) -> Result<(), Box<dyn StdError + Send + Sync>>;
 
     /// 根据主键查询部门
@@ -165,6 +166,7 @@ pub trait DeptRepository: Debug + Send + Sync {
     ///
     /// # 返回值
     /// 返回更新影响的行数，类型: [Result<u64, Box<dyn StdError + Send + Sync>>]
+    #[allow(unused)]
     async fn update_by_primary_key(&self, row: &Dept) -> Result<u64, Box<dyn StdError + Send + Sync>>;
 
     /// 根据主键选择性更新部门
