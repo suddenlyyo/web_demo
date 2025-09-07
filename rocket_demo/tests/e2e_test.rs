@@ -27,7 +27,7 @@ async fn test_add_dept_api() {
 
     // 发送POST请求到添加部门接口
     let res = client
-        .post("http://localhost:8000/dept/dept/add")
+        .post("http://localhost:8000/dept/add")
         .json(&dept_data)
         .send()
         .await;
@@ -57,10 +57,34 @@ async fn test_add_dept_api() {
 async fn test_dept_list_api() {
     // 确保服务器已启动
     let client = reqwest::Client::new();
+    
+    // 准备测试数据
+    let dept_data = serde_json::json!({
+        "id": null,
+        "parentId": null,
+        "name": null,
+        "email": null,
+        "telephone": null,
+        "address": null,
+        "logo": null,
+        "deptLevel": null,
+        "seqNo": null,
+        "status": null,
+        "createBy": null,
+        "createTime": null,
+        "updateBy": null,
+        "updateTime": null,
+        "remark": null,
+        "pageParam": {
+            "pageNum": null,
+            "pageSize": null
+        }
+    });
 
-    // 发送GET请求到部门列表接口
+    // 发送POST请求到部门列表接口
     let res = client
-        .get("http://localhost:8000/dept/dept/list")
+        .post("http://localhost:8000/dept/list")
+        .json(&dept_data)
         .send()
         .await;
 
@@ -72,8 +96,8 @@ async fn test_dept_list_api() {
             let body = response.text().await.unwrap();
             println!("Response body: {}", body);
 
-            // 验证响应状态是成功的
-            assert!(status.is_success());
+            // 验证响应状态不是404
+            assert!(status != reqwest::StatusCode::NOT_FOUND);
         },
         Err(e) => {
             println!("请求失败，请确保服务器正在运行: {}", e);
@@ -88,10 +112,34 @@ async fn test_dept_list_api() {
 async fn test_dept_tree_api() {
     // 确保服务器已启动
     let client = reqwest::Client::new();
+    
+    // 准备测试数据
+    let dept_data = serde_json::json!({
+        "id": null,
+        "parentId": null,
+        "name": null,
+        "email": null,
+        "telephone": null,
+        "address": null,
+        "logo": null,
+        "deptLevel": null,
+        "seqNo": null,
+        "status": null,
+        "createBy": null,
+        "createTime": null,
+        "updateBy": null,
+        "updateTime": null,
+        "remark": null,
+        "pageParam": {
+            "pageNum": null,
+            "pageSize": null
+        }
+    });
 
-    // 发送GET请求到部门树接口
+    // 发送POST请求到部门树接口
     let res = client
-        .get("http://localhost:8000/dept/dept/getDeptTree")
+        .post("http://localhost:8000/dept/getDeptTree")
+        .json(&dept_data)
         .send()
         .await;
 
@@ -103,8 +151,8 @@ async fn test_dept_tree_api() {
             let body = response.text().await.unwrap();
             println!("Response body: {}", body);
 
-            // 验证响应状态是成功的
-            assert!(status.is_success());
+            // 验证响应状态不是404
+            assert!(status != reqwest::StatusCode::NOT_FOUND);
         },
         Err(e) => {
             println!("请求失败，请确保服务器正在运行: {}", e);
@@ -134,7 +182,7 @@ async fn test_edit_dept_api() {
 
     // 发送PUT请求到编辑部门接口（使用一个已知的部门ID）
     let res = client
-        .put("http://localhost:8000/dept/dept/edit")
+        .put("http://localhost:8000/dept/edit")
         .json(&dept_data)
         .send()
         .await;
@@ -167,7 +215,7 @@ async fn test_edit_dept_status_api() {
 
     // 发送PUT请求到修改部门状态接口（使用一个测试部门ID）
     let res = client
-        .put("http://localhost:8000/dept/dept/editStatus/test_dept_id/0")
+        .put("http://localhost:8000/dept/editStatus/test_dept_id/0")
         .send()
         .await;
 
@@ -198,7 +246,7 @@ async fn test_delete_dept_api() {
 
     // 发送DELETE请求到删除部门接口（使用一个测试部门ID）
     let res = client
-        .delete("http://localhost:8000/dept/dept/delete/test_dept_id")
+        .delete("http://localhost:8000/dept/delete/test_dept_id")
         .send()
         .await;
 

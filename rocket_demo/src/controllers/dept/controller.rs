@@ -36,7 +36,7 @@ use serde_json::Value;
 /// # 返回值
 ///
 /// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
-#[post("/dept/list", data = "<dept_param>")]
+#[post("/list", data = "<dept_param>")]
 pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
@@ -93,7 +93,7 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
 /// # 返回值
 ///
 /// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>，参见: [ListWrapper]<[DeptTree]>
-#[post("/dept/getDeptTree", data = "<dept_param>")]
+#[post("/getDeptTree", data = "<dept_param>")]
 pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
     let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
     Json(result)
@@ -111,7 +111,7 @@ pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[post("/dept/add", data = "<dept_param>")]
+#[post("/add", data = "<dept_param>")]
 pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.add_dept(dept_param.into_inner()).await;
     Json(result)
@@ -129,7 +129,7 @@ pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn 
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[put("/dept/edit", data = "<dept_param>")]
+#[put("/edit", data = "<dept_param>")]
 pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept(dept_param.into_inner()).await;
     Json(result)
@@ -147,7 +147,7 @@ pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[delete("/dept/delete/<dept_id>")]
+#[delete("/delete/<dept_id>")]
 pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.delete_dept(&dept_id).await;
     Json(result)
@@ -166,7 +166,7 @@ pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptServi
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[put("/dept/editStatus/<id>/<status>")]
+#[put("/editStatus/<id>/<status>")]
 pub async fn edit_dept_status(id: String, status: i32, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept_status(&id, status).await;
     Json(result)
