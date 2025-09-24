@@ -7,9 +7,9 @@ use crate::config::Config;
 use crate::models::Dept;
 use crate::models::constants::DEPT_FIELDS;
 use crate::repositories::dept::dept_repository::DeptRepository;
+use async_trait::async_trait;
 use diesel::mysql::MysqlConnection;
 use diesel::r2d2::{ConnectionManager, Pool};
-use rocket::async_trait;
 use std::error::Error as StdError;
 use std::fmt::Debug;
 

@@ -3,11 +3,12 @@
 use crate::models::Dept;
 use crate::params::dept_param::DeptParam;
 use crate::views::dept_tree::DeptTree;
+use async_trait::async_trait;
 use common_wrapper::{ListWrapper, ResponseWrapper};
 use std::collections::HashMap;
 
 /// 部门服务trait
-#[rocket::async_trait]
+#[async_trait]
 pub trait DeptService: Send + Sync {
     /// 获取部门树
     async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTree>;
