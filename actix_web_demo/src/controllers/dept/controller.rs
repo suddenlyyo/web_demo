@@ -32,10 +32,7 @@ use common_wrapper::ListWrapper;
 ///
 /// 返回JSON格式的部门列表结果，类型: [HttpResponse]，包含: [ListWrapper]<[Dept]>
 #[post("/dept/list")]
-pub async fn list_depts<T>(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<T>>) -> impl Responder
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn list_depts(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
     // 如果没有数据直接返回
@@ -91,10 +88,7 @@ where
 ///
 /// 返回JSON格式的部门树结果，类型: [HttpResponse]，包含: [ListWrapper]<[DeptTree]>
 #[post("/dept/getDeptTree")]
-pub async fn get_dept_tree<T>(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<T>>) -> impl Responder
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn get_dept_tree(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
     HttpResponse::Ok().json(result)
 }
@@ -112,10 +106,7 @@ where
 ///
 /// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
 #[post("/dept/add")]
-pub async fn add_dept<T>(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<T>>) -> impl Responder
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn add_dept(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result = dept_service.add_dept(dept_param.into_inner()).await;
     HttpResponse::Ok().json(result)
 }
@@ -133,10 +124,7 @@ where
 ///
 /// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
 #[put("/dept/edit")]
-pub async fn edit_dept<T>(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<T>>) -> impl Responder
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn edit_dept(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result = dept_service.edit_dept(dept_param.into_inner()).await;
     HttpResponse::Ok().json(result)
 }
@@ -154,10 +142,7 @@ where
 ///
 /// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
 #[delete("/dept/delete/{dept_id}")]
-pub async fn delete_dept<T>(path: web::Path<(String,)>, dept_service: web::Data<Box<T>>) -> impl Responder
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn delete_dept(path: web::Path<(String,)>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let dept_id = path.into_inner().0;
     let result = dept_service.delete_dept(&dept_id).await;
     HttpResponse::Ok().json(result)
@@ -176,10 +161,7 @@ where
 ///
 /// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
 #[put("/dept/editStatus/{id}/{status}")]
-pub async fn edit_dept_status<T>(path: web::Path<(String, i32)>, dept_service: web::Data<Box<T>>) -> impl Responder
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn edit_dept_status(path: web::Path<(String, i32)>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let (id, status) = path.into_inner();
     let result = dept_service.edit_dept_status(&id, status).await;
     HttpResponse::Ok().json(result)

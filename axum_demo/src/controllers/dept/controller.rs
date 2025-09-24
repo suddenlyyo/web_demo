@@ -39,10 +39,7 @@ use crate::views::dept_tree::DeptTree;
 /// # 返回值
 ///
 /// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
-pub async fn list_depts<T>(State(dept_service): State<Arc<T>>, Json(dept_param): Json<DeptParam>) -> Json<Value>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn list_depts(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<Value> {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param).await;
 
     // 如果没有数据直接返回
@@ -98,10 +95,7 @@ where
 /// # 返回值
 ///
 /// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>
-pub async fn get_dept_tree<T>(State(dept_service): State<Arc<T>>, Json(dept_param): Json<DeptParam>) -> Json<ListWrapper<DeptTree>>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn get_dept_tree(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<ListWrapper<DeptTree>> {
     let result = dept_service.get_dept_tree(dept_param).await;
     Json(result)
 }
@@ -118,10 +112,7 @@ where
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>
-pub async fn add_dept<T>(State(dept_service): State<Arc<T>>, Json(dept_param): Json<DeptParam>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn add_dept(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<ResponseWrapper> {
     let result = dept_service.add_dept(dept_param).await;
     Json(result)
 }
@@ -138,10 +129,7 @@ where
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>
-pub async fn edit_dept<T>(State(dept_service): State<Arc<T>>, Json(dept_param): Json<DeptParam>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn edit_dept(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept(dept_param).await;
     Json(result)
 }
@@ -158,10 +146,7 @@ where
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>
-pub async fn delete_dept<T>(State(dept_service): State<Arc<T>>, Path(dept_id): Path<String>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn delete_dept(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Path(dept_id): Path<String>) -> Json<ResponseWrapper> {
     let result = dept_service.delete_dept(&dept_id).await;
     Json(result)
 }
@@ -179,10 +164,7 @@ where
 /// # 返回值
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>
-pub async fn edit_dept_status<T>(State(dept_service): State<Arc<T>>, Path((id, status)): Path<(String, i32)>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn edit_dept_status(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Path((id, status)): Path<(String, i32)>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept_status(&id, status).await;
     Json(result)
 }

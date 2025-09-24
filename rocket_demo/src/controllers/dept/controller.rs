@@ -37,10 +37,7 @@ use serde_json::Value;
 ///
 /// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
 #[post("/list", data = "<dept_param>")]
-pub async fn list_depts<T>(dept_param: Json<DeptParam>, dept_service: &State<Box<T>>) -> Json<Value>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
     // 如果没有数据直接返回
@@ -96,10 +93,7 @@ where
 ///
 /// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>，参见: [ListWrapper]<[DeptTree]>
 #[post("/getDeptTree", data = "<dept_param>")]
-pub async fn get_dept_tree<T>(dept_param: Json<DeptParam>, dept_service: &State<Box<T>>) -> Json<ListWrapper<DeptTree>>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
     let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
     Json(result)
 }
@@ -117,10 +111,7 @@ where
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
 #[post("/add", data = "<dept_param>")]
-pub async fn add_dept<T>(dept_param: Json<DeptParam>, dept_service: &State<Box<T>>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.add_dept(dept_param.into_inner()).await;
     Json(result)
 }
@@ -138,10 +129,7 @@ where
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
 #[put("/edit", data = "<dept_param>")]
-pub async fn edit_dept<T>(dept_param: Json<DeptParam>, dept_service: &State<Box<T>>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept(dept_param.into_inner()).await;
     Json(result)
 }
@@ -159,10 +147,7 @@ where
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
 #[delete("/delete/<dept_id>")]
-pub async fn delete_dept<T>(dept_id: String, dept_service: &State<Box<T>>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.delete_dept(&dept_id).await;
     Json(result)
 }
@@ -181,10 +166,7 @@ where
 ///
 /// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
 #[put("/editStatus/<id>/<status>")]
-pub async fn edit_dept_status<T>(id: String, status: i32, dept_service: &State<Box<T>>) -> Json<ResponseWrapper>
-where
-    T: DeptService + Send + Sync + 'static,
-{
+pub async fn edit_dept_status(id: String, status: i32, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept_status(&id, status).await;
     Json(result)
 }
