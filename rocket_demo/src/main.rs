@@ -7,7 +7,12 @@ mod services;
 mod views;
 
 use controllers::{dept::controller as dept_controller, index::controller as index_controller};
+use rocket::figment::{
+    Figment,
+    providers::{Env, Serialized, Toml},
+};
 use services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl};
+use std::path::Path;
 
 // 为每种实现定义类型别名，简化条件编译代码
 #[cfg(feature = "sqlx_impl")]
@@ -50,8 +55,16 @@ async fn rocket() -> _ {
     // 初始化部门服务
     let dept_service = Box::new(DeptServiceImpl::new(repository)) as Box<dyn DeptService + Send + Sync>;
 
+    // 创建自定义配置，配置优先级从低到高为：
+    // 1. Rocket框架内置默认值（如address=127.0.0.1, port=8000）
+    // 2. Rocket.toml配置文件中的值
+    // 3. 环境变量ROCKET_*（优先级最高）
+    let figment = Figment::from(rocket::Config::default())
+        .merge(Toml::file("Rocket.toml").nested())
+        .merge(Env::prefixed("ROCKET_").global());
+
     // 构建Rocket实例
-    rocket::build()
+    rocket::custom(figment)
         .manage(dept_service)
         .mount("/", index_controller::routes())
         .mount("/dept", dept_controller::routes())

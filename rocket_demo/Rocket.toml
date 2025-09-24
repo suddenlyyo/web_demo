@@ -1,0 +1,100 @@
+## Rocket配置文件
+## 配置项保持与框架默认值一致，除非有特殊需求才修改
+## 配置优先级: 环境变量 > 配置文件 > 框架默认值
+
+[default]
+## address: 服务器监听地址
+## 类型: IP地址
+## 默认值: 127.0.0.1
+address = "127.0.0.1"
+
+## port: 服务器监听端口
+## 类型: 16位无符号整数
+## 默认值: 8000
+port = 8000
+
+## keep_alive: HTTP keep-alive超时时间(秒)，0表示禁用
+## 类型: 32位无符号整数
+## 默认值: 5
+keep_alive = 5
+
+## ident: 是否在Server响应头中标识服务器身份
+## 类型: 字符串或false
+## 默认值: "Rocket"
+ident = "Rocket"
+
+## ip_header: 用于获取客户端真实IP的请求头
+## 类型: 字符串或false
+## 默认值: "X-Real-IP"
+ip_header = "X-Real-IP"
+
+## log_level: 日志级别
+## 可选值: off, normal, debug, critical
+## 默认值: debug模式下为normal，release模式下为critical
+log_level = "normal"
+
+## cli_colors: 是否在日志中使用颜色和emoji
+## 类型: 布尔值
+## 默认值: true
+cli_colors = true
+
+## ctrlc: 是否允许ctrl-c触发服务器关闭
+## 类型: 布尔值
+## 默认值: true
+ctrlc = true
+
+## limits: 流读取大小限制
+## 类型: 字典
+## 默认值: form = "32KiB"
+## 示例配置（取消注释以使用）:
+# [default.limits]
+# form = "32KiB"
+# json = "1MiB"
+# msgpack = "2MiB"
+
+## TLS配置示例（默认不启用）
+## 需要在Cargo.toml中启用tls特性: rocket = { version = "0.5.1", features = ["tls"] }
+# [default.tls]
+# certs = "path/to/cert-chain.pem"
+# key = "path/to/key.pem"
+# prefer_server_cipher_order = false
+# ciphers = [
+#   "TLS_CHACHA20_POLY1305_SHA256",
+#   "TLS_AES_256_GCM_SHA384", 
+#   "TLS_AES_128_GCM_SHA256",
+#   "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+#   "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
+#   "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+#   "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+#   "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+#   "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+# ]
+
+## shutdown: 优雅关闭配置
+# [default.shutdown]
+# ctrlc = true
+# signals = ["term", "hup"]
+# grace = 5
+# mercy = 5
+
+[debug]
+## debug环境配置
+port = 8000
+## debug模式下日志级别
+log_level = "normal"
+
+[release]
+## release环境配置
+port = 9999
+## release模式下日志级别
+log_level = "critical"
+## release模式下可以禁用ip_header
+# ip_header = false
+
+## 以下配置项无法在配置文件中设置，只能依赖框架默认提供者：
+## workers: 执行futures的工作线程数，默认为CPU核心数
+## max_blocking: 阻塞任务启动的线程数限制，默认为512
+
+## secret_key配置项具有特殊行为：
+## - 在debug模式下由框架自动生成
+## - 在release模式下若启用secrets功能则必须手动设置

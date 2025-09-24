@@ -1,140 +1,136 @@
-# Web Demo
+# Rust Web框架演示项目
 
-一个使用 Rust 编写的 Web 服务 Demo，旨在演示如何使用流行的 Rust Web 框架实现基本的 CRUD 功能。
+本项目演示了如何使用主流的 Rust Web 框架（Axum、Rocket、Actix Web）实现标准的 CRUD 功能，以及如何在多个框架之间共享业务逻辑。
 
 ## 项目结构
 
 ```
 .
-├── actix_web_demo      # 使用 Actix Web 框架的示例
-├── axum_demo           # 使用 Axum 框架的示例
-├── common_validation   # 通用验证库
-├── common_validation_macros # 验证宏定义
-├── common_wrapper      # 通用响应封装库
-├── rocket_demo         # 使用 Rocket 框架的示例
-├── sql                 # 数据库脚本
-└── Cargo.toml          # 工作区配置
+├── actix_web_demo     # Actix Web 框架示例
+├── axum_demo          # Axum 框架示例
+├── common_validation  # 公共参数验证库
+├── common_wrapper     # 公共响应封装库
+├── rocket_demo        # Rocket 框架示例
+├── sql                # 数据库初始化脚本
+└── Cargo.toml         # 工作区配置文件
 ```
 
-## 核心模块介绍
+## 公共库
 
 ### common_validation
-[通用验证库](./common_validation/README.md)，提供参数验证功能：
-- 多种验证规则（非空、长度、日期格式、数值范围等）
-- 灵活的验证规则组合
-- 自定义错误类型
-- 易于使用的验证器接口
 
-### common_validation_macros
-[验证宏库](./common_validation_macros/README.md)，提供派生宏来自动生成验证代码：
-- 为结构体自动生成 `Validatable` 实现
-- 支持多种验证属性
-- 自动处理嵌套结构体的验证
+提供参数验证功能，包括：
+- 非空验证
+- 长度验证
+- 格式验证
+- 范围验证
+- 自定义验证规则
 
 ### common_wrapper
-[通用响应封装库](./common_wrapper/README.md)，提供统一的API响应格式：
-- 统一的响应数据结构
-- 支持多种响应类型（对象、列表、分页等）
-- 标准化的错误处理
 
-## Web框架示例
+提供统一的 API 响应封装，包括：
+- 成功响应
+- 错误响应
+- 分页响应
+- 列表响应
 
-### Actix Web
-[actix_web_demo](./actix_web_demo) 目录包含使用 Actix Web 框架实现的示例。
+## 各框架示例说明
 
-Actix Web Demo 支持多种数据库实现，通过 Rust 特性进行管理，默认使用 SQLx 实现。详情请参见 [Actix Web Demo README](./actix_web_demo/README.md)。
+### Rocket 示例 (rocket_demo)
 
-Actix Web 支持通过环境变量配置主机和端口：
-- `HOST` - 服务器监听的主机地址（默认: 127.0.0.1）
-- `PORT` - 服务器监听的端口号（默认: 8000）
+使用 Rocket 框架实现的 Web 服务示例。
 
-当运行应用程序时，控制台会显示实际使用的地址和来源（环境变量或默认值）。
+支持多种数据库实现：
+- SQLx（默认）
+- Diesel
+- SeaORM
 
-示例：
+配置方式：
+1. 默认配置
+2. Rocket.toml 文件
+3. 环境变量（以 ROCKET_ 为前缀）
+
+运行方式：
 ```bash
-# 设置环境变量并运行
-export HOST=0.0.0.0
-export PORT=3000
-cd actix_web_demo && cargo run
+# 使用默认的 SQLx 实现
+cd rocket_demo && cargo run
 
-# 或者使用内联方式运行
-HOST=0.0.0.0 PORT=3000 cd actix_web_demo && cargo run
+# 使用环境变量配置运行（优先级最高）
+cd rocket_demo && ROCKET_ADDRESS=0.0.0.0 ROCKET_PORT=8080 cargo run
 
-# 不设置环境变量，使用默认值（127.0.0.1:8000）
-cd actix_web_demo && cargo run
+# 使用 Diesel 实现
+cd rocket_demo && cargo run --no-default-features --features diesel_impl
+
+# 使用 SeaORM 实现
+cd rocket_demo && cargo run --no-default-features --features seaorm_impl
 ```
 
-### Axum
-[axum_demo](./axum_demo) 目录包含使用 Axum 框架实现的示例。
+### Axum 示例 (axum_demo)
 
-### Rocket
-[rocket_demo](./rocket_demo) 目录包含使用 Rocket 框架实现的示例。
+使用 Axum 框架实现的 Web 服务示例。
 
-Rocket Demo 支持多种数据库实现，通过 Rust 特性进行管理，默认使用 SQLx 实现。详情请参见 [Rocket Demo README](./rocket_demo/README.md)。
+支持多种数据库实现：
+- SQLx（默认）
+- Diesel
+- SeaORM
 
-## 快速开始
+配置方式：
+- 通过环境变量配置（HOST, PORT）
 
-### 环境要求
-- Rust 和 Cargo (推荐使用最新稳定版)
-- 安装 rustfmt: `rustup component add rustfmt`
+运行方式：
+```bash
+# 使用默认的 SQLx 实现
+cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run
 
-### 数据库配置
-项目使用 MySQL 数据库，需要在运行前设置数据库连接：
+# 使用 Diesel 实现
+cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features diesel_impl
+
+# 使用 SeaORM 实现
+cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features seaorm_impl
+```
+
+### Actix Web 示例 (actix_web_demo)
+
+使用 Actix Web 框架实现的 Web 服务示例。
+
+支持多种数据库实现：
+- SQLx（默认）
+- Diesel
+- SeaORM
+
+配置方式：
+- 通过环境变量配置（HOST, PORT）
+
+运行方式：
+```bash
+# 使用默认的 SQLx 实现
+cd actix_web_demo && HOST=0.0.0.0 PORT=3000 cargo run
+
+# 使用 Diesel 实现
+cd actix_web_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features diesel_impl
+
+# 使用 SeaORM 实现
+cd actix_web_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features seaorm_impl
+```
+
+## 数据库配置
+
+所有示例都需要配置数据库连接，通过设置 DATABASE_URL 环境变量：
+
 ```bash
 export DATABASE_URL=mysql://user:password@localhost/database
 ```
 
-### 构建项目
-```bash
-cargo build
-```
+数据库初始化脚本位于 [sql/demo.sql](sql/demo.sql)。
 
-### 运行示例
-进入各 demo 目录并运行：
+## 测试
+
+每个框架示例都包含集成测试和端到端测试：
 
 ```bash
-# 运行 Actix Web 示例（默认使用 SQLx）
-cd actix_web_demo && cargo run
+# 运行集成测试
+cargo test --test integration_test
 
-# 运行 Actix Web 示例（使用 Diesel）
-cd actix_web_demo && cargo run --no-default-features --features diesel_impl
-
-# 运行 Actix Web 示例（使用 SeaORM）
-cd actix_web_demo && cargo run --no-default-features --features seaorm_impl
-
-# 运行 Axum 示例
-cd axum_demo && cargo run
-
-# 运行 Rocket 示例（默认使用 SQLx）
-cd rocket_demo && cargo run
-
-# 运行 Rocket 示例（使用 Diesel）
-cd rocket_demo && cargo run --no-default-features --features diesel_impl
-
-# 运行 Rocket 示例（使用 SeaORM）
-cd rocket_demo && cargo run --no-default-features --features seaorm_impl
+# 运行端到端测试（需要先启动服务器）
+cargo test --test e2e_test
 ```
-
-### 运行测试
-```bash
-# 运行所有测试
-cargo test
-
-# 运行特定包的测试
-cargo test -p common_validation
-cargo test -p common_validation_macros
-cargo test -p common_wrapper
-```
-
-## 技术栈
-
-- **语言**: Rust
-- **Web框架**: 
-  - Axum
-  - Rocket
-  - Actix Web
-- **ORM/数据库访问**:
-  - SQLx
-  - Diesel
-  - SeaORM
-- **工具**: Cargo, rustfmt

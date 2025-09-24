@@ -33,6 +33,54 @@ cargo run --features sqlx_impl
 
 注意：一次只能启用一种数据库实现特性。
 
+## 配置
+
+Rocket框架支持多种配置方式，按照优先级从低到高依次为：
+
+1. 默认配置
+2. Rocket.toml 文件
+3. 环境变量（以 ROCKET_ 为前缀）
+
+### 配置文件 (Rocket.toml)
+
+项目支持使用 Rocket.toml 文件进行配置。配置文件支持多个配置环境（profiles），包括：
+- default - 所有环境的默认配置
+- debug - 调试模式配置
+- release - 发布模式配置
+
+示例配置文件：
+```toml
+[default]
+address = "0.0.0.0"
+port = 8000
+
+[debug]
+port = 8000
+
+[release]
+port = 9999
+```
+
+### 环境变量配置
+
+可以通过设置环境变量来配置服务器，所有环境变量都以 ROCKET_ 为前缀：
+
+```bash
+ROCKET_ADDRESS=0.0.0.0
+ROCKET_PORT=3000
+```
+
+环境变量运行方式：
+```bash
+# 使用环境变量运行（优先级最高）
+ROCKET_ADDRESS=0.0.0.0 ROCKET_PORT=8080 cargo run
+
+# 或者先设置环境变量再运行
+export ROCKET_ADDRESS=0.0.0.0
+export ROCKET_PORT=8080
+cargo run
+```
+
 ## 数据库配置
 
 项目使用 MySQL 数据库，需要设置以下环境变量：
