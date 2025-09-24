@@ -7,7 +7,58 @@ edition = "2024"
 # 使用工作空间管理的依赖
 # Actix Web框架
 actix-web = { workspace = true }
-# 公共响应处理
-common_wrapper = { path = "../common_wrapper" }
+# SQLx数据库访问库
+sqlx = { workspace = true, features = [
+    "runtime-tokio-rustls",
+    "mysql",
+    "chrono",
+    "uuid",
+] }
+# Diesel ORM
+diesel = { workspace = true, features = [
+    "mysql",
+    "chrono",
+    "uuid",
+    "r2d2",
+] }
+# SeaORM ORM
+sea-orm = { workspace = true, features = [
+    "sqlx-mysql",
+    "runtime-tokio-rustls",
+    "macros",
+    "with-chrono",
+    "with-uuid",
+] }
+# 公共包装器
+common_wrapper = { path = "../common_wrapper", features = ["rocket_responder"] }
+# 公共验证器
+common_validation = { path = "../common_validation" }
 # 异步运行时
 tokio = { workspace = true, features = ["full"] }
+# 时间处理库
+chrono = { workspace = true, features = ["serde"] }
+# 序列化/反序列化
+serde = { workspace = true, features = ["derive"] }
+# JSON序列化/反序列化
+serde_json = { workspace = true }
+# TOML解析库
+toml = { workspace = true }
+# 错误处理
+thiserror = { workspace = true }
+# UUID库
+uuid = { workspace = true }
+# 懒初始化静态变量
+lazy_static = { workspace = true }
+
+[dev-dependencies]
+# HTTP客户端用于端到端测试
+reqwest = { version = "0.11", features = ["json"] }
+
+[features]
+default = ["sqlx_impl"]
+sqlx_impl = []
+diesel_impl = []
+seaorm_impl = []
+
+[package.metadata.docs.rs]
+features = ["sqlx_impl"]
