@@ -13,14 +13,14 @@ sqlx = { workspace = true, features = [
     "mysql",
     "chrono",
     "uuid",
-] }
+], optional = true }
 # Diesel ORM
 diesel = { workspace = true, features = [
     "mysql",
     "chrono",
     "uuid",
     "r2d2",
-] }
+], optional = true }
 # SeaORM ORM
 sea-orm = { workspace = true, features = [
     "sqlx-mysql",
@@ -28,7 +28,7 @@ sea-orm = { workspace = true, features = [
     "macros",
     "with-chrono",
     "with-uuid",
-] }
+], optional = true }
 # 公共包装器
 common_wrapper = { path = "../common_wrapper" }
 # 公共验证器
@@ -51,15 +51,20 @@ uuid = { workspace = true }
 lazy_static = { workspace = true }
 # 异步 trait,多个 trait 实现支持
 async-trait = { workspace = true }
+
 [dev-dependencies]
 # HTTP客户端用于端到端测试
 reqwest = { version = "0.11", features = ["json"] }
 
 [features]
+# 默认使用 SQLx 实现
 default = ["sqlx_impl"]
-sqlx_impl = []
-diesel_impl = []
-seaorm_impl = []
+# 使用 SQLx 作为数据库访问层实现（可选）
+sqlx_impl = ["sqlx"]
+# 使用 Diesel 作为 ORM 实现（可选）
+diesel_impl = ["diesel"]
+# 使用 SeaORM 作为 ORM 实现（可选）
+seaorm_impl = ["sea-orm"]
 
 [package.metadata.docs.rs]
 features = ["sqlx_impl"]
