@@ -15,7 +15,7 @@
 //! ```
 
 use crate::models::Dept;
-use rocket::async_trait;
+use async_trait::async_trait;
 use std::error::Error as StdError;
 use std::fmt::Debug;
 

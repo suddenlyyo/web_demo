@@ -6,7 +6,6 @@ mod repositories;
 mod services;
 mod views;
 
-use config::Config;
 use controllers::{dept::controller as dept_controller, index::controller as index_controller};
 use services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl};
 
