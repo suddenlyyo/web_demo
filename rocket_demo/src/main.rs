@@ -9,10 +9,9 @@ mod views;
 use controllers::{dept::controller as dept_controller, index::controller as index_controller};
 use rocket::figment::{
     Figment,
-    providers::{Env, Serialized, Toml},
+    providers::{Env, Format, Toml},
 };
 use services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl};
-use std::path::Path;
 
 // 为每种实现定义类型别名，简化条件编译代码
 #[cfg(feature = "sqlx_impl")]
