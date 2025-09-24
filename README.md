@@ -42,9 +42,11 @@
 ### Actix Web
 [actix_web_demo](./actix_web_demo) 目录包含使用 Actix Web 框架实现的示例。
 
+Actix Web Demo 支持多种数据库实现，通过 Rust 特性进行管理，默认使用 SQLx 实现。详情请参见 [Actix Web Demo README](./actix_web_demo/README.md)。
+
 Actix Web 支持通过环境变量配置主机和端口：
 - `HOST` - 服务器监听的主机地址（默认: 127.0.0.1）
-- `PORT` - 服务器监听的端口号（默认: 8080）
+- `PORT` - 服务器监听的端口号（默认: 8000）
 
 当运行应用程序时，控制台会显示实际使用的地址和来源（环境变量或默认值）。
 
@@ -58,7 +60,7 @@ cd actix_web_demo && cargo run
 # 或者使用内联方式运行
 HOST=0.0.0.0 PORT=3000 cd actix_web_demo && cargo run
 
-# 不设置环境变量，使用默认值（127.0.0.1:8080）
+# 不设置环境变量，使用默认值（127.0.0.1:8000）
 cd actix_web_demo && cargo run
 ```
 
@@ -91,6 +93,15 @@ cargo build
 进入各 demo 目录并运行：
 
 ```bash
+# 运行 Actix Web 示例（默认使用 SQLx）
+cd actix_web_demo && cargo run
+
+# 运行 Actix Web 示例（使用 Diesel）
+cd actix_web_demo && cargo run --no-default-features --features diesel_impl
+
+# 运行 Actix Web 示例（使用 SeaORM）
+cd actix_web_demo && cargo run --no-default-features --features seaorm_impl
+
 # 运行 Axum 示例
 cd axum_demo && cargo run
 
@@ -102,9 +113,6 @@ cd rocket_demo && cargo run --no-default-features --features diesel_impl
 
 # 运行 Rocket 示例（使用 SeaORM）
 cd rocket_demo && cargo run --no-default-features --features seaorm_impl
-
-# 运行 Actix Web 示例
-cd actix_web_demo && cargo run
 ```
 
 ### 运行测试
