@@ -20,6 +20,7 @@ use repositories::dept::diesel_impl::DeptRepositoryDieselImpl as DeptRepositoryI
 use repositories::dept::seaorm_impl::DeptRepositorySeaormImpl as DeptRepositoryImpl;
 
 // 统一导入trait
+use actix_web::{App, HttpServer, web};
 use repositories::dept::dept_repository::DeptRepository;
 use std::sync::Arc;
 
@@ -47,16 +48,28 @@ async fn main() -> std::io::Result<()> {
         )
     };
 
+    // 从环境变量中读取主机和端口配置，默认为127.0.0.1:8080
+    let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8000".to_string());
+    let bind_address = format!("{}:{}", host, port);
+
+    // 检查是否使用了默认值
+    let host_source = if std::env::var("HOST").is_ok() { "环境变量" } else { "默认值" };
+    let port_source = if std::env::var("PORT").is_ok() { "环境变量" } else { "默认值" };
+
+    println!("Starting server at {bind_address} (host: {host} from {host_source}, port: {port} from {port_source})");
+
     // 初始化部门服务
     let dept_service = Box::new(DeptServiceImpl::new(repository)) as Box<dyn DeptService + Send + Sync>;
     let dept_service_data = web::Data::new(dept_service);
-    HttpServer::new(|| {
+
+    HttpServer::new(move || {
         App::new()
             .app_data(dept_service_data.clone())
             .configure(dept_controller::config)
             .configure(index_controller::config)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(bind_address)?
     .run()
     .await
 }

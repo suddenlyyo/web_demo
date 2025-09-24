@@ -11,15 +11,13 @@
 //! - 删除部门: [delete_dept]
 //! - 修改部门状态: [edit_dept_status]
 //!
-use actix_web::{HttpResponse, Responder, delete, get, post, put, web};
+use actix_web::{HttpResponse, Responder, delete, post, put, web};
 use common_wrapper::enums::status_enum::StatusEnum;
-use serde_json::Value;
 
 use crate::models::dept::Dept;
 use crate::params::dept_param::DeptParam;
 use crate::services::dept::dept_service::DeptService;
-use crate::views::dept_tree::DeptTree;
-use common_wrapper::{ListWrapper, ResponseWrapper};
+use common_wrapper::ListWrapper;
 
 /// 查询部门列表
 ///

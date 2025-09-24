@@ -16,6 +16,18 @@ members = [
 # 3. 减少编译时间，相同依赖只编译一次
 # 4. 降低磁盘空间占用，避免多个版本的相同依赖
 [workspace.dependencies]
+# Axum Web框架
+# 官网地址:https://github.com/tokio-rs/axum
+# 特点: 模块化、功能齐全、类型安全的路由
+# 优势: 基于Tokio和Tower生态系统、零开销、易于组合
+# 使用场景: 构建异步Web应用和API服务
+axum = "0.7"
+# Actix Web框架
+# 官网地址:https://actix.rs/
+# 特点: 高性能、类型安全、功能丰富
+# 优势: 强大的中间件系统、优秀的性能、灵活的路由
+# 使用场景: 构建高性能Web应用、RESTful API服务
+actix-web = "4"
 # Rocket Web 框架 ,官网地址:https://rocket.rs/
 # 特点: 简单易用、类型安全、强大的路由系统
 # 优势: 内置异步支持、良好的文档、零开销抽象
@@ -56,11 +68,11 @@ toml = "0.8.19"
 tokio = { version = "1.45.0" }
 # UUID库
 uuid = { version = "1.10.0", features = ["v4"] }
-# Axum Web框架
-axum = "0.7"
-# Actix Web框架
-actix-web = "4"
 # 懒初始化静态变量
 lazy_static = "1.5.0"
 # 异步 trait,多个 trait 实现支持
+# 官网地址:https://github.com/dtolnay/async-trait
+# 特点: 为trait提供异步方法支持
+# 优势: 简化异步trait的实现、与标准trait语法兼容
+# 使用场景: 需要在trait中定义异步方法的场景
 async-trait = "0.1.89"

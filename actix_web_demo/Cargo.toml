@@ -30,7 +30,7 @@ sea-orm = { workspace = true, features = [
     "with-uuid",
 ] }
 # 公共包装器
-common_wrapper = { path = "../common_wrapper", features = ["rocket_responder"] }
+common_wrapper = { path = "../common_wrapper" }
 # 公共验证器
 common_validation = { path = "../common_validation" }
 # 异步运行时

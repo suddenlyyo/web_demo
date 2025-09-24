@@ -9,14 +9,13 @@
 //! - 提供部门实体与参数对象之间的转换实现
 
 use chrono::NaiveDateTime;
-use rocket::serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// 部门信息实体
 ///
 /// 映射数据库部门表的实体结构，包含了部门的所有字段信息
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "sqlx_impl", derive(sqlx::FromRow))]
-#[serde(crate = "rocket::serde")]
 pub struct Dept {
     /// 部门id
     ///
