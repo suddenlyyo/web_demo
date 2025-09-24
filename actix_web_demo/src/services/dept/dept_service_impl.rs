@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use async_trait::async_trait;
 use chrono::Utc;
 use common_wrapper::enums::status_enum::StatusEnum;
 use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper};
@@ -212,7 +213,7 @@ impl DeptServiceImpl {
     }
 }
 
-#[rocket::async_trait]
+#[async_trait]
 impl DeptService for DeptServiceImpl {
     async fn get_dept_tree(&self, dept_param: DeptParam) -> ListWrapper<DeptTree> {
         // 转换参数类型

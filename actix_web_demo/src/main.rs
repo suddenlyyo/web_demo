@@ -23,8 +23,8 @@ use repositories::dept::seaorm_impl::DeptRepositorySeaormImpl as DeptRepositoryI
 use repositories::dept::dept_repository::DeptRepository;
 use std::sync::Arc;
 
-#[rocket::launch]
-async fn rocket() -> _ {
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     // 根据启用的特性初始化对应的数据访问层实现
     #[cfg(feature = "sqlx_impl")]
     let repository: Arc<dyn DeptRepository> = {
@@ -49,10 +49,14 @@ async fn rocket() -> _ {
 
     // 初始化部门服务
     let dept_service = Box::new(DeptServiceImpl::new(repository)) as Box<dyn DeptService + Send + Sync>;
-
-    // 构建Rocket实例
-    rocket::build()
-        .manage(dept_service)
-        .mount("/", index_controller::routes())
-        .mount("/dept", dept_controller::routes())
+    let dept_service_data = web::Data::new(dept_service);
+    HttpServer::new(|| {
+        App::new()
+            .app_data(dept_service_data.clone())
+            .configure(dept_controller::config)
+            .configure(index_controller::config)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }

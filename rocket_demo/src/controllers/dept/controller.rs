@@ -41,8 +41,7 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
     // 如果没有数据直接返回
-    let depts = result.get_data();
-    if depts.is_none() {
+    if result.get_data().is_none() {
         return Json(serde_json::to_value(&result).unwrap_or_default());
     }
 

@@ -11,18 +11,15 @@
 //! - 删除部门: [delete_dept]
 //! - 修改部门状态: [edit_dept_status]
 //!
+use actix_web::{HttpResponse, Responder, delete, get, post, put, web};
 use common_wrapper::enums::status_enum::StatusEnum;
-use rocket::serde::json::Json;
-use rocket::{State, delete, post, put, routes};
+use serde_json::Value;
 
 use crate::models::dept::Dept;
 use crate::params::dept_param::DeptParam;
 use crate::services::dept::dept_service::DeptService;
 use crate::views::dept_tree::DeptTree;
 use common_wrapper::{ListWrapper, ResponseWrapper};
-use serde_json::Value;
-
-/// 部门控制器
 
 /// 查询部门列表
 ///
@@ -30,20 +27,19 @@ use serde_json::Value;
 ///
 /// # 参数
 ///
-/// - `dept_param`: 部门查询参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_param`: 部门查询参数，类型: [web::Json]<[DeptParam]>，通过请求体传入
+/// - `dept_service`: 部门服务实例，类型: [web::Data]<[Box]<dyn [DeptService] + Send + Sync>>，通过Actix Web依赖注入提供
 ///
 /// # 返回值
 ///
-/// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
-#[post("/list", data = "<dept_param>")]
-pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
+/// 返回JSON格式的部门列表结果，类型: [HttpResponse]，包含: [ListWrapper]<[Dept]>
+#[post("/dept/list")]
+pub async fn list_depts(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
 
     // 如果没有数据直接返回
-    let depts = result.get_data();
-    if depts.is_none() {
-        return Json(serde_json::to_value(&result).unwrap_or_default());
+    if result.get_data().is_none() {
+        return HttpResponse::Ok().json(result);
     }
 
     // 将result转换成json
@@ -78,7 +74,7 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
         }
     }
 
-    Json(json_value)
+    HttpResponse::Ok().json(json_value)
 }
 
 /// 获取部门树
@@ -87,16 +83,16 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
 ///
 /// # 参数
 ///
-/// - `dept_param`: 部门查询参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_param`: 部门查询参数，类型: [web::Json]<[DeptParam]>，通过请求体传入
+/// - `dept_service`: 部门服务实例，类型: [web::Data]<[Box]<dyn [DeptService] + Send + Sync>>，通过Actix Web依赖注入提供
 ///
 /// # 返回值
 ///
-/// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>，参见: [ListWrapper]<[DeptTree]>
-#[post("/getDeptTree", data = "<dept_param>")]
-pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
+/// 返回JSON格式的部门树结果，类型: [HttpResponse]，包含: [ListWrapper]<[DeptTree]>
+#[post("/dept/getDeptTree")]
+pub async fn get_dept_tree(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
-    Json(result)
+    HttpResponse::Ok().json(result)
 }
 
 /// 添加部门
@@ -105,16 +101,16 @@ pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box
 ///
 /// # 参数
 ///
-/// - `dept_param`: 部门参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_param`: 部门参数，类型: [web::Json]<[DeptParam]>，通过请求体传入
+/// - `dept_service`: 部门服务实例，类型: [web::Data]<[Box]<dyn [DeptService] + Send + Sync>>，通过Actix Web依赖注入提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[post("/add", data = "<dept_param>")]
-pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
+/// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
+#[post("/dept/add")]
+pub async fn add_dept(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result = dept_service.add_dept(dept_param.into_inner()).await;
-    Json(result)
+    HttpResponse::Ok().json(result)
 }
 
 /// 编辑部门
@@ -123,16 +119,16 @@ pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn 
 ///
 /// # 参数
 ///
-/// - `dept_param`: 部门参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_param`: 部门参数，类型: [web::Json]<[DeptParam]>，通过请求体传入
+/// - `dept_service`: 部门服务实例，类型: [web::Data]<[Box]<dyn [DeptService] + Send + Sync>>，通过Actix Web依赖注入提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[put("/edit", data = "<dept_param>")]
-pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
+/// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
+#[put("/dept/edit")]
+pub async fn edit_dept(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
     let result = dept_service.edit_dept(dept_param.into_inner()).await;
-    Json(result)
+    HttpResponse::Ok().json(result)
 }
 
 /// 删除部门
@@ -141,16 +137,17 @@ pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn
 ///
 /// # 参数
 ///
-/// - `dept_id`: 部门ID，类型: [String]，通过URL路径传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `path`: 路径参数，包含部门ID，类型: [web::Path]<(String,)>，通过URL路径传入
+/// - `dept_service`: 部门服务实例，类型: [web::Data]<[Box]<dyn [DeptService] + Send + Sync>>，通过Actix Web依赖注入提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[delete("/delete/<dept_id>")]
-pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
+/// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
+#[delete("/dept/delete/{dept_id}")]
+pub async fn delete_dept(path: web::Path<(String,)>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
+    let dept_id = path.into_inner().0;
     let result = dept_service.delete_dept(&dept_id).await;
-    Json(result)
+    HttpResponse::Ok().json(result)
 }
 
 /// 修改部门状态
@@ -159,26 +156,38 @@ pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptServi
 ///
 /// # 参数
 ///
-/// - `id`: 部门ID，类型: [String]，通过URL路径传入
-/// - `status`: 部门状态，类型: [i32]，通过URL路径传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `path`: 路径参数，包含部门ID和状态，类型: [web::Path]<(String, i32)>，通过URL路径传入
+/// - `dept_service`: 部门服务实例，类型: [web::Data]<[Box]<dyn [DeptService] + Send + Sync>>，通过Actix Web依赖注入提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[put("/editStatus/<id>/<status>")]
-pub async fn edit_dept_status(id: String, status: i32, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
+/// 返回操作结果，类型: [HttpResponse]，包含: [ResponseWrapper]
+#[put("/dept/editStatus/{id}/{status}")]
+pub async fn edit_dept_status(path: web::Path<(String, i32)>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
+    let (id, status) = path.into_inner();
     let result = dept_service.edit_dept_status(&id, status).await;
-    Json(result)
+    HttpResponse::Ok().json(result)
 }
 
 /// 注册部门相关路由
 ///
-/// 将部门相关路由注册到Rocket应用中
+/// 将部门相关路由注册到Actix Web应用中
+///
+/// # 参数
+///
+/// - `cfg`: 服务配置，类型: &mut [web::ServiceConfig]
 ///
 /// # 返回值
 ///
-/// 返回部门相关路由列表，类型: [Vec]<rocket::Route>
-pub fn routes() -> Vec<rocket::Route> {
-    routes![list_depts, get_dept_tree, add_dept, edit_dept, delete_dept, edit_dept_status]
+/// 无返回值，直接修改服务配置
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/dept")
+            .service(list_depts)
+            .service(get_dept_tree)
+            .service(add_dept)
+            .service(edit_dept)
+            .service(delete_dept)
+            .service(edit_dept_status),
+    );
 }

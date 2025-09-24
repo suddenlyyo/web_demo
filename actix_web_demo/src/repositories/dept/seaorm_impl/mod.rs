@@ -6,7 +6,7 @@
 use crate::config::Config;
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
-use rocket::async_trait;
+use async_trait::async_trait;
 use sea_orm::*;
 use std::error::Error as StdError;
 use std::fmt::Debug;
