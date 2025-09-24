@@ -65,6 +65,8 @@ cd rocket_demo && cargo run --no-default-features --features diesel_impl
 cd rocket_demo && cargo run --no-default-features --features seaorm_impl
 ```
 
+详细说明请参考 [Rocket 示例 README](./rocket_demo/README.md)
+
 ### Axum 示例 (axum_demo)
 
 使用 Axum 框架实现的 Web 服务示例。
@@ -75,19 +77,26 @@ cd rocket_demo && cargo run --no-default-features --features seaorm_impl
 - SeaORM
 
 配置方式：
-- 通过环境变量配置（HOST, PORT）
+1. 环境变量（HOST 和 PORT）
+2. 配置文件（config.toml 中的 [server] 部分）
+3. 默认值（host="127.0.0.1"，port=8000）
 
 运行方式：
 ```bash
 # 使用默认的 SQLx 实现
+cd axum_demo && cargo run
+
+# 使用环境变量配置运行
 cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run
 
 # 使用 Diesel 实现
-cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features diesel_impl
+cd axum_demo && cargo run --no-default-features --features diesel_impl
 
 # 使用 SeaORM 实现
-cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features seaorm_impl
+cd axum_demo && cargo run --no-default-features --features seaorm_impl
 ```
+
+详细说明请参考 [Axum 示例 README](./axum_demo/README.md)
 
 ### Actix Web 示例 (actix_web_demo)
 
@@ -99,38 +108,27 @@ cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --feature
 - SeaORM
 
 配置方式：
-- 通过环境变量配置（HOST, PORT）
+1. 环境变量（HOST 和 PORT）
+2. 默认值（host="127.0.0.1"，port=8000）
 
 运行方式：
 ```bash
 # 使用默认的 SQLx 实现
-cd actix_web_demo && HOST=0.0.0.0 PORT=3000 cargo run
+cd actix_web_demo && cargo run
+
+# 使用环境变量配置运行
+export HOST=0.0.0.0
+export PORT=8080
+cd actix_web_demo && cargo run
+
+# 或者使用内联方式
+HOST=0.0.0.0 PORT=8080 cd actix_web_demo && cargo run
 
 # 使用 Diesel 实现
-cd actix_web_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features diesel_impl
+cd actix_web_demo && cargo run --no-default-features --features diesel_impl
 
 # 使用 SeaORM 实现
-cd actix_web_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features seaorm_impl
+cd actix_web_demo && cargo run --no-default-features --features seaorm_impl
 ```
 
-## 数据库配置
-
-所有示例都需要配置数据库连接，通过设置 DATABASE_URL 环境变量：
-
-```bash
-export DATABASE_URL=mysql://user:password@localhost/database
-```
-
-数据库初始化脚本位于 [sql/demo.sql](sql/demo.sql)。
-
-## 测试
-
-每个框架示例都包含集成测试和端到端测试：
-
-```bash
-# 运行集成测试
-cargo test --test integration_test
-
-# 运行端到端测试（需要先启动服务器）
-cargo test --test e2e_test
-```
+详细说明请参考 [Actix Web 示例 README](./actix_web_demo/README.md)

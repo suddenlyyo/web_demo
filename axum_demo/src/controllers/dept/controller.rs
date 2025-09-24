@@ -11,18 +11,21 @@
 //! - 删除部门: [delete_dept]
 //! - 修改部门状态: [edit_dept_status]
 //!
+
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    routing::{delete, post, put},
+};
 use common_wrapper::enums::status_enum::StatusEnum;
-use rocket::serde::json::Json;
-use rocket::{State, delete, post, put, routes};
+use common_wrapper::{ListWrapper, ResponseWrapper};
+use serde_json::Value;
+use std::sync::Arc;
 
 use crate::models::dept::Dept;
 use crate::params::dept_param::DeptParam;
 use crate::services::dept::dept_service::DeptService;
 use crate::views::dept_tree::DeptTree;
-use common_wrapper::{ListWrapper, ResponseWrapper};
-use serde_json::Value;
-
-/// 部门控制器
 
 /// 查询部门列表
 ///
@@ -31,14 +34,13 @@ use serde_json::Value;
 /// # 参数
 ///
 /// - `dept_param`: 部门查询参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_service`: 部门服务实例，通过Axum状态管理提供
 ///
 /// # 返回值
 ///
 /// 返回JSON格式的部门列表结果，类型: [Json]<[Value]>，参见: [ListWrapper]<[Dept]>
-#[post("/list", data = "<dept_param>")]
-pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<Value> {
-    let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
+pub async fn list_depts(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<Value> {
+    let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param).await;
 
     // 如果没有数据直接返回
     let depts = result.get_data();
@@ -88,14 +90,13 @@ pub async fn list_depts(dept_param: Json<DeptParam>, dept_service: &State<Box<dy
 /// # 参数
 ///
 /// - `dept_param`: 部门查询参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_service`: 部门服务实例，通过Axum状态管理提供
 ///
 /// # 返回值
 ///
-/// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>，参见: [ListWrapper]<[DeptTree]>
-#[post("/getDeptTree", data = "<dept_param>")]
-pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ListWrapper<DeptTree>> {
-    let result = dept_service.get_dept_tree(dept_param.into_inner()).await;
+/// 返回JSON格式的部门树结果，类型: [Json]<[ListWrapper]<[DeptTree]>>
+pub async fn get_dept_tree(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<ListWrapper<DeptTree>> {
+    let result = dept_service.get_dept_tree(dept_param).await;
     Json(result)
 }
 
@@ -106,14 +107,13 @@ pub async fn get_dept_tree(dept_param: Json<DeptParam>, dept_service: &State<Box
 /// # 参数
 ///
 /// - `dept_param`: 部门参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_service`: 部门服务实例，通过Axum状态管理提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[post("/add", data = "<dept_param>")]
-pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
-    let result = dept_service.add_dept(dept_param.into_inner()).await;
+/// 返回操作结果，类型: [Json]<[ResponseWrapper]>
+pub async fn add_dept(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<ResponseWrapper> {
+    let result = dept_service.add_dept(dept_param).await;
     Json(result)
 }
 
@@ -124,14 +124,13 @@ pub async fn add_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn 
 /// # 参数
 ///
 /// - `dept_param`: 部门参数，类型: [Json]<[DeptParam]>，通过请求体传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_service`: 部门服务实例，通过Axum状态管理提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[put("/edit", data = "<dept_param>")]
-pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
-    let result = dept_service.edit_dept(dept_param.into_inner()).await;
+/// 返回操作结果，类型: [Json]<[ResponseWrapper]>
+pub async fn edit_dept(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Json(dept_param): Json<DeptParam>) -> Json<ResponseWrapper> {
+    let result = dept_service.edit_dept(dept_param).await;
     Json(result)
 }
 
@@ -141,14 +140,13 @@ pub async fn edit_dept(dept_param: Json<DeptParam>, dept_service: &State<Box<dyn
 ///
 /// # 参数
 ///
-/// - `dept_id`: 部门ID，类型: [String]，通过URL路径传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `dept_id`: 部门ID，通过URL路径传入
+/// - `dept_service`: 部门服务实例，通过Axum状态管理提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[delete("/delete/<dept_id>")]
-pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
+/// 返回操作结果，类型: [Json]<[ResponseWrapper]>
+pub async fn delete_dept(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Path(dept_id): Path<String>) -> Json<ResponseWrapper> {
     let result = dept_service.delete_dept(&dept_id).await;
     Json(result)
 }
@@ -159,26 +157,32 @@ pub async fn delete_dept(dept_id: String, dept_service: &State<Box<dyn DeptServi
 ///
 /// # 参数
 ///
-/// - `id`: 部门ID，类型: [String]，通过URL路径传入
-/// - `status`: 部门状态，类型: [i32]，通过URL路径传入
-/// - `dept_service`: 部门服务实例，类型: &[State]<[Box]<dyn [DeptService] + Send + Sync>>，通过Rocket依赖注入提供
+/// - `id`: 部门ID，通过URL路径传入
+/// - `status`: 部门状态，通过URL路径传入
+/// - `dept_service`: 部门服务实例，通过Axum状态管理提供
 ///
 /// # 返回值
 ///
-/// 返回操作结果，类型: [Json]<[ResponseWrapper]>，参见: [ResponseWrapper]
-#[put("/editStatus/<id>/<status>")]
-pub async fn edit_dept_status(id: String, status: i32, dept_service: &State<Box<dyn DeptService + Send + Sync>>) -> Json<ResponseWrapper> {
+/// 返回操作结果，类型: [Json]<[ResponseWrapper]>
+pub async fn edit_dept_status(State(dept_service): State<Arc<dyn DeptService + Send + Sync>>, Path((id, status)): Path<(String, i32)>) -> Json<ResponseWrapper> {
     let result = dept_service.edit_dept_status(&id, status).await;
     Json(result)
 }
 
 /// 注册部门相关路由
 ///
-/// 将部门相关路由注册到Rocket应用中
+/// 将部门相关路由注册到Axum应用中
 ///
 /// # 返回值
 ///
-/// 返回部门相关路由列表，类型: [Vec]<rocket::Route>
-pub fn routes() -> Vec<rocket::Route> {
-    routes![list_depts, get_dept_tree, add_dept, edit_dept, delete_dept, edit_dept_status]
+/// 返回部门相关路由，类型: [Router]
+pub fn routes(dept_service: Arc<dyn DeptService + Send + Sync>) -> Router {
+    Router::new()
+        .route("/list", post(list_depts))
+        .route("/getDeptTree", post(get_dept_tree))
+        .route("/add", post(add_dept))
+        .route("/edit", put(edit_dept))
+        .route("/delete/:dept_id", delete(delete_dept))
+        .route("/editStatus/:id/:status", put(edit_dept_status))
+        .with_state(dept_service)
 }

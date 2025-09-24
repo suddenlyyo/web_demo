@@ -1,18 +1,17 @@
 //! 首页控制器层
 
-use rocket::{get, routes};
+use axum::{Router, routing::get};
 
 /// 根路径处理函数
 ///
 /// # 返回值
 ///
 /// 返回"Hello, world!"字符串
-#[get("/")]
-pub fn index() -> &'static str {
+pub async fn index() -> &'static str {
     "Hello, world!"
 }
 
 /// 注册首页相关路由
-pub fn routes() -> Vec<rocket::Route> {
-    routes![index]
+pub fn routes() -> Router {
+    Router::new().route("/", get(index))
 }
