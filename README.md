@@ -34,6 +34,49 @@
 - 分页响应
 - 列表响应
 
+## Diesel CLI 工具
+
+本项目支持使用 Diesel ORM，如果需要使用 Diesel 的数据库迁移功能，需要安装 `diesel_cli` 工具。
+
+### 安装 Diesel CLI
+
+```bash
+# 安装支持所有数据库后端的 diesel_cli（需要安装对应数据库的客户端库）
+cargo install diesel_cli
+
+# 如果只需要 MySQL 支持
+cargo install diesel_cli --no-default-features --features mysql
+
+# 如果只需要 PostgreSQL 支持
+cargo install diesel_cli --no-default-features --features postgres
+
+# 如果只需要 SQLite 支持
+cargo install diesel_cli --no-default-features --features sqlite
+```
+
+注意：安装前需要确保系统已安装对应数据库的客户端开发库。
+
+### 使用 Diesel CLI
+
+在启用了 `diesel_impl` 特性的项目目录中，可以使用以下命令：
+
+```bash
+# 设置数据库 URL 环境变量
+export DATABASE_URL=mysql://user:password@localhost/database
+
+# 运行迁移
+diesel migration run
+
+# 创建新迁移
+diesel migration generate migration_name
+
+# 回滚迁移
+diesel migration revert
+
+# 重新运行迁移
+diesel migration redo
+```
+
 ## 各框架示例说明
 
 ### Rocket 示例 (rocket_demo)
