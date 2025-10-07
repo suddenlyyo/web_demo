@@ -34,6 +34,45 @@
 - 分页响应
 - 列表响应
 
+## 代码质量检查
+
+为了确保代码质量，项目使用 Clippy 进行静态分析。由于项目支持多种数据库实现，需要为每种实现分别运行 Clippy：
+
+```bash
+# 为 actix_web_demo 检查不同的特性组合
+cargo clippy -p actix_web_demo --features sqlx_impl
+cargo clippy -p actix_web_demo --features diesel_impl
+cargo clippy -p actix_web_demo --features seaorm_impl
+
+# 为 axum_demo 检查不同的特性组合
+cargo clippy -p axum_demo --features sqlx_impl
+cargo clippy -p axum_demo --features diesel_impl
+cargo clippy -p axum_demo --features seaorm_impl
+
+# 为 rocket_demo 检查不同的特性组合
+cargo clippy -p rocket_demo --features sqlx_impl
+cargo clippy -p rocket_demo --features diesel_impl
+cargo clippy -p rocket_demo --features seaorm_impl
+```
+
+同样，也可以使用 cargo check 来快速检查代码是否能编译通过：
+
+```bash
+# 为 actix_web_demo 检查不同的特性组合
+cargo check -p actix_web_demo --features sqlx_impl
+cargo check -p actix_web_demo --features diesel_impl
+cargo check -p actix_web_demo --features seaorm_impl
+
+# 为 axum_demo 检查不同的特性组合
+cargo check -p axum_demo --features sqlx_impl
+cargo check -p axum_demo --features diesel_impl
+cargo check -p axum_demo --features seaorm_impl
+
+# 为 rocket_demo 检查不同的特性组合
+cargo check -p rocket_demo --features sqlx_impl
+cargo check -p rocket_demo --features diesel_impl
+cargo check -p rocket_demo --features seaorm_impl
+```
 ## SeaORM CLI 工具
 
 本项目支持使用 SeaORM ORM，如果需要使用 SeaORM 的代码生成功能，需要安装 `sea-orm-cli` 工具。
