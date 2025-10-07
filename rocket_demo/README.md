@@ -6,29 +6,23 @@
 
 本项目支持多种数据库实现，通过 Rust 的特性（features）系统进行管理：
 
-### 默认特性
+### 可用特性
 
-- `sqlx_impl` - 默认启用，使用 SQLx 作为数据库实现
-
-### 可选特性
-
+- `sqlx_impl` - 使用 SQLx 作为数据库实现
 - `diesel_impl` - 使用 Diesel 作为数据库实现
 - `seaorm_impl` - 使用 SeaORM 作为数据库实现
 
 ### 特性使用方法
 
 ```bash
-# 使用默认的 SQLx 实现
-cargo run
+# 使用 SQLx 实现（需要显式指定）
+cargo run --features sqlx_impl
 
 # 使用 Diesel 实现
-cargo run --no-default-features --features diesel_impl
+cargo run --features diesel_impl
 
 # 使用 SeaORM 实现
-cargo run --no-default-features --features seaorm_impl
-
-# 使用 SQLx 实现（显式指定）
-cargo run --features sqlx_impl
+cargo run --features seaorm_impl
 ```
 
 注意：一次只能启用一种数据库实现特性。
@@ -137,10 +131,10 @@ DATABASE_URL=mysql://user:password@localhost/database
 
 ## 运行项目
 
-```bash
-# 设置环境变量并运行
+```
+# 设置环境变量并运行（以SQLx实现为例）
 export DATABASE_URL=mysql://user:password@localhost/database
-cargo run
+cargo run --features sqlx_impl
 ```
 
 ## 测试
@@ -175,7 +169,7 @@ cargo test --test integration_test --no-default-features --features seaorm_impl
 cargo run
 
 # 在另一个终端中运行端到端测试
-cargo test --test e2e_test
+cargo test --features seaorm_impl --test e2e_test
 ```
 
 端到端测试会向运行中的服务器发送真实的HTTP请求，验证以下接口：
@@ -270,7 +264,6 @@ cargo test --test e2e_test
 | address | varchar(200) | 地址 |
 | logo | varchar(100) | logo地址 |
 | parent_id | char(32) | 父部门id |
-| dept_level | varchar(50) | 部门层级 |
 | seq_no | int | 显示顺序 |
 | status | int | 部门状态(0正常 1停用) |
 | create_by | varchar(30) | 创建者 |

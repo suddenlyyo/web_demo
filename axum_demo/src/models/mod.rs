@@ -18,5 +18,5 @@ pub mod constants {
     /// 部门表字段
     ///
     /// 部门表的所有字段名，以逗号分隔的字符串形式表示
-    pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, dept_level, seq_no, status, create_by, create_time, update_by, update_time, remark";
+    pub const DEPT_FIELDS: &str = "id, parent_id, name, email, telephone, address, logo, seq_no, status, create_by, create_time, update_by, update_time, remark";
 }

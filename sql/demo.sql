@@ -30,7 +30,6 @@ CREATE TABLE `sys_dept` (
   `address` varchar(200) DEFAULT NULL COMMENT '地址',
   `logo` varchar(100) DEFAULT NULL COMMENT 'logo地址',
   `parent_id` char(32) DEFAULT NULL COMMENT '父部门id',
-  `dept_level` varchar(50) DEFAULT NULL COMMENT '部门层级',
   `seq_no` int DEFAULT NULL COMMENT '显示顺序',
   `status` int DEFAULT NULL COMMENT '部门状态(0正常 1停用)',
   `create_by` varchar(30) DEFAULT NULL COMMENT '创建者',
@@ -48,7 +47,15 @@ CREATE TABLE `sys_dept` (
 
 LOCK TABLES `sys_dept` WRITE;
 /*!40000 ALTER TABLE `sys_dept` DISABLE KEYS */;
-INSERT INTO `sys_dept` VALUES ('065a3eb180214ccfbb653f63287d285d','NB PLUS 科技',NULL,NULL,NULL,NULL,'','1',0,1,'admin','2024-09-25 17:29:32',NULL,NULL,NULL),('0753bee6314c4f6fa01cb5166e6e4b14','市场部','1234567@163.com','12345678901','dfasdfasdfasdfsfasldfasdfasdfasdfasdfasdfasdfasdfsadf','https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg','6bcbfa6a71fa454d8363b885ccbcb30a','1',3,0,'admin','2024-10-01 01:40:07','admin','2024-10-07 22:09:42','sad发送到发送到发送到发送到发送到发送到发送地方'),('3fd2fbc8c93e4a20a6e46387b36c0264','销售部',NULL,NULL,NULL,NULL,'6bcbfa6a71fa454d8363b885ccbcb30a','1',0,1,'admin','2024-09-25 17:38:06',NULL,NULL,NULL),('6bcbfa6a71fa454d8363b885ccbcb30a','XXX总公司',NULL,NULL,NULL,NULL,'065a3eb180214ccfbb653f63287d285d','1',0,1,'admin','2024-09-25 17:35:22',NULL,NULL,NULL),('88921a7b70a04ea2b7d1db1651ffe666','研发部',NULL,NULL,NULL,'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg','6bcbfa6a71fa454d8363b885ccbcb30a','1',1,1,'admin','2024-09-26 01:37:41','admin','2024-10-05 13:00:15',NULL),('a308936d3b5d49e185fe15bf7d71b688','XXX分公司',NULL,NULL,NULL,NULL,'065a3eb180214ccfbb653f63287d285d','1',1,1,'admin','2024-09-25 17:43:24',NULL,NULL,NULL),('ebd8118fe94247809abab8c72579cf7d','运维',NULL,NULL,NULL,NULL,'a308936d3b5d49e185fe15bf7d71b688',NULL,0,1,'admin','2024-10-13 19:34:06',NULL,NULL,NULL),('f9271a783e074715aceeb4d9b427004d','财务部',NULL,NULL,NULL,NULL,'6bcbfa6a71fa454d8363b885ccbcb30a','1',2,0,'admin','2024-09-26 01:39:45','admin','2024-10-31 17:38:07',NULL);
+INSERT INTO `sys_dept` VALUES 
+('065a3eb180214ccfbb653f63287d285d','NB PLUS 科技',NULL,NULL,NULL,NULL,'','1',0,'admin','2024-09-25 17:29:32',NULL,NULL,NULL),
+('0753bee6314c4f6fa01cb5166e6e4b14','市场部','1234567@163.com','12345678901','dfasdfasdfasdfsfasldfasdfasdfasdfasdfasdfasdfasdfsadf','https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg','6bcbfa6a71fa454d8363b885ccbcb30a',1,0,'admin','2024-10-01 01:40:07','admin','2024-10-07 22:09:42','sad发送到发送到发送到发送到发送到发送到发送地方'),
+('3fd2fbc8c93e4a20a6e46387b36c0264','销售部',NULL,NULL,NULL,NULL,'6bcbfa6a71fa454d8363b885ccbcb30a',1,0,'admin','2024-09-25 17:38:06',NULL,NULL,NULL),
+('6bcbfa6a71fa454d8363b885ccbcb30a','XXX总公司',NULL,NULL,NULL,NULL,'065a3eb180214ccfbb653f63287d285d',1,0,'admin','2024-09-25 17:35:22',NULL,NULL,NULL),
+('88921a7b70a04ea2b7d1db1651ffe666','研发部',NULL,NULL,NULL,'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg','6bcbfa6a71fa454d8363b885ccbcb30a',1,1,'admin','2024-09-26 01:37:41','admin','2024-10-05 13:00:15',NULL),
+('a308936d3b5d49e185fe15bf7d71b688','XXX分公司',NULL,NULL,NULL,NULL,'065a3eb180214ccfbb653f63287d285d',1,1,'admin','2024-09-25 17:43:24',NULL,NULL,NULL),
+('ebd8118fe94247809abab8c72579cf7d','运维',NULL,NULL,NULL,NULL,'a308936d3b5d49e185fe15bf7d71b688',NULL,0,'admin','2024-10-13 19:34:06',NULL,NULL,NULL),
+('f9271a783e074715aceeb4d9b427004d','财务部',NULL,NULL,NULL,NULL,'6bcbfa6a71fa454d8363b885ccbcb30a',1,0,'admin','2024-09-26 01:39:45','admin','2024-10-31 17:38:07',NULL);
 /*!40000 ALTER TABLE `sys_dept` ENABLE KEYS */;
 UNLOCK TABLES;
 

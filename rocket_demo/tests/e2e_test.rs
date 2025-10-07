@@ -3,7 +3,7 @@
 //! 这个脚本用于测试运行中的服务器，模拟真实的API调用场景
 //! 使用方法：
 //! 1. 在一个终端运行 `cargo run` 启动服务器
-//! 2. 在另一个终端运行 `cargo test e2e --test e2e_test` 执行端到端测试
+//! 2. 在另一个终端运行 `cargo test --package rocket_demo --features seaorm_impl  --test e2e_test -- test_dept_tree_api --exact --show-output` 执行端到端测试
 
 use reqwest;
 use serde_json;

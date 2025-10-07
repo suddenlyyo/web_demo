@@ -6,6 +6,13 @@ mod repositories;
 mod services;
 mod views;
 
+// 只在使用SeaORM时才导入entities模块
+#[cfg(feature = "seaorm_impl")]
+mod entities;
+// 只在使用Diesel时才导入schema模块
+#[cfg(feature = "diesel_impl")]
+mod schema;
+
 use controllers::{dept::controller as dept_controller, index::controller as index_controller};
 use services::dept::{dept_service::DeptService, dept_service_impl::DeptServiceImpl};
 

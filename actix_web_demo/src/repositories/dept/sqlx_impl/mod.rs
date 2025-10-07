@@ -73,11 +73,6 @@ impl DeptRepositorySqlxImpl {
             query.push_bind(parent_id);
         }
 
-        if let Some(ref dept_level) = row.dept_level {
-            query.push(" AND dept_level = ");
-            query.push_bind(dept_level);
-        }
-
         if let Some(seq_no) = row.seq_no {
             query.push(" AND seq_no = ");
             query.push_bind(seq_no);
@@ -164,10 +159,6 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             fields.push("parent_id");
         }
 
-        if row.dept_level.is_some() {
-            fields.push("dept_level");
-        }
-
         if row.seq_no.is_some() {
             fields.push("seq_no");
         }
@@ -237,10 +228,6 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
         if let Some(ref parent_id) = row.parent_id {
             query.push_bind(parent_id);
-        }
-
-        if let Some(ref dept_level) = row.dept_level {
-            query.push_bind(dept_level);
         }
 
         if let Some(seq_no) = row.seq_no {
@@ -314,10 +301,6 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             fields.push("parent_id");
         }
 
-        if row.dept_level.is_some() {
-            fields.push("dept_level");
-        }
-
         if row.seq_no.is_some() {
             fields.push("seq_no");
         }
@@ -382,10 +365,6 @@ impl DeptRepository for DeptRepositorySqlxImpl {
 
         if let Some(ref parent_id) = row.parent_id {
             query.push_bind(parent_id);
-        }
-
-        if let Some(ref dept_level) = row.dept_level {
-            query.push_bind(dept_level);
         }
 
         if let Some(seq_no) = row.seq_no {
@@ -513,15 +492,6 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             }
             query.push("parent_id = ");
             query.push_bind(parent_id);
-            first = false;
-        }
-
-        if let Some(ref dept_level) = row.dept_level {
-            if !first {
-                query.push(", ");
-            }
-            query.push("dept_level = ");
-            query.push_bind(dept_level);
             first = false;
         }
 
@@ -657,15 +627,6 @@ impl DeptRepository for DeptRepositorySqlxImpl {
             }
             query.push("parent_id = ");
             query.push_bind(parent_id);
-            first = false;
-        }
-
-        if let Some(ref dept_level) = row.dept_level {
-            if !first {
-                query.push(", ");
-            }
-            query.push("dept_level = ");
-            query.push_bind(dept_level);
             first = false;
         }
 

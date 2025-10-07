@@ -56,8 +56,8 @@ async-trait = { workspace = true }
 reqwest = { version = "0.11", features = ["json"] }
 
 [features]
-# 默认使用 SQLx 实现
-default = ["sqlx_impl"]
+# 默认使用的实现
+default = []
 # 使用 SQLx 作为数据库访问层实现（可选）
 sqlx_impl = ["sqlx"]
 # 使用 Diesel 作为 ORM 实现（可选）

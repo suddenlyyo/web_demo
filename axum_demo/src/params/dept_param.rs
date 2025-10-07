@@ -52,11 +52,6 @@ pub struct DeptParam {
     /// 类型: [Option]<[String]>
     pub logo: Option<String>,
 
-    /// 部门层级
-    ///
-    /// 类型: [Option]<[String]>
-    pub dept_level: Option<String>,
-
     /// 显示顺序
     ///
     /// 类型: [Option]<[i32]>
@@ -103,13 +98,12 @@ impl From<crate::models::dept::Dept> for DeptParam {
     fn from(dept: crate::models::dept::Dept) -> Self {
         DeptParam {
             id: Some(dept.id),
-            parent_id: dept.parent_id,
             name: dept.name,
             email: dept.email,
             telephone: dept.telephone,
             address: dept.address,
             logo: dept.logo,
-            dept_level: dept.dept_level,
+            parent_id: dept.parent_id,
             seq_no: dept.seq_no,
             status: dept.status,
             create_by: dept.create_by,

@@ -34,6 +34,48 @@
 - 分页响应
 - 列表响应
 
+## SeaORM CLI 工具
+
+本项目支持使用 SeaORM ORM，如果需要使用 SeaORM 的代码生成功能，需要安装 `sea-orm-cli` 工具。
+
+### 安装 SeaORM CLI
+
+```bash
+# 安装最新版 sea-orm-cli
+cargo install sea-orm-cli
+
+# 或者安装特定版本
+cargo install sea-orm-cli@^2.0.0-rc
+```
+
+### 使用 SeaORM CLI
+
+在启用了 `seaorm_impl` 特性的项目目录中，可以使用以下命令：
+
+```bash
+# 设置数据库 URL 环境变量
+export DATABASE_URL=mysql://user:password@localhost/database
+
+# 生成实体文件
+sea-orm-cli generate entity -u mysql://user:password@localhost/database -o src/entities
+
+# 查看所有可用命令
+sea-orm-cli -h
+
+# 查看 generate 子命令帮助
+sea-orm-cli generate -h
+
+# 查看生成实体文件的详细选项
+sea-orm-cli generate entity -h
+```
+
+常用选项：
+- `-u` / `--database-url`: 数据库 URL (默认: 环境变量 DATABASE_URL)
+- `-s` / `--database-schema`: 数据库模式 (PostgreSQL 有效，默认: public)
+- `-o` / `--output-dir`: 实体文件输出目录 (默认: 当前目录)
+- `--expanded-format`: 生成展开格式的实体文件 (默认: 紧凑格式)
+- `--with-serde`: 为实体自动派生 serde Serialize/Deserialize trait (none, serialize, deserialize, both)
+
 ## Diesel CLI 工具
 
 本项目支持使用 Diesel ORM，如果需要使用 Diesel 的数据库迁移功能，需要安装 `diesel_cli` 工具。
@@ -77,6 +119,31 @@ diesel migration revert
 diesel migration redo
 ```
 
+### 从现有数据库表生成 Diesel 代码
+
+如果已有数据库表结构，可以通过以下步骤生成 Diesel 相关代码：
+
+1. 首先确保已安装 diesel_cli 工具（参考上面的安装说明）
+
+2. 设置数据库连接环境变量：
+   ```bash
+   export DATABASE_URL=mysql://user:password@localhost/database
+   ```
+
+3. 在项目根目录下初始化 Diesel：
+   ```bash
+   diesel setup
+   ```
+
+4. 从现有数据库表生成模型代码：
+   ```bash
+   diesel print-schema > src/schema.rs
+   ```
+
+5. 根据生成的 schema.rs 文件手动创建对应的模型结构体和实现。
+   
+   注意：Diesel 不像 SeaORM 那样提供完整的实体代码生成工具，需要手动创建模型结构体并实现相关 trait。
+
 ## 各框架示例说明
 
 ### Rocket 示例 (rocket_demo)
@@ -95,17 +162,17 @@ diesel migration redo
 
 运行方式：
 ```bash
-# 使用默认的 SQLx 实现
-cd rocket_demo && cargo run
+# 使用 SQLx 实现
+cd rocket_demo && cargo run --features sqlx_impl
 
 # 使用环境变量配置运行（优先级最高）
-cd rocket_demo && ROCKET_ADDRESS=0.0.0.0 ROCKET_PORT=8080 cargo run
+cd rocket_demo && ROCKET_ADDRESS=0.0.0.0 ROCKET_PORT=8080 cargo run --features sqlx_impl
 
 # 使用 Diesel 实现
-cd rocket_demo && cargo run --no-default-features --features diesel_impl
+cd rocket_demo && cargo run --features diesel_impl
 
 # 使用 SeaORM 实现
-cd rocket_demo && cargo run --no-default-features --features seaorm_impl
+cd rocket_demo && cargo run --features seaorm_impl
 ```
 
 详细说明请参考 [Rocket 示例 README](./rocket_demo/README.md)
