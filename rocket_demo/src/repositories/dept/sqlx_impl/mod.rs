@@ -26,8 +26,44 @@ impl DeptRepositorySqlxImpl {
     pub async fn new() -> Result<Self, Box<dyn StdError + Send + Sync>> {
         // 从配置文件中读取数据库URL
         let config = Config::from_default_file().expect("无法加载配置文件");
-        let database_url = config.database.url;
-        let pool = MySqlPool::connect(&database_url)
+        let database_url = &config.database.url;
+
+        // 构建连接池配置
+        let mut pool_options = sqlx::mysql::MySqlPoolOptions::new();
+
+        // 只在使用 SQLx 时才应用连接池配置
+        #[cfg(feature = "sqlx_impl")]
+        {
+            use std::time::Duration;
+
+            // 设置最大连接数
+            if let Some(max_connections) = config.database.sqlx.max_connections {
+                pool_options = pool_options.max_connections(max_connections);
+            }
+
+            // 设置最小连接数
+            if let Some(min_connections) = config.database.sqlx.min_connections {
+                pool_options = pool_options.min_connections(min_connections);
+            }
+
+            // 设置获取连接的超时时间
+            if let Some(acquire_timeout) = config.database.sqlx.acquire_timeout {
+                pool_options = pool_options.acquire_timeout(Duration::from_secs(acquire_timeout));
+            }
+
+            // 设置空闲连接超时时间
+            if let Some(idle_timeout) = config.database.sqlx.idle_timeout {
+                pool_options = pool_options.idle_timeout(Duration::from_secs(idle_timeout));
+            }
+
+            // 设置连接最大存活时间
+            if let Some(max_lifetime) = config.database.sqlx.max_lifetime {
+                pool_options = pool_options.max_lifetime(Duration::from_secs(max_lifetime));
+            }
+        }
+
+        let pool = pool_options
+            .connect(database_url)
             .await
             .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
         Ok(Self { pool })

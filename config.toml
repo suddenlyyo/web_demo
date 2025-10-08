@@ -1,3 +1,32 @@
 # 数据库配置
 [database]
 url = "mysql://root:Lv997945%21@localhost:3306/demo"
+
+# Diesel数据库连接池配置（可选）
+# 如果未配置，则使用默认值
+[database.diesel]
+# max_size = 15            # 连接池最大连接数（默认值：10）
+# min_idle = 3             # 连接池最小空闲连接数（默认值：None）
+# connection_timeout = 5   # 获取连接的超时时间（秒）（默认值：30）
+# max_lifetime = 1800      # 连接池中连接的最大存活时间（秒）（默认值：1800）
+# idle_timeout = 600       # 连接池中空闲连接的超时时间（秒）（默认值：600）
+# test_on_check_out = true # 借出连接时测试其有效性（默认值：true）
+
+# SeaORM数据库连接池配置（可选）
+# 如果未配置，则使用默认值
+[database.seaorm]
+# max_connections = 100    # 连接池最大连接数（默认值：10）
+# min_connections = 5      # 连接池最小连接数（默认值：None）
+# connect_timeout = 8      # 连接超时时间（秒）（默认值：无穷大）
+# acquire_timeout = 8      # 获取连接的超时时间（秒）（默认值：30）
+# idle_timeout = 8         # 连接池中空闲连接的超时时间（秒）（默认值：无穷大）
+# max_lifetime = 8         # 连接池中连接的最大存活时间（秒）（默认值：无穷大）
+
+# SQLx数据库连接池配置（可选）
+# 如果未配置，则使用默认值
+[database.sqlx]
+# max_connections = 10     # 连接池最大连接数（默认值：10）
+# min_connections = 0      # 连接池最小连接数（默认值：None）
+# acquire_timeout = 30     # 获取连接的超时时间（秒）（默认值：30）
+# idle_timeout = 600       # 连接池中空闲连接的超时时间（秒）（默认值：600）
+# max_lifetime = 1800      # 连接池中连接的最大存活时间（秒）（默认值：1800）

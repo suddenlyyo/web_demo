@@ -69,10 +69,50 @@ impl DeptRepositorySeaormImpl {
     /// # 返回值
     /// 返回新的部门仓储实例
     pub async fn new() -> Result<Self, Box<dyn StdError + Send + Sync>> {
-        // 从配置文件中读取数据库URL
+        // 从配置文件中读取数据库URL和连接池配置
         let config = Config::from_default_file().expect("无法加载配置文件");
-        let database_url = config.database.url;
-        let connection = Database::connect(&database_url)
+        let database_url = &config.database.url;
+
+        // 构建连接选项
+        let mut opt = ConnectOptions::new(database_url.to_owned());
+
+        // 只在使用 SeaORM 时才应用连接池配置
+        #[cfg(feature = "seaorm_impl")]
+        {
+            use std::time::Duration;
+
+            // 设置最大连接数
+            if let Some(max_connections) = config.database.seaorm.max_connections {
+                opt.max_connections(max_connections);
+            }
+
+            // 设置最小连接数
+            if let Some(min_connections) = config.database.seaorm.min_connections {
+                opt.min_connections(min_connections);
+            }
+
+            // 设置连接超时时间
+            if let Some(connect_timeout) = config.database.seaorm.connect_timeout {
+                opt.connect_timeout(Duration::from_secs(connect_timeout));
+            }
+
+            // 设置获取连接的超时时间
+            if let Some(acquire_timeout) = config.database.seaorm.acquire_timeout {
+                opt.acquire_timeout(Duration::from_secs(acquire_timeout));
+            }
+
+            // 设置空闲连接超时时间
+            if let Some(idle_timeout) = config.database.seaorm.idle_timeout {
+                opt.idle_timeout(Duration::from_secs(idle_timeout));
+            }
+
+            // 设置连接最大存活时间
+            if let Some(max_lifetime) = config.database.seaorm.max_lifetime {
+                opt.max_lifetime(Duration::from_secs(max_lifetime));
+            }
+        }
+
+        let connection = Database::connect(opt)
             .await
             .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
         Ok(Self { connection })

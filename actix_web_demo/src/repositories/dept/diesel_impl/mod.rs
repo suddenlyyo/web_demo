@@ -14,6 +14,7 @@ use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::sql_query;
 use std::error::Error as StdError;
 use std::fmt::Debug;
+use std::time::Duration;
 
 /// Diesel实现的部门仓储
 #[derive(Debug)]
@@ -22,17 +23,50 @@ pub struct DeptRepositoryDieselImpl {
 }
 
 impl DeptRepositoryDieselImpl {
-    /// 创建新的Diesel部门仓储实例（使用默认配置）
+    /// 创建新的Diesel部门仓储实例
     ///
     /// # 返回值
     /// 返回新的部门仓储实例
     pub fn new() -> Result<Self, Box<dyn StdError + Send + Sync>> {
-        // 从配置文件中读取数据库URL
+        // 从配置文件中读取数据库URL和连接池配置
         let config = Config::from_default_file().expect("无法加载配置文件");
         let database_url = config.database.url;
         let manager = ConnectionManager::<MysqlConnection>::new(database_url);
-        let pool = Pool::builder()
-            .max_size(10)
+
+        // 构建连接池配置
+        let mut pool_builder = Pool::builder();
+
+        // 设置最大连接数
+        if let Some(max_size) = config.database.diesel.max_size {
+            pool_builder = pool_builder.max_size(max_size);
+        }
+
+        // 设置最小空闲连接数
+        if let Some(min_idle) = config.database.diesel.min_idle {
+            pool_builder = pool_builder.min_idle(Some(min_idle));
+        }
+
+        // 设置连接超时时间
+        if let Some(connection_timeout) = config.database.diesel.connection_timeout {
+            pool_builder = pool_builder.connection_timeout(Duration::from_secs(connection_timeout));
+        }
+
+        // 设置连接最大存活时间
+        if let Some(max_lifetime) = config.database.diesel.max_lifetime {
+            pool_builder = pool_builder.max_lifetime(Some(Duration::from_secs(max_lifetime)));
+        }
+
+        // 设置空闲连接超时时间
+        if let Some(idle_timeout) = config.database.diesel.idle_timeout {
+            pool_builder = pool_builder.idle_timeout(Some(Duration::from_secs(idle_timeout)));
+        }
+
+        // 设置借出连接时测试其有效性
+        if let Some(test_on_check_out) = config.database.diesel.test_on_check_out {
+            pool_builder = pool_builder.test_on_check_out(test_on_check_out);
+        }
+
+        let pool = pool_builder
             .build(manager)
             .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
