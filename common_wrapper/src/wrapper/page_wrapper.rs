@@ -244,6 +244,70 @@ impl<T> PageWrapper<T> {
     pub fn get_page_size(&self) -> u64 {
         self.page_size
     }
+
+    /// 对包装的数据执行类型转换操作
+    ///
+    /// 如果当前包装器处于成功状态，则使用提供的函数 [f] 将内部数据从 Vec<T> 转换为 Vec<U>，
+    /// 并返回一个新的成功状态的 [PageWrapper]<U> 实例。
+    /// 如果当前包装器处于失败状态，则返回一个新的失败状态的 [PageWrapper]<U> 实例，
+    /// 保留原始的错误代码和消息，以及分页信息。
+    ///
+    /// # 参数
+    ///
+    /// * `f` - 类型转换函数，接受 Vec<T> 类型参数并返回 Vec<U> 类型值
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 原始数据类型
+    /// * U - 转换后的数据类型
+    /// * F - 转换函数类型，必须实现 [FnOnce](Vec<T>) -> Vec<U> trait
+    ///
+    /// # 返回值
+    ///
+    /// [PageWrapper]<U> - 转换后的新包装器实例
+    ///
+    /// # 示例
+    ///
+    /// ```
+    /// use common_wrapper::PageWrapper;
+    /// use common_wrapper::ResponseTrait;
+    ///
+    /// let mut int_wrapper = PageWrapper::new();
+    /// int_wrapper.set_success(vec![1, 2, 3], 100, 1, 10);
+    ///
+    /// let string_wrapper = int_wrapper.map(|v| v.into_iter().map(|x| x.to_string()).collect());
+    ///
+    /// assert!(string_wrapper.is_success());
+    /// assert_eq!(string_wrapper.get_data().as_ref().unwrap(), &vec!["1".to_string(), "2".to_string(), "3".to_string()]);
+    /// assert_eq!(string_wrapper.get_total(), 100);
+    /// assert_eq!(string_wrapper.get_current_page(), 1);
+    /// assert_eq!(string_wrapper.get_page_size(), 10);
+    /// ```
+    pub fn map<U, F>(self, f: F) -> PageWrapper<U>
+    where
+        F: FnOnce(Vec<T>) -> Vec<U>,
+    {
+        let mut new_wrapper = PageWrapper::<U>::new();
+        if self.is_success() {
+            if let Some(data) = self.data {
+                new_wrapper.set_success(f(data), self.total, self.current_page, self.page_size);
+            } else {
+                new_wrapper.data = Some(Vec::new());
+                new_wrapper.total = self.total;
+                new_wrapper.total_page = self.total_page;
+                new_wrapper.current_page = self.current_page;
+                new_wrapper.page_size = self.page_size;
+            }
+        } else {
+            new_wrapper.base = self.base;
+            new_wrapper.data = None;
+            new_wrapper.total = self.total;
+            new_wrapper.total_page = self.total_page;
+            new_wrapper.current_page = self.current_page;
+            new_wrapper.page_size = self.page_size;
+        }
+        new_wrapper
+    }
 }
 
 impl<T> Default for PageWrapper<T> {

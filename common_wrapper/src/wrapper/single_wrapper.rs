@@ -143,6 +143,59 @@ impl<T> SingleWrapper<T> {
     pub fn get_data(&self) -> &Option<T> {
         &self.data
     }
+
+    /// 对包装的数据执行类型转换操作
+    ///
+    /// 如果当前包装器处于成功状态，则使用提供的函数 [f] 将内部数据从类型 T 转换为类型 U，
+    /// 并返回一个新的成功状态的 [SingleWrapper]<U> 实例。
+    /// 如果当前包装器处于失败状态，则返回一个新的失败状态的 [SingleWrapper]<U> 实例，
+    /// 保留原始的错误代码和消息。
+    ///
+    /// # 参数
+    ///
+    /// * `f` - 类型转换函数，接受 T 类型参数并返回 U 类型值
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 原始数据类型
+    /// * U - 转换后的数据类型
+    /// * F - 转换函数类型，必须实现 [FnOnce](T) -> U trait
+    ///
+    /// # 返回值
+    ///
+    /// [SingleWrapper]<U> - 转换后的新包装器实例
+    ///
+    /// # 示例
+    ///
+    /// ```
+    /// use common_wrapper::SingleWrapper;
+    /// use common_wrapper::ResponseTrait;
+    ///
+    /// let mut int_wrapper = SingleWrapper::new();
+    /// int_wrapper.set_success(42);
+    ///
+    /// let string_wrapper = int_wrapper.map(|x| x.to_string());
+    ///
+    /// assert!(string_wrapper.is_success());
+    /// assert_eq!(string_wrapper.get_data(), &Some("42".to_string()));
+    /// ```
+    pub fn map<U, F>(self, f: F) -> SingleWrapper<U>
+    where
+        F: FnOnce(T) -> U,
+    {
+        let mut new_wrapper = SingleWrapper::<U>::new();
+        if self.is_success() {
+            if let Some(data) = self.data {
+                new_wrapper.set_success(f(data));
+            } else {
+                new_wrapper.data = None;
+            }
+        } else {
+            new_wrapper.base = self.base;
+            new_wrapper.data = None;
+        }
+        new_wrapper
+    }
 }
 
 impl<T> Default for SingleWrapper<T> {
