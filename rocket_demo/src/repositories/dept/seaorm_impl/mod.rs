@@ -49,9 +49,9 @@ impl From<Model> for Dept {
             seq_no: model.seq_no,
             status: model.status,
             create_by: model.create_by,
-            create_time: model.create_time,
+            create_time: model.create_time.map(|dt| dt.and_utc().naive_utc()),
             update_by: model.update_by,
-            update_time: model.update_time,
+            update_time: model.update_time.map(|dt| dt.and_utc().naive_utc()),
             remark: model.remark,
         }
     }
@@ -179,8 +179,22 @@ impl DeptRepository for DeptRepositorySeaormImpl {
 
     /// 根据父部门ID查询部门列表
     async fn select_dept_by_parent_id(&self, parent_id: &str) -> Result<Vec<Dept>, Box<dyn StdError + Send + Sync>> {
+        // 非基础crud方法使用原生sql,方便优化性能
+        //    let sql = r#"
+        //        SELECT id, parent_id, name, email, telephone, address, logo, seq_no, status,
+        //               create_by, create_time, update_by, update_time, remark
+        //        FROM sys_dept
+        //        WHERE parent_id = ?
+        //        ORDER BY seq_no
+        //    "#;
+
+        // 使用原生SQL查询以优化性能
+        use crate::models::constants::DEPT_FIELDS;
+        // 使用DEPT_FIELDS常量构建SQL查询
+        let sql = format!("SELECT {DEPT_FIELDS} FROM sys_dept WHERE parent_id = ?");
+        let stmt = Statement::from_sql_and_values(DbBackend::MySql, &sql, vec![parent_id.into()]);
         let models = SysDept::find()
-            .filter(Column::ParentId.eq(parent_id))
+            .from_raw_sql(stmt)
             .all(&self.connection)
             .await
             .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;

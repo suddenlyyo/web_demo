@@ -671,25 +671,25 @@ impl DeptRepository for DeptRepositorySqlxImpl {
         }
 
         query.push("seq_no = ");
-        query.push_bind(&row.seq_no);
+        query.push_bind(row.seq_no);
 
         if !first {
             query.push(", ");
         }
         query.push("status = ");
-        query.push_bind(&row.status);
+        query.push_bind(row.status);
 
         if !first {
             query.push(", ");
         }
         query.push("create_time = ");
-        query.push_bind(&row.create_time);
+        query.push_bind(row.create_time);
 
         if !first {
             query.push(", ");
         }
         query.push("update_time = ");
-        query.push_bind(&row.update_time);
+        query.push_bind(row.update_time);
 
         if !field_added {
             // 没有更新任何字段

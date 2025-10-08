@@ -56,26 +56,23 @@ pub async fn list_depts(State(dept_service): State<Arc<dyn DeptService + Send + 
         let all_depts = dept_service.get_dept(DeptParam::default()).await;
         for dept_json in data_array.iter_mut() {
             let mut new_map = serde_json::Map::new();
-            let dept_obj = dept_json.as_object_mut().unwrap_or_else(|| &mut new_map);
+            let dept_obj = dept_json.as_object_mut().unwrap_or(&mut new_map);
 
             // 添加状态描述
-            if let Some(status_value) = dept_obj.get("status") {
-                if let Some(status) = status_value.as_i64() {
-                    if let Some(status_enum) = StatusEnum::from_code(status as i32) {
-                        dept_obj.insert("statusDesc".into(), serde_json::Value::String(status_enum.desc().to_string()));
-                    }
-                }
+            if let Some(status_value) = dept_obj.get("status")
+                && let Some(status) = status_value.as_i64()
+                && let Some(status_enum) = StatusEnum::from_code(status as i32)
+            {
+                dept_obj.insert("statusDesc".into(), serde_json::Value::String(status_enum.desc().to_string()));
             }
 
             // 添加父部门名称
-            if let Some(parent_id_value) = dept_obj.get("parent_id") {
-                if let Some(parent_id) = parent_id_value.as_str() {
-                    if !parent_id.is_empty() {
-                        if let Some(parent) = all_depts.get(parent_id) {
-                            dept_obj.insert("parentName".into(), serde_json::Value::String(parent.name.clone().unwrap_or_default()));
-                        }
-                    }
-                }
+            if let Some(parent_id_value) = dept_obj.get("parent_id")
+                && let Some(parent_id) = parent_id_value.as_str()
+                && !parent_id.is_empty()
+                && let Some(parent) = all_depts.get(parent_id)
+            {
+                dept_obj.insert("parentName".into(), serde_json::Value::String(parent.name.clone().unwrap_or_default()));
             }
         }
     }

@@ -21,7 +21,6 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "diesel_impl", derive(Queryable, Selectable, Insertable, AsChangeset, QueryableByName))]
 #[cfg_attr(feature = "diesel_impl", diesel(table_name = crate::schema::sys_dept))]
 #[cfg_attr(feature = "diesel_impl", diesel(check_for_backend(diesel::mysql::Mysql)))]
-
 pub struct Dept {
     /// 部门id
     ///
@@ -124,24 +123,21 @@ pub struct Dept {
 
 impl From<crate::params::dept_param::DeptParam> for Dept {
     fn from(param: crate::params::dept_param::DeptParam) -> Self {
-        let mut dept = Dept::default();
-
-        // 手动赋值所有字段
-        dept.id = param.id.unwrap_or_default();
-        dept.name = param.name;
-        dept.email = param.email;
-        dept.telephone = param.telephone;
-        dept.address = param.address;
-        dept.logo = param.logo;
-        dept.parent_id = param.parent_id;
-        dept.seq_no = param.seq_no;
-        dept.status = param.status;
-        dept.create_by = param.create_by;
-        dept.create_time = param.create_time;
-        dept.update_by = param.update_by;
-        dept.update_time = param.update_time;
-        dept.remark = param.remark;
-
-        dept
+        Dept {
+            id: param.id.unwrap_or_default(),
+            name: param.name,
+            email: param.email,
+            telephone: param.telephone,
+            address: param.address,
+            logo: param.logo,
+            parent_id: param.parent_id,
+            seq_no: param.seq_no,
+            status: param.status,
+            create_by: param.create_by,
+            create_time: param.create_time,
+            update_by: param.update_by,
+            update_time: param.update_time,
+            remark: param.remark,
+        }
     }
 }

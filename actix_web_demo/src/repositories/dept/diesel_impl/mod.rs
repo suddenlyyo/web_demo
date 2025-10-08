@@ -51,19 +51,11 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let pool = self.pool.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut conn = pool
-                .get()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
-            diesel::delete(sys_dept::table.filter(sys_dept::id.eq(id_value)))
-                .execute(&mut conn)
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+            let mut conn = pool.get()?;
+            diesel::delete(sys_dept::table.filter(sys_dept::id.eq(id_value))).execute(&mut conn)?;
             Ok::<(), Box<dyn StdError + Send + Sync>>(())
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 插入部门记录
@@ -84,20 +76,13 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let pool = self.pool.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut conn = pool
-                .get()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+            let mut conn = pool.get()?;
             diesel::insert_into(sys_dept::table)
                 .values(&row)
-                .execute(&mut conn)
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+                .execute(&mut conn)?;
             Ok::<(), Box<dyn StdError + Send + Sync>>(())
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 根据主键查询部门
@@ -106,21 +91,14 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let pool = self.pool.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut conn = pool
-                .get()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+            let mut conn = pool.get()?;
             let result = sys_dept::table
                 .filter(sys_dept::id.eq(id_value))
                 .first::<Dept>(&mut conn)
-                .optional()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+                .optional()?;
             Ok::<Option<Dept>, Box<dyn StdError + Send + Sync>>(result)
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 根据父部门ID查询部门
@@ -131,24 +109,17 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let pool = self.pool.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut conn = pool
-                .get()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+            let mut conn = pool.get()?;
             // 使用原生SQL查询以优化性能
             use crate::models::constants::DEPT_FIELDS;
             // 使用DEPT_FIELDS常量构建SQL查询
             let sql = format!("SELECT {DEPT_FIELDS} FROM sys_dept WHERE parent_id = ?");
             let results = sql_query(sql)
                 .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(parent_id_value)
-                .load::<Dept>(&mut conn)
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+                .load::<Dept>(&mut conn)?;
             Ok::<Vec<Dept>, Box<dyn StdError + Send + Sync>>(results)
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 查询部门列表
@@ -157,10 +128,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let pool = self.pool.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut conn = pool
-                .get()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+            let mut conn = pool.get()?;
             // 构建查询条件
             let mut query = sys_dept::table.into_boxed();
 
@@ -230,7 +198,6 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         })
         .await
         .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
     }
 
     /// 根据主键更新部门
@@ -251,19 +218,14 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         let pool = self.pool.clone();
 
         tokio::task::spawn_blocking(move || {
-            let mut conn = pool
-                .get()
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
-
+            let mut conn = pool.get()?;
             let result = diesel::update(sys_dept::table.filter(sys_dept::id.eq(&row.id)))
                 .set(&row)
-                .execute(&mut conn)
-                .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
+                .execute(&mut conn)?;
 
             Ok::<u64, Box<dyn StdError + Send + Sync>>(result as u64)
         })
         .await
         .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
     }
 }

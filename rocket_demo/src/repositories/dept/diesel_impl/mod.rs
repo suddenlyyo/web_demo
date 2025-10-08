@@ -61,9 +61,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
 
             Ok::<(), Box<dyn StdError + Send + Sync>>(())
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 插入部门记录
@@ -95,9 +93,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
 
             Ok::<(), Box<dyn StdError + Send + Sync>>(())
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 根据主键查询部门
@@ -118,9 +114,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
 
             Ok::<Option<Dept>, Box<dyn StdError + Send + Sync>>(result)
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 根据父部门ID查询部门
@@ -146,9 +140,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
 
             Ok::<Vec<Dept>, Box<dyn StdError + Send + Sync>>(results)
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 查询部门列表
@@ -228,9 +220,7 @@ impl DeptRepository for DeptRepositoryDieselImpl {
 
             Ok::<Vec<Dept>, Box<dyn StdError + Send + Sync>>(results)
         })
-        .await
-        .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
+        .await?
     }
 
     /// 根据主键更新部门
@@ -264,6 +254,5 @@ impl DeptRepository for DeptRepositoryDieselImpl {
         })
         .await
         .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?
-        .map_err(|e| e)
     }
 }

@@ -55,13 +55,14 @@ impl DeptServiceImpl {
         let mut parent_child_map: HashMap<String, Vec<String>> = HashMap::new();
 
         for (id, node) in &tree_map {
-            if let Some(ref parent_id) = node.parent_id {
-                if !parent_id.is_empty() && tree_map.contains_key(parent_id) {
-                    parent_child_map
-                        .entry(parent_id.clone())
-                        .or_insert_with(Vec::new)
-                        .push(id.clone());
-                }
+            if let Some(ref parent_id) = node.parent_id
+                && !parent_id.is_empty()
+                && tree_map.contains_key(parent_id)
+            {
+                parent_child_map
+                    .entry(parent_id.clone())
+                    .or_default()
+                    .push(id.clone());
             }
         }
 
@@ -76,18 +77,17 @@ impl DeptServiceImpl {
                     .filter_map(|child_id| tree_map.get(child_id).cloned())
                     .collect();
 
-                if let Some(parent_node) = tree_map.get_mut(&parent_id) {
-                    if !children.is_empty() {
-                        parent_node.children = children;
-                    }
+                if let Some(parent_node) = tree_map.get_mut(&parent_id)
+                    && !children.is_empty()
+                {
+                    parent_node.children = children;
                 }
             }
         }
 
         // 只返回根节点（parent_id为None或空字符串的节点）
         tree_map
-            .into_iter()
-            .map(|(_, node)| node)
+            .into_values()
             .filter(|node| match &node.parent_id {
                 None => true,
                 Some(parent_id) => parent_id.is_empty(),
@@ -226,7 +226,7 @@ impl DeptService for DeptServiceImpl {
             },
             Err(e) => {
                 let mut wrapper = ListWrapper::new();
-                wrapper.set_fail(&format!("查询部门树失败: {}", e));
+                wrapper.set_fail(format!("查询部门树失败: {}", e));
                 wrapper
             },
         }
@@ -237,7 +237,7 @@ impl DeptService for DeptServiceImpl {
         let dept = Dept::from(dept_param);
         match self.repository.select_dept_list(&dept).await {
             Ok(dept_list) => {
-                let mut dept_map = HashMap::with_capacity(dept_list.len());
+                let mut dept_map = HashMap::new();
                 for dept in dept_list {
                     dept_map.insert(dept.id.clone(), dept);
                 }
@@ -260,7 +260,7 @@ impl DeptService for DeptServiceImpl {
             },
             Err(e) => {
                 let mut wrapper = ListWrapper::new();
-                wrapper.set_fail(&format!("查询部门列表失败: {}", e));
+                wrapper.set_fail(format!("查询部门列表失败: {}", e));
                 wrapper
             },
         }
@@ -274,20 +274,19 @@ impl DeptService for DeptServiceImpl {
         };
 
         // 如果有父部门ID，验证父级部门
-        if let Some(ref parent_id) = dept_param.parent_id {
-            if let Err(e) = self.validate_parent_dept(parent_id).await {
-                return Self::create_error_response(&e);
-            }
+        if let Some(ref parent_id) = dept_param.parent_id
+            && let Err(e) = self.validate_parent_dept(parent_id).await
+        {
+            return Self::create_error_response(&e);
         }
 
         // 验证部门名称唯一性（新增部门）
-        if let Some(ref name) = dept_param.name {
-            if let Err(e) = self
+        if let Some(ref name) = dept_param.name
+            && let Err(e) = self
                 .validate_dept_name_unique(dept_param.parent_id.as_ref(), name, true, None)
                 .await
-            {
-                return Self::create_error_response(&e);
-            }
+        {
+            return Self::create_error_response(&e);
         }
 
         // 创建部门实体
@@ -320,10 +319,10 @@ impl DeptService for DeptServiceImpl {
         };
 
         // 如果有父部门ID，验证父级部门
-        if let Some(ref parent_id) = dept_param.parent_id {
-            if let Err(e) = self.validate_parent_dept(parent_id).await {
-                return Self::create_error_response(&e);
-            }
+        if let Some(ref parent_id) = dept_param.parent_id
+            && let Err(e) = self.validate_parent_dept(parent_id).await
+        {
+            return Self::create_error_response(&e);
         }
 
         // 验证部门状态
@@ -333,13 +332,12 @@ impl DeptService for DeptServiceImpl {
         };
 
         // 验证部门名称唯一性（编辑部门时需要排除自身）
-        if let Some(ref name) = dept_param.name {
-            if let Err(e) = self
+        if let Some(ref name) = dept_param.name
+            && let Err(e) = self
                 .validate_dept_name_unique(dept_param.parent_id.as_ref(), name, false, Some(dept_id))
                 .await
-            {
-                return Self::create_error_response(&e);
-            }
+        {
+            return Self::create_error_response(&e);
         }
 
         // 创建部门实体
@@ -373,12 +371,13 @@ impl DeptService for DeptServiceImpl {
             return Self::create_error_response(&e);
         }
 
-        let mut dept = Dept::default();
-        dept.id = trimmed_id.to_string();
-        dept.status = Some(status);
-        //TODO: 获取当前登录用户
-        dept.update_by = Some("system".to_string());
-        dept.update_time = Some(chrono::Utc::now().naive_utc());
+        let dept = Dept {
+            id: trimmed_id.to_string(),
+            status: Some(status),
+            update_by: Some("system".to_string()),
+            update_time: Some(chrono::Utc::now().naive_utc()),
+            ..Default::default()
+        };
         match self.repository.update_by_primary_key_selective(&dept).await {
             Ok(_) => ResponseWrapper::success_default(),
             Err(e) => Self::create_error_response(&format!("更新部门状态失败: {}", e)),
