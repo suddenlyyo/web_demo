@@ -8,7 +8,7 @@ use common_wrapper::enums::status_enum::StatusEnum;
 use common_wrapper::{ListWrapper, ResponseTrait, ResponseWrapper};
 use uuid::Uuid;
 
-use crate::{models::Dept, params::dept_param::DeptParam, repositories::dept::dept_repository::DeptRepository, services::dept::dept_service::DeptService, views::dept_tree::DeptTree};
+use crate::{models::Dept, params::dept_param::DeptParam, repositories::dept::dept_repository::DeptRepository, services::dept::dept_service::DeptService, views::dept_tree::DeptTree, views::dept_vo::DeptVO};
 
 /// 部门服务实现
 pub struct DeptServiceImpl {
@@ -264,6 +264,51 @@ impl DeptService for DeptServiceImpl {
                 wrapper
             },
         }
+    }
+
+    async fn select_dept_vo_list(&self, dept_param: DeptParam) -> ListWrapper<DeptVO> {
+        // 先获取部门列表
+        let dept_result = self.select_dept_list(dept_param).await;
+
+        // 如果没有数据或出现错误，直接返回转换后的结果
+        let depts = match dept_result.get_data() {
+            Some(data) => data,
+            None => return dept_result.map(|_| vec![]), // 转换为VO类型的空列表
+        };
+
+        // 获取所有部门信息，用于匹配父部门名称
+        let all_depts = self.get_dept(DeptParam::default()).await;
+
+        // 转换为VO列表
+        let dept_vos: Vec<DeptVO> = depts
+            .iter()
+            .map(|dept| {
+                // 获取状态描述
+                let status_desc = dept
+                    .status
+                    .and_then(StatusEnum::from_code)
+                    .map(|status_enum| status_enum.desc().to_string());
+
+                // 获取父部门名称
+                let parent_name = dept.parent_id.as_ref().and_then(|parent_id| {
+                    if !parent_id.is_empty() {
+                        all_depts
+                            .get(parent_id)
+                            .and_then(|parent_dept| parent_dept.name.clone())
+                    } else {
+                        None
+                    }
+                });
+
+                // 构造DeptVO
+                DeptVO { base: dept.clone(), status_desc, parent_name }
+            })
+            .collect();
+
+        // 创建成功响应
+        let mut wrapper = ListWrapper::new();
+        wrapper.set_success(dept_vos);
+        wrapper
     }
 
     async fn add_dept(&self, dept_param: DeptParam) -> ResponseWrapper {

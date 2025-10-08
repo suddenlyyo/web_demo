@@ -2,7 +2,7 @@
 
 use crate::models::Dept;
 use crate::params::dept_param::DeptParam;
-use crate::views::dept_tree::DeptTree;
+use crate::views::{dept_tree::DeptTree, dept_vo::DeptVO};
 use async_trait::async_trait;
 use common_wrapper::{ListWrapper, ResponseWrapper};
 use std::collections::HashMap;
@@ -17,6 +17,11 @@ pub trait DeptService: Send + Sync {
 
     /// 查询部门列表
     async fn select_dept_list(&self, dept_param: DeptParam) -> ListWrapper<Dept>;
+
+    /// 查询部门VO列表
+    ///
+    /// 查询部门列表信息，返回包含状态描述和父部门名称等额外信息的部门VO列表
+    async fn select_dept_vo_list(&self, dept_param: DeptParam) -> ListWrapper<DeptVO>;
 
     /// 新增部门
     async fn add_dept(&self, dept_param: DeptParam) -> ResponseWrapper;

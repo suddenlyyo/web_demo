@@ -16,7 +16,7 @@ use rocket::serde::{Deserialize, Serialize};
 /// 部门信息实体
 ///
 /// 映射数据库部门表的实体结构，包含了部门的所有字段信息
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "sqlx_impl", derive(sqlx::FromRow))]
 #[cfg_attr(feature = "diesel_impl", derive(Queryable, Selectable, Insertable, AsChangeset, QueryableByName))]
 #[cfg_attr(feature = "diesel_impl", diesel(table_name = crate::schema::sys_dept))]

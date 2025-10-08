@@ -6,5 +6,7 @@
 //! # 模块组织
 //!
 //! - [dept_tree] - 部门树视图模型，参见: [crate::models::dept::Dept]
+//! - [dept_vo] - 部门详情视图对象，参见: [crate::models::dept::Dept]
 
 pub mod dept_tree;
+pub mod dept_vo;

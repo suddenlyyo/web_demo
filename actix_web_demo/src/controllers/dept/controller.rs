@@ -11,17 +11,17 @@
 //! - 删除部门: [delete_dept]
 //! - 修改部门状态: [edit_dept_status]
 //!
-use actix_web::{HttpResponse, Responder, delete, post, put, web};
-use common_wrapper::enums::status_enum::StatusEnum;
 
-use crate::models::dept::Dept;
+use actix_web::{HttpResponse, Responder, delete, post, put, web};
+use common_wrapper::ListWrapper;
+
 use crate::params::dept_param::DeptParam;
 use crate::services::dept::dept_service::DeptService;
-use common_wrapper::ListWrapper;
+use crate::views::dept_vo::DeptVO;
 
 /// 查询部门列表
 ///
-/// 根据参数查询部门列表信息，并对结果进行处理，添加状态描述和父部门名称等额外信息
+/// 根据参数查询部门列表信息，返回包含状态描述和父部门名称等额外信息的部门VO列表
 ///
 /// # 参数
 ///
@@ -30,46 +30,13 @@ use common_wrapper::ListWrapper;
 ///
 /// # 返回值
 ///
-/// 返回JSON格式的部门列表结果，类型: [HttpResponse]，包含: [ListWrapper]<[Dept]>
+/// 返回JSON格式的部门列表结果，类型: [HttpResponse]，包含: [ListWrapper]<[DeptVO]>
 #[post("/dept/list")]
 pub async fn list_depts(dept_param: web::Json<DeptParam>, dept_service: web::Data<Box<dyn DeptService + Send + Sync>>) -> impl Responder {
-    let result: ListWrapper<Dept> = dept_service.select_dept_list(dept_param.into_inner()).await;
-
-    // 如果没有数据直接返回
-    if result.get_data().is_none() {
-        return HttpResponse::Ok().json(result);
-    }
-
-    // 将result转换成json
-    let mut json_value = serde_json::to_value(&result).unwrap_or_else(|_| serde_json::json!({}));
-
-    // 在json中添加额外信息
-    if let Some(data_array) = json_value.get_mut("data").and_then(|d| d.as_array_mut()) {
-        let all_depts = dept_service.get_dept(DeptParam::default()).await;
-        for dept_json in data_array.iter_mut() {
-            let mut new_map = serde_json::Map::new();
-            let dept_obj = dept_json.as_object_mut().unwrap_or(&mut new_map);
-
-            // 添加状态描述
-            if let Some(status_value) = dept_obj.get("status")
-                && let Some(status) = status_value.as_i64()
-                && let Some(status_enum) = StatusEnum::from_code(status as i32)
-            {
-                dept_obj.insert("statusDesc".into(), serde_json::Value::String(status_enum.desc().to_string()));
-            }
-
-            // 添加父部门名称
-            if let Some(parent_id_value) = dept_obj.get("parent_id")
-                && let Some(parent_id) = parent_id_value.as_str()
-                && !parent_id.is_empty()
-                && let Some(parent) = all_depts.get(parent_id)
-            {
-                dept_obj.insert("parentName".into(), serde_json::Value::String(parent.name.clone().unwrap_or_default()));
-            }
-        }
-    }
-
-    HttpResponse::Ok().json(json_value)
+    let result: ListWrapper<DeptVO> = dept_service
+        .select_dept_vo_list(dept_param.into_inner())
+        .await;
+    HttpResponse::Ok().json(result)
 }
 
 /// 获取部门树

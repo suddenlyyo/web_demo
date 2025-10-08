@@ -1,4 +1,6 @@
 //! 部门树节点视图定义
+//!
+//! 该模块定义了用于构建部门树形结构的视图对象。
 
 use serde::{Deserialize, Serialize};
 

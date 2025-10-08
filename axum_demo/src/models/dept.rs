@@ -16,17 +16,20 @@ use serde::{Deserialize, Serialize};
 /// 部门信息实体
 ///
 /// 映射数据库部门表的实体结构，包含了部门的所有字段信息
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[cfg_attr(feature = "sqlx_impl", derive(sqlx::FromRow))]
 #[cfg_attr(feature = "diesel_impl", derive(Queryable, Selectable, Insertable, AsChangeset, QueryableByName))]
 #[cfg_attr(feature = "diesel_impl", diesel(table_name = crate::schema::sys_dept))]
 #[cfg_attr(feature = "diesel_impl", diesel(check_for_backend(diesel::mysql::Mysql)))]
+#[cfg_attr(feature = "seaorm_impl", derive(sea_orm::FromQueryResult))]
+#[serde(crate = "serde")]
 pub struct Dept {
     /// 部门id
     ///
     /// 类型: [String]，数据库字段名: id
     #[cfg_attr(feature = "sqlx_impl", sqlx(rename = "id"))]
     #[cfg_attr(feature = "diesel_impl", diesel(column_name = id))]
+    #[cfg_attr(feature = "seaorm_impl", sea_orm(field_name = "id"))]
     pub id: String,
 
     /// 部门名称

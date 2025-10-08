@@ -147,6 +147,56 @@ impl<T> ListWrapper<T> {
     pub fn get_data(&self) -> &Option<Vec<T>> {
         &self.data
     }
+
+    /// 将ListWrapper<T>映射为ListWrapper<U>
+    ///
+    /// 如果原ListWrapper是成功的，则使用提供的函数将数据转换为新的类型，
+    /// 如果原ListWrapper是失败的，则保持失败状态不变
+    ///
+    /// # 参数
+    ///
+    /// * `f` - 转换函数，将Vec<T>转换为Vec<U>
+    ///
+    /// # 返回值
+    ///
+    /// ListWrapper<U> - 转换后的新ListWrapper
+    ///
+    /// # 泛型参数
+    ///
+    /// * T - 原数据列表中元素的类型
+    /// * U - 新数据列表中元素的类型
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use common_wrapper::ListWrapper;
+    ///
+    /// let mut wrapper: ListWrapper<i32> = ListWrapper::new();
+    /// wrapper.set_success(vec![1, 2, 3]);
+    ///
+    /// let string_wrapper: ListWrapper<String> = wrapper.map(|data| {
+    ///     data.into_iter().map(|x| x.to_string()).collect()
+    /// });
+    ///
+    /// assert_eq!(string_wrapper.get_data().as_ref().unwrap(), &vec!["1".to_string(), "2".to_string(), "3".to_string()]);
+    /// ```
+    pub fn map<U, F>(self, f: F) -> ListWrapper<U>
+    where
+        F: FnOnce(Vec<T>) -> Vec<U>,
+    {
+        let mut new_wrapper = ListWrapper::<U>::new();
+        if self.is_success() {
+            if let Some(data) = self.data {
+                new_wrapper.set_success(f(data));
+            } else {
+                new_wrapper.data = Some(Vec::new());
+            }
+        } else {
+            new_wrapper.base = self.base;
+            new_wrapper.data = None;
+        }
+        new_wrapper
+    }
 }
 
 impl<T> Default for ListWrapper<T> {
