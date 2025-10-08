@@ -70,6 +70,13 @@
 
 [详细文档](common_wrapper/README.md)
 
+## 文档资源
+
+为了更好地理解和使用本项目，我们提供了以下文档资源：
+
+- [架构设计文档](ARCHITECTURE.md) - 详细介绍项目的设计理念、架构模式和技术决策
+- [部署和运维指南](DEPLOYMENT.md) - 提供完整的部署步骤、配置说明和常见问题处理
+
 ## 快速开始
 
 ### 环境要求
@@ -91,30 +98,20 @@ export DATABASE_URL=mysql://user:password@localhost/database
 
 由于项目没有默认实现，必须明确指定要使用的数据库特性：
 
-```bash
+```
 # 进入任一框架目录并运行项目，必须指定特性
 
 # 使用 SQLx 实现
 cd axum_demo && cargo run --no-default-features --features sqlx_impl
 cd actix_web_demo && cargo run --no-default-features --features sqlx_impl
 cd rocket_demo && cargo run --no-default-features --features sqlx_impl
-
-# 使用 Diesel 实现
-cd axum_demo && cargo run --no-default-features --features diesel_impl
-cd actix_web_demo && cargo run --no-default-features --features diesel_impl
-cd rocket_demo && cargo run --no-default-features --features diesel_impl
-
-# 使用 SeaORM 实现
-cd axum_demo && cargo run --no-default-features --features seaorm_impl
-cd actix_web_demo && cargo run --no-default-features --features seaorm_impl
-cd rocket_demo && cargo run --no-default-features --features seaorm_impl
 ```
 
 ## 代码质量检查
 
 为了确保代码质量，项目使用 Clippy 进行静态分析。由于项目支持多种数据库实现，需要为每种实现分别运行 Clippy：
 
-```bash
+```
 # 为 actix_web_demo 检查不同的特性组合
 cargo clippy -p actix_web_demo --features sqlx_impl
 cargo clippy -p actix_web_demo --features diesel_impl
@@ -133,7 +130,7 @@ cargo clippy -p rocket_demo --features seaorm_impl
 
 同样，也可以使用 cargo check 来快速检查代码是否能编译通过：
 
-```bash
+```
 # 为 actix_web_demo 检查不同的特性组合
 cargo check -p actix_web_demo --features sqlx_impl
 cargo check -p actix_web_demo --features diesel_impl
@@ -156,7 +153,7 @@ cargo check -p rocket_demo --features seaorm_impl
 
 ### 安装 SeaORM CLI
 
-```bash
+```
 # 安装最新版 sea-orm-cli
 cargo install sea-orm-cli
 
@@ -168,7 +165,7 @@ cargo install sea-orm-cli@^2.0.0-rc
 
 在启用了 `seaorm_impl` 特性的项目目录中，可以使用以下命令：
 
-```bash
+```
 # 设置数据库 URL 环境变量
 export DATABASE_URL=mysql://user:password@localhost/database
 
@@ -198,7 +195,7 @@ sea-orm-cli generate entity -h
 
 ### 安装 Diesel CLI
 
-```bash
+```
 # 安装支持所有数据库后端的 diesel_cli（需要安装对应数据库的客户端库）
 cargo install diesel_cli
 
@@ -218,7 +215,7 @@ cargo install diesel_cli --no-default-features --features sqlite
 
 在启用了 `diesel_impl` 特性的项目目录中，可以使用以下命令：
 
-```bash
+```
 # 设置数据库 URL 环境变量
 export DATABASE_URL=mysql://user:password@localhost/database
 

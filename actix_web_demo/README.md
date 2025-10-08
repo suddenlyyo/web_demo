@@ -99,14 +99,173 @@ Actix Web Demo 支持通过环境变量配置服务监听的地址和端口：
 ```bash
 # 设置环境变量并运行
 export HOST=0.0.0.0
-export PORT=3000
-cargo run
-
-# 或者使用内联方式运行
-HOST=0.0.0.0 PORT=3000 cargo run
+export PORT=8080
+cargo run --no-default-features --features sqlx_impl
 ```
 
-当运行应用程序时，控制台会显示实际使用的地址和来源（环境变量或默认值）。
+## API 接口文档
+
+### 首页接口
+
+- **URL**: `/`
+- **方法**: `GET`
+- **描述**: 健康检查接口，返回欢迎信息
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Welcome to the Actix Web Demo"
+  }
+  ```
+
+### 获取部门列表
+
+- **URL**: `/dept/list`
+- **方法**: `POST`
+- **描述**: 分页获取部门列表，支持条件查询
+- **请求体**:
+  ```json
+  {
+    "deptName": "部门名称（可选）",
+    "status": "状态（可选）",
+    "pageNum": 1,
+    "pageSize": 10
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Success",
+    "data": [
+      {
+        "id": "1",
+        "parentId": "0",
+        "deptName": "研发部",
+        "orderNum": 1,
+        "status": 1,
+        "createdAt": "2023-01-01T00:00:00+08:00",
+        "updatedAt": "2023-01-01T00:00:00+08:00"
+      }
+    ],
+    "total": 100,
+    "totalPage": 10,
+    "currentPage": 1,
+    "pageSize": 10
+  }
+  ```
+
+### 获取部门树结构
+
+- **URL**: `/dept/getDeptTree`
+- **方法**: `GET`
+- **描述**: 获取完整的部门树结构
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Success",
+    "data": [
+      {
+        "id": "1",
+        "parentId": "0",
+        "deptName": "总公司",
+        "orderNum": 1,
+        "status": 1,
+        "createdAt": "2023-01-01T00:00:00+08:00",
+        "updatedAt": "2023-01-01T00:00:00+08:00",
+        "children": [
+          {
+            "id": "2",
+            "parentId": "1",
+            "deptName": "研发部",
+            "orderNum": 1,
+            "status": 1,
+            "createdAt": "2023-01-01T00:00:00+08:00",
+            "updatedAt": "2023-01-01T00:00:00+08:00",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+### 添加部门
+
+- **URL**: `/dept/add`
+- **方法**: `POST`
+- **描述**: 添加新部门
+- **请求体**:
+  ```json
+  {
+    "parentId": "0",
+    "deptName": "新部门",
+    "orderNum": 1,
+    "status": 1
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 编辑部门
+
+- **URL**: `/dept/edit`
+- **方法**: `PUT`
+- **描述**: 编辑部门信息
+- **请求体**:
+  ```json
+  {
+    "id": "1",
+    "parentId": "0",
+    "deptName": "更新后的部门名",
+    "orderNum": 2,
+    "status": 1
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 修改部门状态
+
+- **URL**: `/dept/editStatus/{id}/{status}`
+- **方法**: `PUT`
+- **描述**: 修改部门状态（启用/禁用）
+- **路径参数**:
+  - `id`: 部门ID
+  - `status`: 状态值（0-禁用，1-启用）
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 删除部门
+
+- **URL**: `/dept/delete/{id}`
+- **方法**: `DELETE`
+- **描述**: 根据ID删除部门
+- **路径参数**:
+  - `id`: 部门ID
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
 
 ## 项目结构
 
@@ -128,17 +287,33 @@ src/
 ├── services/              # 服务层
 │   └── dept/              # 部门服务
 └── views/                 # 视图模型
+
+tests/
+├── e2e_test.rs            # 端到端测试
+└── integration_test.rs    # 集成测试
 ```
 
-## API 接口
+## 测试
 
-项目提供部门管理相关的 RESTful API 接口：
+项目包含两种类型的测试：
 
-- `GET /dept/tree` - 获取部门树形结构
-- `GET /dept/list` - 获取部门列表
-- `GET /dept/{id}` - 根据 ID 获取部门详情
-- `POST /dept` - 创建部门
-- `PUT /dept` - 更新部门
-- `DELETE /dept/{id}` - 根据 ID 删除部门
+### 集成测试 (Integration Tests)
+测试多个组件之间的交互，使用 Actix Web 的测试工具。
 
-所有接口都返回统一格式的 JSON 响应。
+运行集成测试：
+```bash
+cargo test --test integration_test
+```
+
+### 端到端测试 (End-to-End Tests)
+测试完整的应用程序，需要启动实际的服务。
+
+1. 在一个终端启动服务：
+```bash
+cargo run
+```
+
+2. 在另一个终端运行端到端测试：
+```bash
+cargo test --test e2e_test
+```

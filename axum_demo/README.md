@@ -98,27 +98,172 @@ HOST=0.0.0.0 PORT=3000 cd axum_demo && cargo run
 
 ```bash
 # 使用 SQLx 实现
-cd axum_demo && cargo run --no-default-features --features sqlx_impl
-
-# 使用环境变量配置运行
-cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features sqlx_impl
-
-# 使用 Diesel 实现
-cd axum_demo && cargo run --no-default-features --features diesel_impl
-
-# 使用 SeaORM 实现
-cd axum_demo && cargo run --no-default-features --features seaorm_impl
+cargo run --no-default-features --features sqlx_impl
 ```
 
-## API 接口
+## API 接口文档
 
-- `GET /` - 首页，返回欢迎信息
-- `GET /dept/tree` - 获取部门树形结构
-- `GET /dept/list` - 获取部门列表
-- `GET /dept/{id}` - 根据ID获取部门详情
-- `POST /dept` - 创建部门
-- `PUT /dept` - 更新部门
-- `DELETE /dept/{id}` - 根据ID删除部门
+### 首页接口
+
+- **URL**: `/`
+- **方法**: `GET`
+- **描述**: 健康检查接口，返回欢迎信息
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Welcome to the Axum Demo"
+  }
+  ```
+
+### 获取部门列表
+
+- **URL**: `/dept/list`
+- **方法**: `POST`
+- **描述**: 分页获取部门列表，支持条件查询
+- **请求体**:
+  ```json
+  {
+    "deptName": "部门名称（可选）",
+    "status": "状态（可选）",
+    "pageNum": 1,
+    "pageSize": 10
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Success",
+    "data": [
+      {
+        "id": "1",
+        "parentId": "0",
+        "deptName": "研发部",
+        "orderNum": 1,
+        "status": 1,
+        "createdAt": "2023-01-01T00:00:00+08:00",
+        "updatedAt": "2023-01-01T00:00:00+08:00"
+      }
+    ],
+    "total": 100,
+    "totalPage": 10,
+    "currentPage": 1,
+    "pageSize": 10
+  }
+  ```
+
+### 获取部门树结构
+
+- **URL**: `/dept/getDeptTree`
+- **方法**: `GET`
+- **描述**: 获取完整的部门树结构
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Success",
+    "data": [
+      {
+        "id": "1",
+        "parentId": "0",
+        "deptName": "总公司",
+        "orderNum": 1,
+        "status": 1,
+        "createdAt": "2023-01-01T00:00:00+08:00",
+        "updatedAt": "2023-01-01T00:00:00+08:00",
+        "children": [
+          {
+            "id": "2",
+            "parentId": "1",
+            "deptName": "研发部",
+            "orderNum": 1,
+            "status": 1,
+            "createdAt": "2023-01-01T00:00:00+08:00",
+            "updatedAt": "2023-01-01T00:00:00+08:00",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+### 添加部门
+
+- **URL**: `/dept/add`
+- **方法**: `POST`
+- **描述**: 添加新部门
+- **请求体**:
+  ```json
+  {
+    "parentId": "0",
+    "deptName": "新部门",
+    "orderNum": 1,
+    "status": 1
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 编辑部门
+
+- **URL**: `/dept/edit`
+- **方法**: `PUT`
+- **描述**: 编辑部门信息
+- **请求体**:
+  ```json
+  {
+    "id": "1",
+    "parentId": "0",
+    "deptName": "更新后的部门名",
+    "orderNum": 2,
+    "status": 1
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 修改部门状态
+
+- **URL**: `/dept/editStatus/{id}/{status}`
+- **方法**: `PUT`
+- **描述**: 修改部门状态（启用/禁用）
+- **路径参数**:
+  - `id`: 部门ID
+  - `status`: 状态值（0-禁用，1-启用）
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 删除部门
+
+- **URL**: `/dept/delete/{id}`
+- **方法**: `DELETE`
+- **描述**: 根据ID删除部门
+- **路径参数**:
+  - `id`: 部门ID
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
 
 ## 数据库配置
 

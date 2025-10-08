@@ -6,117 +6,32 @@
 
 本项目支持多种数据库实现，通过 Rust 的特性（features）系统进行管理：
 
-### 可用特性
+### 默认特性
 
-- `sqlx_impl` - 使用 SQLx 作为数据库实现
+- `sqlx_impl` - 默认启用，使用 SQLx 作为数据库实现
+
+### 可选特性
+
 - `diesel_impl` - 使用 Diesel 作为数据库实现
 - `seaorm_impl` - 使用 SeaORM 作为数据库实现
 
 ### 特性使用方法
 
 ```bash
-# 使用 SQLx 实现（需要显式指定）
-cargo run --no-default-features --features sqlx_impl
+# 使用默认的 SQLx 实现
+cargo run
 
 # 使用 Diesel 实现
 cargo run --no-default-features --features diesel_impl
 
 # 使用 SeaORM 实现
 cargo run --no-default-features --features seaorm_impl
+
+# 使用 SQLx 实现（显式指定）
+cargo run --features sqlx_impl
 ```
 
 注意：一次只能启用一种数据库实现特性。
-
-## Diesel CLI 工具
-
-如果需要使用 Diesel 的数据库迁移功能，需要安装 `diesel_cli` 工具。
-
-### 安装 Diesel CLI
-
-```bash
-# 安装支持所有数据库后端的 diesel_cli（需要安装对应数据库的客户端库）
-cargo install diesel_cli
-
-# 如果只需要 MySQL 支持
-cargo install diesel_cli --no-default-features --features mysql
-
-# 如果只需要 PostgreSQL 支持
-cargo install diesel_cli --no-default-features --features postgres
-
-# 如果只需要 SQLite 支持
-cargo install diesel_cli --no-default-features --features sqlite
-```
-
-注意：安装前需要确保系统已安装对应数据库的客户端开发库。
-
-### 使用 Diesel CLI
-
-在本项目目录中，可以使用以下命令操作数据库：
-
-```bash
-# 设置数据库 URL 环境变量
-export DATABASE_URL=mysql://user:password@localhost/database
-
-# 运行迁移
-diesel migration run
-
-# 创建新迁移
-diesel migration generate migration_name
-
-# 回滚迁移
-diesel migration revert
-
-# 重新运行迁移
-diesel migration redo
-```
-
-## 配置
-
-Rocket框架支持多种配置方式，按照优先级从低到高依次为：
-
-1. 默认配置
-2. Rocket.toml 文件
-3. 环境变量（以 ROCKET_ 为前缀）
-
-### 配置文件 (Rocket.toml)
-
-项目支持使用 Rocket.toml 文件进行配置。配置文件支持多个配置环境（profiles），包括：
-- default - 所有环境的默认配置
-- debug - 调试模式配置
-- release - 发布模式配置
-
-示例配置文件：
-```toml
-[default]
-address = "0.0.0.0"
-port = 8000
-
-[debug]
-port = 8000
-
-[release]
-port = 9999
-```
-
-### 环境变量配置
-
-可以通过设置环境变量来配置服务器，所有环境变量都以 ROCKET_ 为前缀：
-
-```bash
-ROCKET_ADDRESS=0.0.0.0
-ROCKET_PORT=3000
-```
-
-环境变量运行方式：
-```bash
-# 使用环境变量运行（优先级最高）
-ROCKET_ADDRESS=0.0.0.0 ROCKET_PORT=8080 cargo run
-
-# 或者先设置环境变量再运行
-export ROCKET_ADDRESS=0.0.0.0
-export ROCKET_PORT=8080
-cargo run
-```
 
 ## 数据库配置
 
@@ -131,10 +46,240 @@ DATABASE_URL=mysql://user:password@localhost/database
 
 ## 运行项目
 
-```
+```bash
 # 设置环境变量并运行（以SQLx实现为例）
 export DATABASE_URL=mysql://user:password@localhost/database
 cargo run --features sqlx_impl
+```
+
+## API 接口文档
+
+### 首页接口
+
+- **URL**: `/`
+- **方法**: `GET`
+- **描述**: 健康检查接口，返回欢迎信息
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Welcome to the Rocket Demo"
+  }
+  ```
+
+### 获取部门列表
+
+- **URL**: `/dept/dept/list`
+- **方法**: `GET`
+- **描述**: 分页获取部门列表，支持条件查询
+- **查询参数**:
+  - `deptName`: 部门名称（可选）
+  - `status`: 状态（可选）
+  - `pageNum`: 页码，默认为1
+  - `pageSize`: 每页大小，默认为10
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Success",
+    "data": [
+      {
+        "id": "1",
+        "parentId": "0",
+        "deptName": "研发部",
+        "orderNum": 1,
+        "status": 1,
+        "createdAt": "2023-01-01T00:00:00+08:00",
+        "updatedAt": "2023-01-01T00:00:00+08:00"
+      }
+    ],
+    "total": 100,
+    "totalPage": 10,
+    "currentPage": 1,
+    "pageSize": 10
+  }
+  ```
+
+### 获取部门树结构
+
+- **URL**: `/dept/dept/getDeptTree`
+- **方法**: `GET`
+- **描述**: 获取完整的部门树结构
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "Success",
+    "data": [
+      {
+        "id": "1",
+        "parentId": "0",
+        "deptName": "总公司",
+        "orderNum": 1,
+        "status": 1,
+        "createdAt": "2023-01-01T00:00:00+08:00",
+        "updatedAt": "2023-01-01T00:00:00+08:00",
+        "children": [
+          {
+            "id": "2",
+            "parentId": "1",
+            "deptName": "研发部",
+            "orderNum": 1,
+            "status": 1,
+            "createdAt": "2023-01-01T00:00:00+08:00",
+            "updatedAt": "2023-01-01T00:00:00+08:00",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+  ```
+
+### 添加部门
+
+- **URL**: `/dept/dept/add`
+- **方法**: `POST`
+- **描述**: 添加新部门
+- **请求体**:
+  ```json
+  {
+    "parentId": "0",
+    "deptName": "新部门",
+    "orderNum": 1,
+    "status": 1
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 编辑部门
+
+- **URL**: `/dept/dept/edit`
+- **方法**: `PUT`
+- **描述**: 编辑部门信息
+- **请求体**:
+  ```json
+  {
+    "id": "1",
+    "parentId": "0",
+    "deptName": "更新后的部门名",
+    "orderNum": 2,
+    "status": 1
+  }
+  ```
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 修改部门状态
+
+- **URL**: `/dept/dept/editStatus/{id}/{status}`
+- **方法**: `PUT`
+- **描述**: 修改部门状态（启用/禁用）
+- **路径参数**:
+  - `id`: 部门ID
+  - `status`: 状态值（0-禁用，1-启用）
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+### 删除部门
+
+- **URL**: `/dept/dept/delete/{id}`
+- **方法**: `DELETE`
+- **描述**: 根据ID删除部门
+- **路径参数**:
+  - `id`: 部门ID
+- **成功响应**:
+  ```json
+  {
+    "code": 1,
+    "message": "操作成功"
+  }
+  ```
+
+## API 响应格式
+
+本项目使用 `common_wrapper` crate 提供的统一响应格式，所有 API 响应都遵循以下格式：
+
+### SingleWrapper<T>
+
+用于包装单个对象的响应：
+
+```json
+{
+  "code": 1,
+  "message": "Success",
+  "data": {}
+}
+```
+
+### ListWrapper<T>
+
+用于包装列表对象的响应：
+
+```json
+{
+  "code": 1,
+  "message": "Success",
+  "data": []
+}
+```
+
+### PageWrapper<T>
+
+用于包装分页对象的响应：
+
+```json
+{
+  "code": 1,
+  "message": "Success",
+  "data": [],
+  "total": 100,
+  "totalPage": 10,
+  "currentPage": 1,
+  "pageSize": 10
+}
+```
+
+## 项目结构
+
+```
+src/
+├── config.rs              # 配置文件解析
+├── main.rs                # 程序入口
+├── controllers/           # 控制器层
+│   ├── dept/              # 部门相关控制器
+│   └── index/             # 首页控制器
+├── models/                # 数据模型
+├── params/                # 请求参数
+├── repositories/          # 数据访问层
+│   └── dept/              # 部门数据访问
+│       ├── diesel_impl/   # Diesel 实现
+│       ├── seaorm_impl/   # SeaORM 实现
+│       ├── sqlx_impl/     # SQLx 实现
+│       └── dept_repository.rs  # 数据访问接口
+├── services/              # 服务层
+│   └── dept/              # 部门服务
+└── views/                 # 视图模型
+
+tests/
+├── e2e_test.rs            # 端到端测试
+└── integration_test.rs    # 集成测试
 ```
 
 ## 测试
@@ -189,87 +334,3 @@ cargo test --features seaorm_impl --test e2e_test
 4. Delete (删除) - 最后测试删除部门功能
 
 这种执行顺序确保了测试数据在测试过程中被正确创建、使用和清理，避免了测试数据在数据库中的长期累积。
-
-## API 响应格式
-
-本项目使用 `common_wrapper` crate 提供的统一响应格式，所有 API 响应都遵循以下格式：
-
-### SingleWrapper<T>
-
-用于包装单个对象的响应：
-
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": {}
-}
-```
-
-### ListWrapper<T>
-
-用于包装列表对象的响应：
-
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": []
-}
-```
-
-### PageWrapper<T>
-
-用于包装分页对象的响应：
-
-```json
-{
-  "code": 200,
-  "message": "Success",
-  "data": [],
-  "total": 100,
-  "total_page": 10,
-  "current_page": 1,
-  "page_size": 10
-}
-```
-
-## API 接口
-
-### 部门管理
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| GET | `/dept/<id>` | 根据ID获取部门信息 |
-| GET | `/dept/list` | 获取部门列表 |
-| GET | `/dept/page?<page_num>&<page_size>` | 分页查询部门列表 |
-| GET | `/dept/children/<parent_id>` | 根据父部门ID获取子部门列表 |
-| GET | `/dept/tree` | 获取部门树结构 |
-| POST | `/dept` | 新增部门 |
-| PUT | `/dept/<id>` | 修改部门 |
-| DELETE | `/dept/<id>` | 删除部门 |
-
-## 数据库表结构
-
-项目使用以下数据库表，表结构定义在 [sql/demo.sql](../sql/demo.sql) 文件中：
-
-### 部门表 (sys_dept)
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| id | char(32) | 部门id |
-| name | varchar(30) | 部门名称 |
-| email | varchar(50) | 邮箱 |
-| telephone | varchar(11) | 联系电话 |
-| address | varchar(200) | 地址 |
-| logo | varchar(100) | logo地址 |
-| parent_id | char(32) | 父部门id |
-| seq_no | int | 显示顺序 |
-| status | int | 部门状态(0正常 1停用) |
-| create_by | varchar(30) | 创建者 |
-| create_time | datetime | 创建时间 |
-| update_by | varchar(30) | 更新者 |
-| update_time | datetime | 更新时间 |
-| remark | varchar(200) | 备注 |
-
-<!-- 最后一行保持空白 -->
