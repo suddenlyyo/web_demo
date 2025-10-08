@@ -310,7 +310,8 @@ cargo test --test integration_test
 
 1. 在一个终端启动服务：
 ```bash
-cargo run
+# 使用 SQLx 实现运行
+cargo run --no-default-features --features sqlx_impl
 ```
 
 2. 在另一个终端运行端到端测试：

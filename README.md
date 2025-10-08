@@ -98,7 +98,7 @@ export DATABASE_URL=mysql://user:password@localhost/database
 
 由于项目没有默认实现，必须明确指定要使用的数据库特性：
 
-```
+```bash
 # 进入任一框架目录并运行项目，必须指定特性
 
 # 使用 SQLx 实现

@@ -71,6 +71,21 @@ diesel migration revert
 diesel migration redo
 ```
 
+## 运行项目
+
+由于项目没有默认实现，必须明确指定要使用的数据库特性：
+
+```bash
+# 使用 SQLx 实现
+cargo run --no-default-features --features sqlx_impl
+
+# 使用 Diesel 实现
+cargo run --no-default-features --features diesel_impl
+
+# 使用 SeaORM 实现
+cargo run --no-default-features --features seaorm_impl
+```
+
 ## 配置说明
 
 Axum 项目支持通过环境变量进行配置：
@@ -81,25 +96,17 @@ Axum 项目支持通过环境变量进行配置：
 # 设置主机和端口
 export HOST=0.0.0.0
 export PORT=3000
-cd axum_demo && cargo run
 ```
 
 或者使用内联方式：
 
 ```bash
-HOST=0.0.0.0 PORT=3000 cd axum_demo && cargo run
+HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features sqlx_impl
 ```
 
 默认配置：
 - 主机：127.0.0.1
 - 端口：8000
-
-## 运行项目
-
-```bash
-# 使用 SQLx 实现
-cargo run --no-default-features --features sqlx_impl
-```
 
 ## API 接口文档
 
