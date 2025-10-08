@@ -26,7 +26,7 @@ impl DeptRepositoryDieselImpl {
     ///
     /// # 返回值
     /// 返回新的部门仓储实例
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, Box<dyn StdError + Send + Sync>> {
         // 从配置文件中读取数据库URL
         let config = Config::from_default_file().expect("无法加载配置文件");
         let database_url = config.database.url;
@@ -34,9 +34,9 @@ impl DeptRepositoryDieselImpl {
         let pool = Pool::builder()
             .max_size(10)
             .build(manager)
-            .expect("Failed to create pool");
+            .map_err(|e| Box::new(e) as Box<dyn StdError + Send + Sync>)?;
 
-        Self { pool }
+        Ok(Self { pool })
     }
 }
 

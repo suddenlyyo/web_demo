@@ -34,17 +34,8 @@ use std::sync::Arc;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     // 根据启用的特性初始化对应的数据访问层实现
-    #[cfg(feature = "sqlx_impl")]
-    let repository: Arc<dyn DeptRepository> = {
-        Arc::new(
-            DeptRepositoryImpl::new()
-                .await
-                .expect("无法创建SQLx数据库连接"),
-        )
-    };
-
     #[cfg(feature = "diesel_impl")]
-    let repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryImpl::new()) };
+    let repository: Arc<dyn DeptRepository> = { Arc::new(DeptRepositoryImpl::new().expect("无法创建Diesel数据库连接")) };
 
     #[cfg(feature = "seaorm_impl")]
     let repository: Arc<dyn DeptRepository> = {
@@ -52,6 +43,15 @@ async fn main() -> std::io::Result<()> {
             DeptRepositoryImpl::new()
                 .await
                 .expect("无法创建SeaORM数据库连接"),
+        )
+    };
+
+    #[cfg(feature = "sqlx_impl")]
+    let repository: Arc<dyn DeptRepository> = {
+        Arc::new(
+            DeptRepositoryImpl::new()
+                .await
+                .expect("无法创建SQLx数据库连接"),
         )
     };
 
