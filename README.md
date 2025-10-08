@@ -95,9 +95,9 @@ export DATABASE_URL=mysql://user:password@localhost/database
 # 进入任一框架目录并运行项目，必须指定特性
 
 # 使用 SQLx 实现
-cd axum_demo && cargo run --features sqlx_impl
-cd actix_web_demo && cargo run --features sqlx_impl
-cd rocket_demo && cargo run --features sqlx_impl
+cd axum_demo && cargo run --no-default-features --features sqlx_impl
+cd actix_web_demo && cargo run --no-default-features --features sqlx_impl
+cd rocket_demo && cargo run --no-default-features --features sqlx_impl
 
 # 使用 Diesel 实现
 cd axum_demo && cargo run --no-default-features --features diesel_impl

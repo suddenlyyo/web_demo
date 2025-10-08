@@ -98,16 +98,16 @@ HOST=0.0.0.0 PORT=3000 cd axum_demo && cargo run
 
 ```bash
 # 使用 SQLx 实现
-cd axum_demo && cargo run --features sqlx_impl
+cd axum_demo && cargo run --no-default-features --features sqlx_impl
 
 # 使用环境变量配置运行
-cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --features sqlx_impl
+cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run --no-default-features --features sqlx_impl
 
 # 使用 Diesel 实现
-cd axum_demo && cargo run --features diesel_impl
+cd axum_demo && cargo run --no-default-features --features diesel_impl
 
 # 使用 SeaORM 实现
-cd axum_demo && cargo run --features seaorm_impl
+cd axum_demo && cargo run --no-default-features --features seaorm_impl
 ```
 
 ## API 接口

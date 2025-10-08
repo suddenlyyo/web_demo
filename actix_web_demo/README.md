@@ -78,8 +78,8 @@ export DATABASE_URL=mysql://user:password@localhost/database
 # 进入项目目录
 cd actix_web_demo
 
-# 使用 SQLx 实现运行（sqlx_impl 是默认特性）
-cargo run --features sqlx_impl
+# 使用 SQLx 实现运行
+cargo run --no-default-features --features sqlx_impl
 
 # 使用 Diesel 实现运行
 cargo run --no-default-features --features diesel_impl

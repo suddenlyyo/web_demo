@@ -16,13 +16,13 @@
 
 ```bash
 # 使用 SQLx 实现（需要显式指定）
-cargo run --features sqlx_impl
+cargo run --no-default-features --features sqlx_impl
 
 # 使用 Diesel 实现
-cargo run --features diesel_impl
+cargo run --no-default-features --features diesel_impl
 
 # 使用 SeaORM 实现
-cargo run --features seaorm_impl
+cargo run --no-default-features --features seaorm_impl
 ```
 
 注意：一次只能启用一种数据库实现特性。
