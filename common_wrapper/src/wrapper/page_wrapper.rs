@@ -149,7 +149,8 @@ impl<T> PageWrapper<T> {
         self.current_page = current_page;
         self.page_size = page_size;
         // 计算总页数，如果有余数则加1
-        self.total_page = if page_size > 0 { (total + page_size - 1) / page_size } else { 0 };
+        //self.total_page = if page_size > 0 { (total + page_size - 1) / page_size } else { 0 };
+        self.total_page = if page_size > 0 { total.div_ceil(page_size) } else { 0 };
     }
 
     /// 设置为失败状态并附带消息

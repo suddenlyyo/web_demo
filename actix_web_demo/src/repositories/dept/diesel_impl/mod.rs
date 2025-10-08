@@ -7,11 +7,11 @@ use crate::config::Config;
 use crate::models::Dept;
 use crate::repositories::dept::dept_repository::DeptRepository;
 use crate::schema::sys_dept;
+use async_trait::async_trait;
 use diesel::mysql::MysqlConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::sql_query;
-use async_trait::async_trait;
 use std::error::Error as StdError;
 use std::fmt::Debug;
 
