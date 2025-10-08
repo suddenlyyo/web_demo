@@ -15,6 +15,38 @@
 └── Cargo.toml         # 工作区配置文件
 ```
 
+## 各框架示例说明
+
+### Axum 示例 (axum_demo)
+
+使用 Axum 框架实现的 Web 服务示例。
+
+- [详细文档](axum_demo/README.md)
+- 默认端口: 8000
+- 支持多种数据库实现（SQLx、Diesel、SeaORM）
+- 配置方式：环境变量（HOST/PORT）
+
+### Actix Web 示例 (actix_web_demo)
+
+使用 Actix Web 框架实现的 Web 服务示例。
+
+- [详细文档](actix_web_demo/README.md)
+- 默认端口: 8000
+- 支持多种数据库实现（SQLx、Diesel、SeaORM）
+- 配置方式：环境变量（HOST/PORT）
+
+### Rocket 示例 (rocket_demo)
+
+使用 Rocket 框架实现的 Web 服务示例。
+
+- [详细文档](rocket_demo/README.md)
+- 默认端口: 8000
+- 支持多种数据库实现（SQLx、Diesel、SeaORM）
+- 配置方式：
+  1. 默认配置
+  2. Rocket.toml 文件
+  3. 环境变量（以 ROCKET_ 为前缀）
+
 ## 公共库
 
 ### common_validation
@@ -26,6 +58,8 @@
 - 范围验证
 - 自定义验证规则
 
+[详细文档](common_validation/README.md)
+
 ### common_wrapper
 
 提供统一的 API 响应封装，包括：
@@ -33,6 +67,44 @@
 - 错误响应
 - 分页响应
 - 列表响应
+
+[详细文档](common_wrapper/README.md)
+
+## 快速开始
+
+### 环境要求
+
+- Rust 和 Cargo (推荐使用最新稳定版)
+- MySQL 数据库
+
+### 数据库配置
+
+项目使用 MySQL 数据库，需要在运行前设置数据库连接：
+
+```bash
+export DATABASE_URL=mysql://user:password@localhost/database
+```
+
+数据库连接信息也可以通过项目根目录的 `config.toml` 文件配置。
+
+### 运行项目
+
+```bash
+# 进入任一框架目录并运行项目（默认使用 SQLx 实现）
+cd axum_demo && cargo run
+cd actix_web_demo && cargo run
+cd rocket_demo && cargo run --features sqlx_impl
+
+# 使用 Diesel 实现运行
+cd axum_demo && cargo run --no-default-features --features diesel_impl
+cd actix_web_demo && cargo run --no-default-features --features diesel_impl
+cd rocket_demo && cargo run --no-default-features --features diesel_impl
+
+# 使用 SeaORM 实现运行
+cd axum_demo && cargo run --no-default-features --features seaorm_impl
+cd actix_web_demo && cargo run --no-default-features --features seaorm_impl
+cd rocket_demo && cargo run --no-default-features --features seaorm_impl
+```
 
 ## 代码质量检查
 
@@ -73,6 +145,7 @@ cargo check -p rocket_demo --features sqlx_impl
 cargo check -p rocket_demo --features diesel_impl
 cargo check -p rocket_demo --features seaorm_impl
 ```
+
 ## SeaORM CLI 工具
 
 本项目支持使用 SeaORM ORM，如果需要使用 SeaORM 的代码生成功能，需要安装 `sea-orm-cli` 工具。
@@ -182,102 +255,3 @@ diesel migration redo
 5. 根据生成的 schema.rs 文件手动创建对应的模型结构体和实现。
    
    注意：Diesel 不像 SeaORM 那样提供完整的实体代码生成工具，需要手动创建模型结构体并实现相关 trait。
-
-## 各框架示例说明
-
-### Rocket 示例 (rocket_demo)
-
-使用 Rocket 框架实现的 Web 服务示例。
-
-支持多种数据库实现：
-- SQLx（默认）
-- Diesel
-- SeaORM
-
-配置方式：
-1. 默认配置
-2. Rocket.toml 文件
-3. 环境变量（以 ROCKET_ 为前缀）
-
-运行方式：
-```bash
-# 使用 SQLx 实现
-cd rocket_demo && cargo run --features sqlx_impl
-
-# 使用环境变量配置运行（优先级最高）
-cd rocket_demo && ROCKET_ADDRESS=0.0.0.0 ROCKET_PORT=8080 cargo run --features sqlx_impl
-
-# 使用 Diesel 实现
-cd rocket_demo && cargo run --features diesel_impl
-
-# 使用 SeaORM 实现
-cd rocket_demo && cargo run --features seaorm_impl
-```
-
-详细说明请参考 [Rocket 示例 README](./rocket_demo/README.md)
-
-### Axum 示例 (axum_demo)
-
-使用 Axum 框架实现的 Web 服务示例。
-
-支持多种数据库实现：
-- SQLx（默认）
-- Diesel
-- SeaORM
-
-配置方式：
-1. 环境变量（HOST 和 PORT）
-2. 配置文件（config.toml 中的 [server] 部分）
-3. 默认值（host="127.0.0.1"，port=8000）
-
-运行方式：
-```bash
-# 使用默认的 SQLx 实现
-cd axum_demo && cargo run
-
-# 使用环境变量配置运行
-cd axum_demo && HOST=0.0.0.0 PORT=3000 cargo run
-
-# 使用 Diesel 实现
-cd axum_demo && cargo run --no-default-features --features diesel_impl
-
-# 使用 SeaORM 实现
-cd axum_demo && cargo run --no-default-features --features seaorm_impl
-```
-
-详细说明请参考 [Axum 示例 README](./axum_demo/README.md)
-
-### Actix Web 示例 (actix_web_demo)
-
-使用 Actix Web 框架实现的 Web 服务示例。
-
-支持多种数据库实现：
-- SQLx（默认）
-- Diesel
-- SeaORM
-
-配置方式：
-1. 环境变量（HOST 和 PORT）
-2. 默认值（host="127.0.0.1"，port=8000）
-
-运行方式：
-```bash
-# 使用默认的 SQLx 实现
-cd actix_web_demo && cargo run
-
-# 使用环境变量配置运行
-export HOST=0.0.0.0
-export PORT=8080
-cd actix_web_demo && cargo run
-
-# 或者使用内联方式
-HOST=0.0.0.0 PORT=8080 cd actix_web_demo && cargo run
-
-# 使用 Diesel 实现
-cd actix_web_demo && cargo run --no-default-features --features diesel_impl
-
-# 使用 SeaORM 实现
-cd actix_web_demo && cargo run --no-default-features --features seaorm_impl
-```
-
-详细说明请参考 [Actix Web 示例 README](./actix_web_demo/README.md)
