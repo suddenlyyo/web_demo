@@ -72,12 +72,14 @@ export DATABASE_URL=mysql://user:password@localhost/database
 
 ### 运行项目
 
+由于项目没有默认实现，必须明确指定要使用的数据库特性：
+
 ```bash
 # 进入项目目录
 cd actix_web_demo
 
-# 运行项目（默认使用 SQLx 实现）
-cargo run
+# 使用 SQLx 实现运行（sqlx_impl 是默认特性）
+cargo run --features sqlx_impl
 
 # 使用 Diesel 实现运行
 cargo run --no-default-features --features diesel_impl
