@@ -76,10 +76,27 @@ struct User {
 - `not_null`: 非空验证
 - `length = N`: 固定长度验证
 - `length_range(min = N, max = M)`: 长度范围验证
+- `exist_length = N`: 存在时的固定长度验证
+- `exist_length_range(min = N, max = M)`: 存在时的长度范围验证
+- `desc = "描述"`: 字段描述
+
+### 日期验证属性
+
 - `date_format = Format`: 日期格式验证
+
+### 数值验证属性
+
 - `min = N`: 最小值验证
 - `max = N`: 最大值验证
-- `desc = "描述"`: 字段描述
+- `number_min = N`: 数值最小值验证
+- `number_max = N`: 数值最大值验证
+- `positive_number`: 正数验证
+- `non_negative_number`: 非负数验证
+- `integer`: 整数验证
+- `decimal_scale = N`: 小数位数验证
+- `odd_number`: 奇数验证
+- `even_number`: 偶数验证
+- `multiple_of = N`: 倍数验证
 
 ### 高级验证属性
 
@@ -87,6 +104,8 @@ struct User {
 - `custom = "function_name"`: 自定义验证函数
 
 ## 使用示例
+
+### 基本示例
 
 ```rust
 use common_validation::{Validatable, DateTimeFormatEnum};
@@ -103,19 +122,112 @@ struct User {
     #[validate(min = 0, max = 150, desc = "年龄")]
     age: u8,
     
-    #[validate(length_range(min = 6, max = 20), desc = "密码")]
-    password: Option<String>,
+    #[validate(length_range(min = 1, max = 5), desc = "电话号码")]
+    phone_numbers: Vec<String>,
 }
 
 let user = User {
     username: "test".to_string(),
     birthday: "1990-01-01".to_string(),
     age: 30,
-    password: Some("secret123".to_string()),
+    phone_numbers: vec!["13800138000".to_string()],
 };
 
 match user.validate() {
     Ok(()) => println!("验证通过"),
     Err(e) => println!("验证失败: {}", e),
+}
+```
+
+### 高级验证示例
+
+```rust
+use common_validation::{Validatable, DateTimeFormatEnum};
+use common_validation_macros::ValidatableImpl;
+
+#[derive(ValidatableImpl)]
+struct Product {
+    #[validate(not_null, length_range(min = 1, max = 100), desc = "产品名称")]
+    name: String,
+    
+    #[validate(not_null, positive_number, desc = "产品价格")]
+    price: f64,
+    
+    #[validate(not_null, decimal_scale = 2, desc = "折扣")]
+    discount: f64,
+    
+    #[validate(not_null, integer, min = 1, max = 1000, desc = "库存数量")]
+    stock: i32,
+    
+    #[validate(not_null, even_number, desc = "包装数量")]
+    package_quantity: i32,
+    
+    #[validate(not_null, multiple_of = 5, desc = "最小起订量")]
+    min_order_quantity: i32,
+}
+
+let product = Product {
+    name: "测试产品".to_string(),
+    price: 99.99,
+    discount: 0.8,
+    stock: 100,
+    package_quantity: 10,
+    min_order_quantity: 5,
+};
+
+match product.validate() {
+    Ok(()) => println!("验证通过"),
+    Err(e) => println!("验证失败: {}", e),
+}
+```
+
+### 分组验证示例
+
+```rust
+use common_validation::{Validatable, DateTimeFormatEnum, CreateGroup, UpdateGroup};
+use common_validation_macros::ValidatableImpl;
+
+#[derive(ValidatableImpl)]
+#[group_fields(
+    create = ["name", "price", "stock"],
+    update = ["id", "name", "price"]
+)]
+struct Product {
+    #[validate(not_null, desc = "产品ID")]
+    id: String,
+    
+    #[validate(not_null, length_range(min = 1, max = 100), desc = "产品名称")]
+    name: String,
+    
+    #[validate(not_null, positive_number, desc = "产品价格")]
+    price: f64,
+    
+    #[validate(not_null, non_negative_number, desc = "库存数量")]
+    stock: i32,
+}
+
+let product = Product {
+    id: "1".to_string(),
+    name: "测试产品".to_string(),
+    price: 99.99,
+    stock: 100,
+};
+
+// 完整验证
+match product.validate() {
+    Ok(()) => println!("完整验证通过"),
+    Err(e) => println!("完整验证失败: {}", e),
+}
+
+// 创建分组验证（只验证create组中的字段）
+match product.validate_with_group::<CreateGroup>() {
+    Ok(()) => println!("创建验证通过"),
+    Err(e) => println!("创建验证失败: {}", e),
+}
+
+// 更新分组验证（只验证update组中的字段）
+match product.validate_with_group::<UpdateGroup>() {
+    Ok(()) => println!("更新验证通过"),
+    Err(e) => println!("更新验证失败: {}", e),
 }
 ```

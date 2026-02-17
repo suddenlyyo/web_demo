@@ -80,22 +80,44 @@ impl Validatable for MyStruct {
 
 ## 支持的验证规则
 
+### 基本验证
 - `not_null`: 非空验证
 - `length`: 固定长度验证
 - `length_range`: 长度范围验证
 - `exist_length`: 存在时的固定长度验证
 - `exist_length_range`: 存在时的长度范围验证
+
+### 日期验证
 - `date_format`: 日期格式验证
-- `min`/`max`: 数值范围验证
-- `number_min`/`number_max`: 数值最小/最大值验证
+
+### 数值验证
+- `min`/`max`: 数值最小/最大值验证
+- `number_range`: 数值范围验证（同时设置最小值和最大值）
+- `positive_number`: 正数验证
+- `non_negative_number`: 非负数验证
+- `integer`: 整数验证
+- `decimal_scale`: 小数位数验证
+- `odd_number`: 奇数验证
+- `even_number`: 偶数验证
+- `multiple_of`: 倍数验证
 
 ## 错误类型
 
+### 基本错误
 - `NotNull`: 字段不能为空
 - `Length`: 字段长度不符合要求
 - `Format`: 字段格式不正确
-- `NumberMin`: 数值不能小于指定最小值
-- `NumberMax`: 数值不能大于指定最大值
 - `LengthRangeError`: 长度区间设置错误
 - `DateTimeFormatNotSet`: 日期时间格式未设置
 - `NumberFormatError`: 数字格式错误
+
+### 数值错误
+- `NumberMin`: 数值不能小于指定最小值
+- `NumberMax`: 数值不能大于指定最大值
+- `PositiveNumber`: 数值必须为正数
+- `NonNegativeNumber`: 数值必须为非负数
+- `Integer`: 数值必须为整数
+- `DecimalScale`: 小数位数超过限制
+- `OddNumber`: 数值必须为奇数
+- `EvenNumber`: 数值必须为偶数
+- `MultipleOf`: 数值必须为指定值的倍数
