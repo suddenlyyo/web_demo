@@ -34,4 +34,25 @@ pub enum ValidationErrorEnum {
     /// 类型不支持错误，第一个参数为类型名称，第二个参数为规则名称
     #[error("类型 {0} 不支持验证规则 {1}")]
     UnsupportedType(String, String),
+    /// 必须为正数
+    #[error("{0} 必须为正数")]
+    PositiveNumber(String),
+    /// 必须为非负数
+    #[error("{0} 必须为非负数")]
+    NonNegativeNumber(String),
+    /// 必须为整数
+    #[error("{0} 必须为整数")]
+    Integer(String),
+    /// 小数位数超出限制
+    #[error("{0} 小数位数不能超过 {1} 位")]
+    DecimalScale(String, u32),
+    /// 必须为奇数
+    #[error("{0} 必须为奇数")]
+    OddNumber(String),
+    /// 必须为偶数
+    #[error("{0} 必须为偶数")]
+    EvenNumber(String),
+    /// 必须为指定数字的倍数
+    #[error("{0} 必须为 {1} 的倍数")]
+    MultipleOf(String, i64),
 }

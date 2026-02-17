@@ -180,6 +180,77 @@ impl ValidationRule {
         self.with_rule(ValidationRulesEnum::NumberMin(min))
             .with_rule(ValidationRulesEnum::NumberMax(max))
     }
+
+    /// 便捷方法：添加正数验证
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn positive_number(self) -> Self {
+        self.with_rule(ValidationRulesEnum::PositiveNumber)
+    }
+
+    /// 便捷方法：添加非负数验证
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn non_negative_number(self) -> Self {
+        self.with_rule(ValidationRulesEnum::NonNegativeNumber)
+    }
+
+    /// 便捷方法：添加整数验证
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn integer(self) -> Self {
+        self.with_rule(ValidationRulesEnum::Integer)
+    }
+
+    /// 便捷方法：添加小数位数验证
+    ///
+    /// # 参数
+    ///
+    /// * `scale` - 最大小数位数
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn decimal_scale(self, scale: u32) -> Self {
+        self.with_rule(ValidationRulesEnum::DecimalScale(scale))
+    }
+
+    /// 便捷方法：添加奇数验证
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn odd_number(self) -> Self {
+        self.with_rule(ValidationRulesEnum::OddNumber)
+    }
+
+    /// 便捷方法：添加偶数验证
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn even_number(self) -> Self {
+        self.with_rule(ValidationRulesEnum::EvenNumber)
+    }
+
+    /// 便捷方法：添加倍数验证
+    ///
+    /// # 参数
+    ///
+    /// * `multiple` - 倍数
+    ///
+    /// # 返回值
+    ///
+    /// 返回Self以支持链式调用
+    pub fn multiple_of(self, multiple: i64) -> Self {
+        self.with_rule(ValidationRulesEnum::MultipleOf(multiple))
+    }
 }
 
 // ====================== 验证器实现 ======================
@@ -210,6 +281,13 @@ impl ParameterValidator {
                 ValidationRulesEnum::DateFormat(format) => Self::validate_datetime(value, format, &rule.desc)?,
                 ValidationRulesEnum::NumberMin(min) => Self::validate_number_min(value, min, &rule.desc)?,
                 ValidationRulesEnum::NumberMax(max) => Self::validate_number_max(value, max, &rule.desc)?,
+                ValidationRulesEnum::PositiveNumber => Self::validate_positive_number(value, &rule.desc)?,
+                ValidationRulesEnum::NonNegativeNumber => Self::validate_non_negative_number(value, &rule.desc)?,
+                ValidationRulesEnum::Integer => Self::validate_integer(value, &rule.desc)?,
+                ValidationRulesEnum::DecimalScale(scale) => Self::validate_decimal_scale(value, scale, &rule.desc)?,
+                ValidationRulesEnum::OddNumber => Self::validate_odd_number(value, &rule.desc)?,
+                ValidationRulesEnum::EvenNumber => Self::validate_even_number(value, &rule.desc)?,
+                ValidationRulesEnum::MultipleOf(multiple) => Self::validate_multiple_of(value, multiple, &rule.desc)?,
                 ValidationRulesEnum::Nested => {
                     // Nested规则不在此处处理，它应该在宏生成的代码中通过直接调用validate()处理
                     // 此处保留空处理以避免编译错误
@@ -420,6 +498,260 @@ impl ParameterValidator {
         }
         Ok(())
     }
+
+    /// 验证正数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::PositiveNumber(desc) 如果不是正数
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_positive_number(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
+        let num = f64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        if num <= 0.0 {
+            return Err(ValidationErrorEnum::PositiveNumber(desc.to_string()));
+        }
+        Ok(())
+    }
+
+    /// 验证非负数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::NonNegativeNumber(desc) 如果是负数
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_non_negative_number(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
+        let num = f64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        if num < 0.0 {
+            return Err(ValidationErrorEnum::NonNegativeNumber(desc.to_string()));
+        }
+        Ok(())
+    }
+
+    /// 验证整数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::Integer(desc) 如果不是整数
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_integer(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
+        let num = f64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        if num.fract() != 0.0 {
+            return Err(ValidationErrorEnum::Integer(desc.to_string()));
+        }
+        Ok(())
+    }
+
+    /// 验证小数位数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `scale` - 最大小数位数
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::DecimalScale(desc, scale) 如果小数位数超过限制
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_decimal_scale(value: &str, scale: u32, desc: &str) -> Result<(), ValidationErrorEnum> {
+        // 检查是否是有效数字
+        let _ = f64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        // 检查小数位数
+        if let Some(decimal_part) = value.split('.').nth(1)
+            && decimal_part.len() > scale as usize
+        {
+            return Err(ValidationErrorEnum::DecimalScale(desc.to_string(), scale));
+        }
+        Ok(())
+    }
+
+    /// 验证奇数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::OddNumber(desc) 如果不是奇数
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_odd_number(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
+        let num = i64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        if num % 2 == 0 {
+            return Err(ValidationErrorEnum::OddNumber(desc.to_string()));
+        }
+        Ok(())
+    }
+
+    /// 验证偶数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::EvenNumber(desc) 如果不是偶数
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_even_number(value: &str, desc: &str) -> Result<(), ValidationErrorEnum> {
+        let num = i64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        if num % 2 != 0 {
+            return Err(ValidationErrorEnum::EvenNumber(desc.to_string()));
+        }
+        Ok(())
+    }
+
+    /// 验证倍数
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要验证的值
+    /// * `multiple` - 倍数
+    /// * `desc` - 参数描述
+    ///
+    /// # 返回值
+    ///
+    /// Ok(()) 如果验证通过，否则返回 ValidationErrorEnum
+    ///
+    /// # 错误
+    ///
+    /// ValidationErrorEnum::MultipleOf(desc, multiple) 如果不是指定倍数
+    /// ValidationErrorEnum::NumberFormatError 如果不是有效数字
+    fn validate_multiple_of(value: &str, multiple: i64, desc: &str) -> Result<(), ValidationErrorEnum> {
+        let num = i64::from_str(value).map_err(|_| ValidationErrorEnum::NumberFormatError)?;
+
+        if num % multiple != 0 {
+            return Err(ValidationErrorEnum::MultipleOf(desc.to_string(), multiple));
+        }
+        Ok(())
+    }
+}
+
+// ====================== 分组验证接口 ======================
+/// 分组验证基础trait
+pub trait ValidationGroup {
+    /// 获取分组名称
+    fn group_name() -> &'static str;
+}
+
+/// 创建分组
+pub struct CreateGroup;
+impl ValidationGroup for CreateGroup {
+    fn group_name() -> &'static str {
+        "create"
+    }
+}
+
+/// 更新分组
+pub struct UpdateGroup;
+impl ValidationGroup for UpdateGroup {
+    fn group_name() -> &'static str {
+        "update"
+    }
+}
+
+/// 查询分组
+pub struct QueryGroup;
+impl ValidationGroup for QueryGroup {
+    fn group_name() -> &'static str {
+        "query"
+    }
+}
+
+/// 状态更新分组
+pub struct StatusUpdateGroup;
+impl ValidationGroup for StatusUpdateGroup {
+    fn group_name() -> &'static str {
+        "status_update"
+    }
+}
+
+/// 分页查询分组
+pub struct PageQueryGroup;
+impl ValidationGroup for PageQueryGroup {
+    fn group_name() -> &'static str {
+        "page_query"
+    }
+}
+
+/// 分组字段提供者trait
+///
+/// 用于集中管理不同分组需要验证的字段
+pub trait GroupFieldsProvider {
+    /// 获取创建分组需要验证的字段
+    fn get_create_group_fields() -> &'static [&'static str];
+
+    /// 获取更新分组需要验证的字段
+    fn get_update_group_fields() -> &'static [&'static str];
+
+    /// 获取查询分组需要验证的字段
+    fn get_query_group_fields() -> &'static [&'static str];
+
+    /// 获取状态更新分组需要验证的字段
+    fn get_status_update_group_fields() -> &'static [&'static str];
+
+    /// 获取分页查询分组需要验证的字段
+    fn get_page_query_group_fields() -> &'static [&'static str];
+
+    /// 根据分组名称获取需要验证的字段
+    fn get_group_fields(group_name: &str) -> &'static [&'static str];
+}
+
+/// 支持分组验证的trait
+pub trait GroupValidatable: GroupFieldsProvider {
+    /// 分组验证
+    ///
+    /// # 返回值
+    ///
+    /// 如果验证通过返回Ok(())，否则返回相应的验证错误
+    fn validate_with_group<G: ValidationGroup>(&self) -> Result<(), ValidationErrorEnum>;
 }
 
 // ====================== 结构体验证接口 ======================
@@ -433,6 +765,29 @@ pub trait Validatable {
     ///
     /// 如果验证通过返回Ok(())，否则返回相应的验证错误
     fn validate(&self) -> Result<(), ValidationErrorEnum>;
+}
+
+/// 分组验证辅助方法
+///
+/// 用于简化分组验证的实现
+///
+/// # 参数
+///
+/// * `obj` - 要验证的对象
+/// * `fields` - 需要验证的字段列表
+/// * `validator` - 验证函数，接收对象和字段名，返回验证结果
+///
+/// # 返回值
+///
+/// 如果验证通过返回Ok(())，否则返回相应的验证错误
+pub fn validate_group_fields<T, F>(obj: &T, fields: &[&str], validator: F) -> Result<(), ValidationErrorEnum>
+where
+    F: Fn(&T, &str) -> Result<(), ValidationErrorEnum>,
+{
+    for field in fields {
+        validator(obj, field)?;
+    }
+    Ok(())
 }
 
 mod enums;

@@ -1,4 +1,4 @@
-use common_validation::{DateTimeFormatEnum, ParameterValidator, Validatable, ValidationErrorEnum, ValidationRule, ValidationRulesEnum};
+use common_validation::{CreateGroup, DateTimeFormatEnum, PageQueryGroup, ParameterValidator, QueryGroup, StatusUpdateGroup, UpdateGroup, Validatable, ValidationErrorEnum, ValidationRule, ValidationRulesEnum};
 use common_validation_macros::ValidatableImpl;
 
 // ====================== 基本结构体验证 ======================
@@ -285,4 +285,105 @@ fn test_complex_types() {
     // 空Vec测试
     let empty_vec = NestedVecTest { items: vec![] };
     assert!(empty_vec.validate().is_ok()); // 空Vec本身是有效的，除非有特殊约束
+}
+
+// ====================== 新增验证规则测试 ======================
+#[test]
+fn test_new_validation_rules() {
+    // 测试正数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct PositiveTest {
+        #[validate(positive_number, desc = "正数测试")]
+        value: f64,
+    }
+
+    let positive_valid = PositiveTest { value: 10.5 };
+    assert!(positive_valid.validate().is_ok());
+
+    let positive_invalid = PositiveTest { value: -5.0 };
+    assert_eq!(positive_invalid.validate(), Err(ValidationErrorEnum::PositiveNumber("正数测试".to_string())));
+
+    // 测试非负数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct NonNegativeTest {
+        #[validate(non_negative_number, desc = "非负数测试")]
+        value: f64,
+    }
+
+    let non_negative_valid1 = NonNegativeTest { value: 0.0 };
+    assert!(non_negative_valid1.validate().is_ok());
+
+    let non_negative_valid2 = NonNegativeTest { value: 100.0 };
+    assert!(non_negative_valid2.validate().is_ok());
+
+    let non_negative_invalid = NonNegativeTest { value: -1.0 };
+    assert_eq!(non_negative_invalid.validate(), Err(ValidationErrorEnum::NonNegativeNumber("非负数测试".to_string())));
+
+    // 测试整数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct IntegerTest {
+        #[validate(integer, desc = "整数测试")]
+        value: f64,
+    }
+
+    let integer_valid = IntegerTest { value: 42.0 };
+    assert!(integer_valid.validate().is_ok());
+
+    let integer_invalid = IntegerTest { value: 42.5 };
+    assert_eq!(integer_invalid.validate(), Err(ValidationErrorEnum::Integer("整数测试".to_string())));
+
+    // 测试小数位数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct DecimalScaleTest {
+        #[validate(decimal_scale = 2, desc = "小数位数测试")]
+        value: f64,
+    }
+
+    let decimal_valid1 = DecimalScaleTest { value: 123.45 };
+    assert!(decimal_valid1.validate().is_ok());
+
+    let decimal_valid2 = DecimalScaleTest { value: 123.0 };
+    assert!(decimal_valid2.validate().is_ok());
+
+    let decimal_invalid = DecimalScaleTest { value: 123.456 };
+    assert_eq!(decimal_invalid.validate(), Err(ValidationErrorEnum::DecimalScale("小数位数测试".to_string(), 2)));
+
+    // 测试奇数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct OddTest {
+        #[validate(odd_number, desc = "奇数测试")]
+        value: i32,
+    }
+
+    let odd_valid = OddTest { value: 7 };
+    assert!(odd_valid.validate().is_ok());
+
+    let odd_invalid = OddTest { value: 8 };
+    assert_eq!(odd_invalid.validate(), Err(ValidationErrorEnum::OddNumber("奇数测试".to_string())));
+
+    // 测试偶数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct EvenTest {
+        #[validate(even_number, desc = "偶数测试")]
+        value: i32,
+    }
+
+    let even_valid = EvenTest { value: 8 };
+    assert!(even_valid.validate().is_ok());
+
+    let even_invalid = EvenTest { value: 7 };
+    assert_eq!(even_invalid.validate(), Err(ValidationErrorEnum::EvenNumber("偶数测试".to_string())));
+
+    // 测试倍数验证
+    #[derive(Debug, ValidatableImpl)]
+    struct MultipleOfTest {
+        #[validate(multiple_of = 5, desc = "倍数测试")]
+        value: i32,
+    }
+
+    let multiple_valid = MultipleOfTest { value: 15 };
+    assert!(multiple_valid.validate().is_ok());
+
+    let multiple_invalid = MultipleOfTest { value: 16 };
+    assert_eq!(multiple_invalid.validate(), Err(ValidationErrorEnum::MultipleOf("倍数测试".to_string(), 5)));
 }

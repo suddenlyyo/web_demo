@@ -46,6 +46,26 @@ pub enum ValidationRulesEnum {
     /// # 参数
     /// * `i64` - 最大数值
     NumberMax(i64),
+    /// 正数验证
+    PositiveNumber,
+    /// 非负数验证
+    NonNegativeNumber,
+    /// 整数验证
+    Integer,
+    /// 小数位数验证
+    ///
+    /// # 参数
+    /// * `u32` - 最大小数位数
+    DecimalScale(u32),
+    /// 奇数验证
+    OddNumber,
+    /// 偶数验证
+    EvenNumber,
+    /// 倍数验证
+    ///
+    /// # 参数
+    /// * `i64` - 倍数
+    MultipleOf(i64),
     /// 用于判断是否递归校验自定义类型，使用此枚举值表示需要递归校验
     Nested,
 }
